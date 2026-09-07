@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import SQLite3
 
 #if os(macOS)
 import AppKit
@@ -38,17 +39,25 @@ final class LibraryService {
     private var labelsByPath: [String: [String]] = [:]
     private let labelsKey = "audioharbor.trackLabels"
 
-    private static let audioExtensions = Set(["flac", "m4a", "alac", "wav", "aiff", "aif", "aac", "mp3", "dsf", "dff"])
+    private var tracksByPath: [String: Track] = [:]
+    private var tracksByParent: [String: [Track]] = [:]
+    private var searchIndex = CatalogueSearchIndex()
+    private(set) var indexedTrackCount = 0
+
+    private static let audioExtensions = CatalogueIndexer.audioExtensions
+
+    var indexStatusText: String? {
+        guard !showsDemoLibrary, indexedTrackCount > 0 else { return nil }
+        return "\(indexedTrackCount.formatted()) tracks indexed"
+    }
 
     var filteredTracks: [Track] {
         let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else { return tracks }
-        return tracks.filter {
-            $0.title.localizedCaseInsensitiveContains(q)
-                || $0.artist.localizedCaseInsensitiveContains(q)
-                || $0.album.localizedCaseInsensitiveContains(q)
-                || $0.labels.contains { $0.localizedCaseInsensitiveContains(q) }
+        guard let hits = searchIndex.matchingIndices(query: q, trackCount: tracks.count) else {
+            return tracks
         }
+        return hits.sorted().compactMap { tracks.indices.contains($0) ? tracks[$0] : nil }
     }
 
     var allTracks: [Track] { tracks }
@@ -70,14 +79,12 @@ final class LibraryService {
     var filteredAlbums: [Album] {
         let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else { return albums }
+        guard let hits = searchIndex.matchingIndices(query: q, trackCount: tracks.count) else {
+            return albums
+        }
+        let paths = Set(hits.compactMap { tracks.indices.contains($0) ? tracks[$0].url.path : nil })
         return albums.filter { album in
-            album.title.localizedCaseInsensitiveContains(q)
-                || album.artist.localizedCaseInsensitiveContains(q)
-                ||                 album.tracks.contains {
-                    $0.title.localizedCaseInsensitiveContains(q)
-                        || $0.artist.localizedCaseInsensitiveContains(q)
-                        || $0.labels.contains { $0.localizedCaseInsensitiveContains(q) }
-                }
+            album.tracks.contains { paths.contains($0.url.path) }
         }
     }
 
@@ -133,45 +140,32 @@ final class LibraryService {
 
         var hits: [FolderSearchHit] = []
         var seen = Set<String>()
+        let matchingTracks: [Track]
+        if let indices = searchIndex.matchingIndices(query: q, trackCount: tracks.count) {
+            matchingTracks = indices.compactMap { tracks.indices.contains($0) ? tracks[$0] : nil }
+        } else {
+            matchingTracks = []
+        }
 
         for (root, base) in scopes {
-            // Matching audio from the metadata index (title / artist / album / filename).
-            for track in tracks where track.url.path.hasPrefix(base.path) {
-                let fileName = track.url.lastPathComponent
-                let matches =
-                    track.title.localizedCaseInsensitiveContains(q)
-                    || track.artist.localizedCaseInsensitiveContains(q)
-                    || track.album.localizedCaseInsensitiveContains(q)
-                    || fileName.localizedCaseInsensitiveContains(q)
-                guard matches else { continue }
+            let prefix = normalizedPrefix(base.path)
+            for track in matchingTracks where track.url.path.hasPrefix(prefix) {
                 guard seen.insert(track.url.path).inserted else { continue }
-                let relative = relativePath(for: track.url, under: root)
                 hits.append(
                     FolderSearchHit(
-                        entry: FolderBrowseEntry(name: fileName, url: track.url, kind: .audioFile),
-                        relativePath: relative
+                        entry: FolderBrowseEntry(name: track.url.lastPathComponent, url: track.url, kind: .audioFile),
+                        relativePath: relativePath(for: track.url, under: root)
                     )
                 )
             }
 
-            // Matching directories under the current scope.
-            let fm = FileManager.default
-            guard let enumerator = fm.enumerator(
-                at: base,
-                includingPropertiesForKeys: [.isDirectoryKey],
-                options: [.skipsHiddenFiles]
-            ) else { continue }
-
-            while let item = enumerator.nextObject() as? URL {
-                let isDir = (try? item.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true
-                guard isDir else { continue }
-                guard item.lastPathComponent.localizedCaseInsensitiveContains(q) else { continue }
-                guard directoryContainsSupportedAudio(item) else { continue }
-                guard seen.insert(item.path).inserted else { continue }
+            for directory in indexedDirectories(under: base) {
+                guard directory.lastPathComponent.localizedCaseInsensitiveContains(q) else { continue }
+                guard seen.insert(directory.path).inserted else { continue }
                 hits.append(
                     FolderSearchHit(
-                        entry: FolderBrowseEntry(name: item.lastPathComponent, url: item, kind: .directory),
-                        relativePath: relativePath(for: item, under: root)
+                        entry: FolderBrowseEntry(name: directory.lastPathComponent, url: directory, kind: .directory),
+                        relativePath: relativePath(for: directory, under: root)
                     )
                 )
             }
@@ -190,8 +184,12 @@ final class LibraryService {
 
     init() {
         loadLabels()
-        loadDemoLibrary()
-        Task { await restoreBookmarks() }
+        Task { await bootstrap() }
+    }
+
+    /// Force a full metadata re-read of every connected directory.
+    func rebuildIndex() {
+        Task { await refreshIndex(force: true) }
     }
 
     func setBrowseMode(_ mode: CatalogueBrowseMode) {
@@ -272,7 +270,7 @@ final class LibraryService {
 
     /// Prefer indexed metadata; fall back to a lightweight file-based track.
     func trackForPlayback(at url: URL) -> Track {
-        if let existing = tracks.first(where: { $0.url.path == url.path }) {
+        if let existing = tracksByPath[url.path] {
             return existing
         }
         let format = AudioFormat.infer(from: url)
@@ -310,6 +308,7 @@ final class LibraryService {
         }
         saveLabels()
         applyStoredLabelsToTracks()
+        persistLabels(for: track.url.path)
     }
 
     func removeLabel(_ label: String, from track: Track) {
@@ -322,6 +321,7 @@ final class LibraryService {
         }
         saveLabels()
         applyStoredLabelsToTracks()
+        persistLabels(for: track.url.path)
     }
 
     func setLabels(_ labels: [String], for track: Track) {
@@ -334,6 +334,12 @@ final class LibraryService {
         }
         saveLabels()
         applyStoredLabelsToTracks()
+        persistLabels(for: track.url.path)
+    }
+
+    private func persistLabels(for path: String) {
+        let labels = labelsByPath[path] ?? []
+        Task { await CatalogueIndexStore.shared.updateLabels(path: path, labels: labels) }
     }
 
     private func applyStoredLabelsToTracks() {
@@ -342,6 +348,7 @@ final class LibraryService {
             copy.labels = labelsByPath[track.url.path] ?? []
             return copy
         }
+        reindexLookups()
         rebuildAlbums()
     }
 
@@ -396,20 +403,48 @@ final class LibraryService {
                 resetFolderBrowseToRoots()
             }
             await BookmarkStore.shared.save(folders)
-            // Drop tracks that lived under this folder path.
             let path = bookmark.displayPath
-            tracks.removeAll { $0.url.path.hasPrefix(path) }
-            if tracks.isEmpty {
+            await CatalogueIndexStore.shared.delete(underPrefix: path)
+            let remaining = await CatalogueIndexStore.shared.loadAll()
+            if remaining.isEmpty {
                 showsDemoLibrary = true
                 loadDemoLibrary()
             } else {
                 showsDemoLibrary = false
-                rebuildAlbums()
+                applyIndexedRecords(remaining)
             }
         }
     }
 
     private func listFolderContents(at url: URL) -> [FolderBrowseEntry] {
+        let parentPath = normalizedPath(url.path)
+        let parentPrefix = parentPath + "/"
+        let dirNames = immediateChildDirectoryNamesContainingAudio(under: url)
+        let indexedFiles = tracksByParent[parentPath] ?? []
+        let parentIndexed = !indexedFiles.isEmpty || tracks.contains { $0.url.path.hasPrefix(parentPrefix) }
+
+        if parentIndexed || !dirNames.isEmpty {
+            let directories = dirNames.sorted {
+                $0.localizedStandardCompare($1) == .orderedAscending
+            }.map { name in
+                FolderBrowseEntry(
+                    name: name,
+                    url: url.appendingPathComponent(name, isDirectory: true),
+                    kind: .directory
+                )
+            }
+            let files = indexedFiles
+                .sorted { $0.url.lastPathComponent.localizedStandardCompare($1.url.lastPathComponent) == .orderedAscending }
+                .map { track in
+                    FolderBrowseEntry(name: track.url.lastPathComponent, url: track.url, kind: .audioFile)
+                }
+            return directories + files
+        }
+
+        return listFolderContentsFromDisk(at: url)
+    }
+
+    private func listFolderContentsFromDisk(at url: URL) -> [FolderBrowseEntry] {
         let fm = FileManager.default
         guard let items = try? fm.contentsOfDirectory(
             at: url,
@@ -417,23 +452,13 @@ final class LibraryService {
             options: [.skipsHiddenFiles]
         ) else { return [] }
 
-        let parentPrefix = {
-            let path = url.path.hasSuffix("/") ? String(url.path.dropLast()) : url.path
-            return path + "/"
-        }()
-        let audioChildNames = immediateChildDirectoryNamesContainingAudio(under: url)
-        let parentIndexed = tracks.contains { $0.url.path.hasPrefix(parentPrefix) }
-
         var directories: [FolderBrowseEntry] = []
         var files: [FolderBrowseEntry] = []
 
         for item in items {
             let values = try? item.resourceValues(forKeys: [.isDirectoryKey, .isRegularFileKey])
             if values?.isDirectory == true {
-                // Only show folders that contain at least one supported audio file (recursively).
-                let hasAudio = audioChildNames.contains(item.lastPathComponent)
-                    || (!parentIndexed && directoryContainsSupportedAudioOnDisk(item))
-                if hasAudio {
+                if directoryContainsSupportedAudioOnDisk(item) {
                     directories.append(FolderBrowseEntry(name: item.lastPathComponent, url: item, kind: .directory))
                 }
             } else if values?.isRegularFile == true,
@@ -487,18 +512,29 @@ final class LibraryService {
         return false
     }
 
-    private func restoreBookmarks() async {
+    private func bootstrap() async {
         let stored = await BookmarkStore.shared.load()
-        guard !stored.isEmpty else { return }
         folders = stored
         for bookmark in stored {
             do {
                 let url = try await BookmarkStore.shared.startAccess(for: bookmark)
                 accessibleFolderURLs[bookmark.id] = url
-                await scan(url: url, replaceDemo: true)
             } catch {
                 scanProgressText = error.localizedDescription
             }
+        }
+
+        let indexed = await CatalogueIndexStore.shared.loadAll()
+        if !indexed.isEmpty {
+            showsDemoLibrary = false
+            applyIndexedRecords(indexed)
+            await refreshIndex(force: false)
+        } else if !accessibleFolderURLs.isEmpty {
+            showsDemoLibrary = false
+            await refreshIndex(force: true)
+        } else {
+            showsDemoLibrary = true
+            loadDemoLibrary()
         }
     }
 
@@ -511,68 +547,71 @@ final class LibraryService {
                 await BookmarkStore.shared.save(folders)
             }
             accessibleFolderURLs[bookmark.id] = accessed
-            await scan(url: accessed, replaceDemo: true)
+            await refreshIndex(force: false)
         } catch {
             scanProgressText = error.localizedDescription
         }
     }
 
-    private func scan(url: URL, replaceDemo: Bool) async {
+    private func refreshIndex(force: Bool) async {
+        let roots = folders.compactMap { accessibleFolderURLs[$0.id] }
+        guard !roots.isEmpty else { return }
+
         isScanning = true
-        scanProgressText = "Scanning \(url.lastPathComponent)…"
+        scanProgressText = force ? "Building catalogue index…" : "Checking catalogue…"
         defer {
             isScanning = false
             scanProgressText = nil
         }
 
-        let fm = FileManager.default
-        guard let enumerator = fm.enumerator(
-            at: url,
-            includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles]
-        ) else { return }
+        let files = await Task.detached(priority: .userInitiated) {
+            CatalogueIndexer.enumerateAudioFiles(in: roots)
+        }.value
 
-        var fileURLs: [URL] = []
-        while let fileURL = enumerator.nextObject() as? URL {
-            guard Self.audioExtensions.contains(fileURL.pathExtension.lowercased()) else { continue }
-            fileURLs.append(fileURL)
+        let existing = await CatalogueIndexStore.shared.fingerprints()
+        let plan = CatalogueIndexer.plan(files: files, existing: existing, force: force)
+
+        if !plan.toRead.isEmpty {
+            let verb = force ? "Indexing" : "Updating"
+            scanProgressText = "\(verb) 0/\(plan.toRead.count)…"
+            let records = await CatalogueIndexer.readMetadata(
+                files: plan.toRead,
+                labelsByPath: labelsByPath
+            ) { done, total in
+                await MainActor.run { [weak self] in
+                    self?.scanProgressText = "\(verb) \(done)/\(total)…"
+                }
+            }
+            await CatalogueIndexStore.shared.upsert(records)
         }
 
-        var found: [Track] = []
-        for (index, fileURL) in fileURLs.enumerated() {
-            scanProgressText = "Reading \(index + 1)/\(fileURLs.count)…"
-            let meta = await MetadataReader.read(url: fileURL)
-            found.append(
-                labeled(
-                    Track(
-                        title: meta.title,
-                        artist: meta.artist,
-                        album: meta.album,
-                        trackNumber: meta.trackNumber,
-                        year: meta.year,
-                        duration: meta.duration,
-                        format: meta.format,
-                        sampleRateHz: meta.sampleRateHz,
-                        bitDepth: meta.bitDepth,
-                        channelCount: meta.channelCount,
-                        url: fileURL,
-                        artworkData: meta.artworkData
-                    )
-                )
-            )
+        if !plan.toDelete.isEmpty {
+            await CatalogueIndexStore.shared.delete(paths: plan.toDelete)
         }
 
-        if replaceDemo && showsDemoLibrary {
-            tracks = found
-            showsDemoLibrary = false
+        let loaded = await CatalogueIndexStore.shared.loadAll()
+        if loaded.isEmpty {
+            showsDemoLibrary = true
+            loadDemoLibrary()
         } else {
-            // Prefer newer scan results for same paths.
-            let paths = Set(found.map(\.url.path))
-            tracks.removeAll { paths.contains($0.url.path) }
-            tracks.append(contentsOf: found)
-            if !found.isEmpty { showsDemoLibrary = false }
+            showsDemoLibrary = false
+            applyIndexedRecords(loaded)
+            let hashes = await CatalogueIndexStore.shared.artworkHashes()
+            ArtworkCache.shared.removeUnreferenced(keeping: hashes)
         }
+    }
+
+    private func applyIndexedRecords(_ records: [IndexedTrackRecord]) {
+        tracks = records.map { $0.asTrack(labelsByPath: labelsByPath) }
+        reindexLookups()
         rebuildAlbums()
+    }
+
+    private func reindexLookups() {
+        tracksByPath = Dictionary(uniqueKeysWithValues: tracks.map { ($0.url.path, $0) })
+        tracksByParent = Dictionary(grouping: tracks) { $0.url.deletingLastPathComponent().path }
+        searchIndex.rebuild(from: tracks)
+        indexedTrackCount = showsDemoLibrary ? 0 : tracks.count
     }
 
     private func rebuildAlbums() {
@@ -580,15 +619,41 @@ final class LibraryService {
         albums = grouped.values
             .map { list in
                 let first = list[0]
+                let art = list.lazy.compactMap { ArtworkCache.data(for: $0) }.first
                 return Album(
                     title: first.album,
                     artist: first.artist,
                     year: first.year,
                     tracks: list.sorted { ($0.trackNumber ?? 9999) < ($1.trackNumber ?? 9999) },
-                    artworkData: list.first(where: { $0.artworkData != nil })?.artworkData
+                    artworkData: art
                 )
             }
             .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+    }
+
+    private func normalizedPath(_ path: String) -> String {
+        path.hasSuffix("/") ? String(path.dropLast()) : path
+    }
+
+    private func normalizedPrefix(_ path: String) -> String {
+        normalizedPath(path) + "/"
+    }
+
+    private func indexedDirectories(under base: URL) -> [URL] {
+        let prefix = normalizedPrefix(base.path)
+        var dirs = Set<String>()
+        for track in tracks where track.url.path.hasPrefix(prefix) {
+            var directory = track.url.deletingLastPathComponent()
+            while directory.path.hasPrefix(prefix) || directory.path == normalizedPath(base.path) {
+                if directory.path != normalizedPath(base.path) {
+                    dirs.insert(directory.path)
+                }
+                let parent = directory.deletingLastPathComponent()
+                if parent.path == directory.path { break }
+                directory = parent
+            }
+        }
+        return dirs.map { URL(fileURLWithPath: $0, isDirectory: true) }
     }
 
     private func loadDemoLibrary() {
@@ -644,6 +709,685 @@ final class LibraryService {
             ),
         ]
         tracks = demo
+        reindexLookups()
         rebuildAlbums()
+    }
+}
+
+struct IndexedTrackRecord: Sendable {
+    var path: String
+    var title: String
+    var artist: String
+    var album: String
+    var trackNumber: Int?
+    var year: Int?
+    var duration: TimeInterval
+    var format: AudioFormat
+    var sampleRateHz: Int?
+    var bitDepth: Int?
+    var channelCount: Int?
+    var fileSize: Int64
+    var mtime: TimeInterval
+    var artworkHash: String?
+    var filename: String
+    var labels: [String]
+
+    func asTrack(labelsByPath: [String: [String]]) -> Track {
+        Track(
+            title: title,
+            artist: artist,
+            album: album,
+            trackNumber: trackNumber,
+            year: year,
+            duration: duration,
+            format: format,
+            sampleRateHz: sampleRateHz,
+            bitDepth: bitDepth,
+            channelCount: channelCount,
+            url: URL(fileURLWithPath: path),
+            artworkHash: artworkHash,
+            labels: labelsByPath[path] ?? labels
+        )
+    }
+}
+
+struct FileFingerprint: Sendable {
+    var url: URL
+    var path: String
+    var fileSize: Int64
+    var mtime: TimeInterval
+}
+
+struct StoredFingerprint: Sendable {
+    var path: String
+    var fileSize: Int64
+    var mtime: TimeInterval
+}
+
+/// Persistent catalogue: WAL SQLite + FTS5, incremental by path/mtime/size.
+actor CatalogueIndexStore {
+    static let shared = CatalogueIndexStore()
+
+    private var db: OpaquePointer?
+    private let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+    private static let schemaVersion = "2"
+
+    init() {
+        db = Self.connect()
+    }
+
+    deinit {
+        if let db {
+            sqlite3_close(db)
+        }
+    }
+
+    func loadAll() -> [IndexedTrackRecord] {
+        guard let db else { return [] }
+        let sql = """
+        SELECT path, title, artist, album, track_number, year, duration, format,
+               sample_rate, bit_depth, channel_count, file_size, mtime, artwork_hash, filename, labels
+        FROM tracks
+        ORDER BY artist COLLATE NOCASE, album COLLATE NOCASE, track_number ASC, title COLLATE NOCASE
+        """
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK, let stmt else { return [] }
+        defer { sqlite3_finalize(stmt) }
+
+        var rows: [IndexedTrackRecord] = []
+        rows.reserveCapacity(4096)
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            rows.append(record(from: stmt))
+        }
+        return rows
+    }
+
+    func fingerprints(underPrefix prefix: String? = nil) -> [String: StoredFingerprint] {
+        guard let db else { return [:] }
+        let sql: String
+        if prefix != nil {
+            sql = "SELECT path, file_size, mtime FROM tracks WHERE path LIKE ? ESCAPE '\\'"
+        } else {
+            sql = "SELECT path, file_size, mtime FROM tracks"
+        }
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK, let stmt else { return [:] }
+        defer { sqlite3_finalize(stmt) }
+        if let prefix {
+            bindText(stmt, 1, likePrefix(prefix))
+        }
+
+        var map: [String: StoredFingerprint] = [:]
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let path = string(stmt, 0)
+            map[path] = StoredFingerprint(
+                path: path,
+                fileSize: sqlite3_column_int64(stmt, 1),
+                mtime: sqlite3_column_double(stmt, 2)
+            )
+        }
+        return map
+    }
+
+    func upsert(_ records: [IndexedTrackRecord]) {
+        guard let db, !records.isEmpty else { return }
+        sqlite3_exec(db, "BEGIN IMMEDIATE", nil, nil, nil)
+        let sql = """
+        INSERT INTO tracks (
+            path, title, artist, album, track_number, year, duration, format,
+            sample_rate, bit_depth, channel_count, file_size, mtime, artwork_hash, filename, labels
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(path) DO UPDATE SET
+            title=excluded.title,
+            artist=excluded.artist,
+            album=excluded.album,
+            track_number=excluded.track_number,
+            year=excluded.year,
+            duration=excluded.duration,
+            format=excluded.format,
+            sample_rate=excluded.sample_rate,
+            bit_depth=excluded.bit_depth,
+            channel_count=excluded.channel_count,
+            file_size=excluded.file_size,
+            mtime=excluded.mtime,
+            artwork_hash=excluded.artwork_hash,
+            filename=excluded.filename,
+            labels=excluded.labels
+        """
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK, let stmt else {
+            sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
+            return
+        }
+        defer { sqlite3_finalize(stmt) }
+
+        for record in records {
+            sqlite3_reset(stmt)
+            sqlite3_clear_bindings(stmt)
+            bindText(stmt, 1, record.path)
+            bindText(stmt, 2, record.title)
+            bindText(stmt, 3, record.artist)
+            bindText(stmt, 4, record.album)
+            bindOptionalInt(stmt, 5, record.trackNumber)
+            bindOptionalInt(stmt, 6, record.year)
+            sqlite3_bind_double(stmt, 7, record.duration)
+            bindText(stmt, 8, record.format.rawValue)
+            bindOptionalInt(stmt, 9, record.sampleRateHz)
+            bindOptionalInt(stmt, 10, record.bitDepth)
+            bindOptionalInt(stmt, 11, record.channelCount)
+            sqlite3_bind_int64(stmt, 12, record.fileSize)
+            sqlite3_bind_double(stmt, 13, record.mtime)
+            if let hash = record.artworkHash {
+                bindText(stmt, 14, hash)
+            } else {
+                sqlite3_bind_null(stmt, 14)
+            }
+            bindText(stmt, 15, record.filename)
+            bindText(stmt, 16, encodeLabels(record.labels))
+            sqlite3_step(stmt)
+        }
+        sqlite3_exec(db, "COMMIT", nil, nil, nil)
+    }
+
+    func delete(paths: [String]) {
+        guard let db, !paths.isEmpty else { return }
+        sqlite3_exec(db, "BEGIN IMMEDIATE", nil, nil, nil)
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "DELETE FROM tracks WHERE path = ?", -1, &stmt, nil) == SQLITE_OK, let stmt else {
+            sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
+            return
+        }
+        defer { sqlite3_finalize(stmt) }
+        for path in paths {
+            sqlite3_reset(stmt)
+            bindText(stmt, 1, path)
+            sqlite3_step(stmt)
+        }
+        sqlite3_exec(db, "COMMIT", nil, nil, nil)
+    }
+
+    func delete(underPrefix prefix: String) {
+        guard let db else { return }
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "DELETE FROM tracks WHERE path LIKE ? ESCAPE '\\'", -1, &stmt, nil) == SQLITE_OK else {
+            return
+        }
+        defer { sqlite3_finalize(stmt) }
+        bindText(stmt, 1, likePrefix(prefix))
+        sqlite3_step(stmt)
+    }
+
+    func updateLabels(path: String, labels: [String]) {
+        guard let db else { return }
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "UPDATE tracks SET labels = ? WHERE path = ?", -1, &stmt, nil) == SQLITE_OK else {
+            return
+        }
+        defer { sqlite3_finalize(stmt) }
+        bindText(stmt, 1, encodeLabels(labels))
+        bindText(stmt, 2, path)
+        sqlite3_step(stmt)
+    }
+
+    func searchPaths(query: String) -> [String] {
+        let fts = Self.ftsQuery(from: query)
+        guard let db, let fts else { return [] }
+        let sql = """
+        SELECT t.path
+        FROM tracks_fts
+        JOIN tracks t ON t.rowid = tracks_fts.rowid
+        WHERE tracks_fts MATCH ?
+        ORDER BY rank
+        LIMIT 2000
+        """
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK, let stmt else { return [] }
+        defer { sqlite3_finalize(stmt) }
+        bindText(stmt, 1, fts)
+
+        var paths: [String] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            paths.append(string(stmt, 0))
+        }
+        return paths
+    }
+
+    func trackCount() -> Int {
+        guard let db else { return 0 }
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM tracks", -1, &stmt, nil) == SQLITE_OK else { return 0 }
+        defer { sqlite3_finalize(stmt) }
+        guard sqlite3_step(stmt) == SQLITE_ROW else { return 0 }
+        return Int(sqlite3_column_int64(stmt, 0))
+    }
+
+    func artworkHashes() -> Set<String> {
+        guard let db else { return [] }
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "SELECT DISTINCT artwork_hash FROM tracks WHERE artwork_hash IS NOT NULL", -1, &stmt, nil) == SQLITE_OK else {
+            return []
+        }
+        defer { sqlite3_finalize(stmt) }
+        var hashes = Set<String>()
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            hashes.insert(string(stmt, 0))
+        }
+        return hashes
+    }
+
+    private static func connect() -> OpaquePointer? {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? URL(fileURLWithPath: NSTemporaryDirectory())
+        let dir = base.appendingPathComponent("AudioHarbor", isDirectory: true)
+            .appendingPathComponent("CatalogueIndex", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let url = dir.appendingPathComponent("catalogue.sqlite")
+
+        var db: OpaquePointer?
+        if sqlite3_open_v2(
+            url.path,
+            &db,
+            SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX,
+            nil
+        ) != SQLITE_OK {
+            if let db { sqlite3_close(db) }
+            return nil
+        }
+
+        applyPragmas(db)
+        if !migrateIfNeeded(db) {
+            sqlite3_close(db)
+            db = nil
+            try? FileManager.default.removeItem(at: url)
+            if sqlite3_open_v2(
+                url.path,
+                &db,
+                SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX,
+                nil
+            ) != SQLITE_OK {
+                if let db { sqlite3_close(db) }
+                return nil
+            }
+            applyPragmas(db)
+            _ = migrateIfNeeded(db)
+        }
+        return db
+    }
+
+    private static func applyPragmas(_ db: OpaquePointer?) {
+        guard let db else { return }
+        sqlite3_exec(db, "PRAGMA journal_mode = WAL", nil, nil, nil)
+        sqlite3_exec(db, "PRAGMA synchronous = NORMAL", nil, nil, nil)
+        sqlite3_exec(db, "PRAGMA temp_store = MEMORY", nil, nil, nil)
+        sqlite3_exec(db, "PRAGMA cache_size = -16000", nil, nil, nil)
+        sqlite3_exec(db, "PRAGMA mmap_size = 268435456", nil, nil, nil)
+        sqlite3_exec(db, "PRAGMA foreign_keys = ON", nil, nil, nil)
+    }
+
+    private static func migrateIfNeeded(_ db: OpaquePointer?) -> Bool {
+        guard let db else { return false }
+        sqlite3_exec(
+            db,
+            "CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)",
+            nil, nil, nil
+        )
+        let version = metaValue(db, "schema_version")
+        if version == schemaVersion {
+            return true
+        }
+        if version != nil {
+            sqlite3_exec(db, "DROP TABLE IF EXISTS tracks_fts", nil, nil, nil)
+            sqlite3_exec(db, "DROP TABLE IF EXISTS tracks", nil, nil, nil)
+        }
+        return createSchema(db)
+    }
+
+    private static func createSchema(_ db: OpaquePointer?) -> Bool {
+        guard let db else { return false }
+        let ddl = """
+        CREATE TABLE IF NOT EXISTS tracks (
+            path TEXT PRIMARY KEY NOT NULL,
+            title TEXT NOT NULL,
+            artist TEXT NOT NULL,
+            album TEXT NOT NULL,
+            track_number INTEGER,
+            year INTEGER,
+            duration REAL NOT NULL,
+            format TEXT NOT NULL,
+            sample_rate INTEGER,
+            bit_depth INTEGER,
+            channel_count INTEGER,
+            file_size INTEGER NOT NULL,
+            mtime REAL NOT NULL,
+            artwork_hash TEXT,
+            filename TEXT NOT NULL,
+            labels TEXT NOT NULL DEFAULT ''
+        );
+        CREATE INDEX IF NOT EXISTS idx_tracks_album_artist ON tracks(album, artist);
+        CREATE INDEX IF NOT EXISTS idx_tracks_artist ON tracks(artist);
+        CREATE INDEX IF NOT EXISTS idx_tracks_filename ON tracks(filename);
+        CREATE VIRTUAL TABLE IF NOT EXISTS tracks_fts USING fts5(
+            title, artist, album, filename, labels,
+            content='tracks',
+            content_rowid='rowid',
+            tokenize='unicode61 remove_diacritics 2'
+        );
+        CREATE TRIGGER IF NOT EXISTS tracks_ai AFTER INSERT ON tracks BEGIN
+            INSERT INTO tracks_fts(rowid, title, artist, album, filename, labels)
+            VALUES (new.rowid, new.title, new.artist, new.album, new.filename, new.labels);
+        END;
+        CREATE TRIGGER IF NOT EXISTS tracks_ad AFTER DELETE ON tracks BEGIN
+            INSERT INTO tracks_fts(tracks_fts, rowid, title, artist, album, filename, labels)
+            VALUES ('delete', old.rowid, old.title, old.artist, old.album, old.filename, old.labels);
+        END;
+        CREATE TRIGGER IF NOT EXISTS tracks_au AFTER UPDATE ON tracks BEGIN
+            INSERT INTO tracks_fts(tracks_fts, rowid, title, artist, album, filename, labels)
+            VALUES ('delete', old.rowid, old.title, old.artist, old.album, old.filename, old.labels);
+            INSERT INTO tracks_fts(rowid, title, artist, album, filename, labels)
+            VALUES (new.rowid, new.title, new.artist, new.album, new.filename, new.labels);
+        END;
+        """
+        guard sqlite3_exec(db, ddl, nil, nil, nil) == SQLITE_OK else { return false }
+        setMeta(db, "schema_version", schemaVersion)
+        return true
+    }
+
+    private static func metaValue(_ db: OpaquePointer?, _ key: String) -> String? {
+        guard let db else { return nil }
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "SELECT value FROM meta WHERE key = ?", -1, &stmt, nil) == SQLITE_OK else {
+            return nil
+        }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, key, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        guard sqlite3_step(stmt) == SQLITE_ROW else { return nil }
+        guard let c = sqlite3_column_text(stmt, 0) else { return nil }
+        return String(cString: c)
+    }
+
+    private static func setMeta(_ db: OpaquePointer?, _ key: String, _ value: String) {
+        guard let db else { return }
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)", -1, &stmt, nil) == SQLITE_OK else {
+            return
+        }
+        defer { sqlite3_finalize(stmt) }
+        let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        sqlite3_bind_text(stmt, 1, key, -1, transient)
+        sqlite3_bind_text(stmt, 2, value, -1, transient)
+        sqlite3_step(stmt)
+    }
+
+    private func bindText(_ stmt: OpaquePointer?, _ index: Int32, _ value: String) {
+        sqlite3_bind_text(stmt, index, value, -1, sqliteTransient)
+    }
+
+    private func bindOptionalInt(_ stmt: OpaquePointer?, _ index: Int32, _ value: Int?) {
+        if let value {
+            sqlite3_bind_int64(stmt, index, Int64(value))
+        } else {
+            sqlite3_bind_null(stmt, index)
+        }
+    }
+
+    private func string(_ stmt: OpaquePointer?, _ index: Int32) -> String {
+        guard let c = sqlite3_column_text(stmt, index) else { return "" }
+        return String(cString: c)
+    }
+
+    private func optionalString(_ stmt: OpaquePointer?, _ index: Int32) -> String? {
+        guard sqlite3_column_type(stmt, index) != SQLITE_NULL,
+              let c = sqlite3_column_text(stmt, index)
+        else { return nil }
+        return String(cString: c)
+    }
+
+    private func optionalInt(_ stmt: OpaquePointer?, _ index: Int32) -> Int? {
+        sqlite3_column_type(stmt, index) == SQLITE_NULL ? nil : Int(sqlite3_column_int64(stmt, index))
+    }
+
+    private func record(from stmt: OpaquePointer?) -> IndexedTrackRecord {
+        IndexedTrackRecord(
+            path: string(stmt, 0),
+            title: string(stmt, 1),
+            artist: string(stmt, 2),
+            album: string(stmt, 3),
+            trackNumber: optionalInt(stmt, 4),
+            year: optionalInt(stmt, 5),
+            duration: sqlite3_column_double(stmt, 6),
+            format: AudioFormat(rawValue: string(stmt, 7)) ?? .unknown,
+            sampleRateHz: optionalInt(stmt, 8),
+            bitDepth: optionalInt(stmt, 9),
+            channelCount: optionalInt(stmt, 10),
+            fileSize: sqlite3_column_int64(stmt, 11),
+            mtime: sqlite3_column_double(stmt, 12),
+            artworkHash: optionalString(stmt, 13),
+            filename: string(stmt, 14),
+            labels: decodeLabels(string(stmt, 15))
+        )
+    }
+
+    private func likePrefix(_ path: String) -> String {
+        let trimmed = path.hasSuffix("/") ? String(path.dropLast()) : path
+        let escaped = trimmed
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "%", with: "\\%")
+            .replacingOccurrences(of: "_", with: "\\_")
+        return "\(escaped)/%"
+    }
+
+    private func encodeLabels(_ labels: [String]) -> String {
+        labels.joined(separator: "\u{1f}")
+    }
+
+    private func decodeLabels(_ raw: String) -> [String] {
+        raw.split(separator: "\u{1f}", omittingEmptySubsequences: true).map(String.init)
+    }
+
+    static func ftsQuery(from raw: String) -> String? {
+        let tokens = raw
+            .split { !$0.isLetter && !$0.isNumber }
+            .map { String($0) }
+            .filter { !$0.isEmpty }
+        guard !tokens.isEmpty else { return nil }
+        return tokens
+            .map { token in
+                let cleaned = token.replacingOccurrences(of: "\"", with: "")
+                return "\"\(cleaned)\"*"
+            }
+            .joined(separator: " ")
+    }
+}
+
+/// In-memory inverted index for instant catalogue search (AND of prefix tokens).
+struct CatalogueSearchIndex: Sendable {
+    private var postings: [String: Set<Int>] = [:]
+
+    mutating func rebuild(from tracks: [Track]) {
+        postings.removeAll(keepingCapacity: true)
+        for (index, track) in tracks.enumerated() {
+            var tokens = Set<String>()
+            for field in [track.title, track.artist, track.album, track.url.lastPathComponent] {
+                tokens.formUnion(Self.tokenize(field))
+            }
+            for label in track.labels {
+                tokens.formUnion(Self.tokenize(label))
+            }
+            for token in tokens {
+                postings[token, default: []].insert(index)
+            }
+        }
+    }
+
+    func matchingIndices(query: String, trackCount: Int) -> Set<Int>? {
+        let tokens = Self.tokenize(query)
+        guard !tokens.isEmpty else { return nil }
+
+        var result: Set<Int>?
+        for token in tokens {
+            var union = Set<Int>()
+            if token.count >= 3 {
+                for (key, ids) in postings where key.hasPrefix(token) {
+                    union.formUnion(ids)
+                }
+            } else if let exact = postings[token] {
+                union = exact
+            } else {
+                for (key, ids) in postings where key.hasPrefix(token) {
+                    union.formUnion(ids)
+                    if union.count == trackCount { break }
+                }
+            }
+            if let current = result {
+                result = current.intersection(union)
+            } else {
+                result = union
+            }
+            if result?.isEmpty == true { break }
+        }
+        return result
+    }
+
+    static func tokenize(_ text: String) -> [String] {
+        text.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            .split { !$0.isLetter && !$0.isNumber }
+            .map(String.init)
+            .filter { !$0.isEmpty }
+    }
+}
+
+enum CatalogueIndexer {
+    static let audioExtensions = Set(["flac", "m4a", "alac", "wav", "aiff", "aif", "aac", "mp3", "dsf", "dff"])
+
+    static func enumerateAudioFiles(in roots: [URL]) -> [FileFingerprint] {
+        let fm = FileManager.default
+        var files: [FileFingerprint] = []
+        files.reserveCapacity(2048)
+        var seen = Set<String>()
+
+        for root in roots {
+            guard let enumerator = fm.enumerator(
+                at: root,
+                includingPropertiesForKeys: [.isRegularFileKey, .contentModificationDateKey, .fileSizeKey],
+                options: [.skipsHiddenFiles, .skipsPackageDescendants]
+            ) else { continue }
+
+            while let item = enumerator.nextObject() as? URL {
+                let ext = item.pathExtension.lowercased()
+                guard audioExtensions.contains(ext) else { continue }
+                let values = try? item.resourceValues(forKeys: [.isRegularFileKey, .contentModificationDateKey, .fileSizeKey])
+                guard values?.isRegularFile == true else { continue }
+                let path = item.path
+                guard seen.insert(path).inserted else { continue }
+                files.append(
+                    FileFingerprint(
+                        url: item,
+                        path: path,
+                        fileSize: Int64(values?.fileSize ?? 0),
+                        mtime: values?.contentModificationDate?.timeIntervalSince1970 ?? 0
+                    )
+                )
+            }
+        }
+        return files
+    }
+
+    static func plan(
+        files: [FileFingerprint],
+        existing: [String: StoredFingerprint],
+        force: Bool
+    ) -> (toRead: [FileFingerprint], toDelete: [String], unchanged: Int) {
+        var toRead: [FileFingerprint] = []
+        toRead.reserveCapacity(force ? files.count : 64)
+        var live = Set<String>(minimumCapacity: files.count)
+        var unchanged = 0
+
+        for file in files {
+            live.insert(file.path)
+            if force {
+                toRead.append(file)
+                continue
+            }
+            if let stored = existing[file.path],
+               stored.fileSize == file.fileSize,
+               abs(stored.mtime - file.mtime) < 0.6 {
+                unchanged += 1
+            } else {
+                toRead.append(file)
+            }
+        }
+
+        let toDelete = existing.keys.filter { !live.contains($0) }
+        return (toRead, toDelete, unchanged)
+    }
+
+    static func readMetadata(
+        files: [FileFingerprint],
+        labelsByPath: [String: [String]],
+        progress: @escaping @Sendable (Int, Int) async -> Void
+    ) async -> [IndexedTrackRecord] {
+        guard !files.isEmpty else { return [] }
+        let chunkSize = max(4, min(8, ProcessInfo.processInfo.activeProcessorCount))
+        var records: [IndexedTrackRecord] = []
+        records.reserveCapacity(files.count)
+
+        var processed = 0
+        for chunk in files.chunked(into: chunkSize) {
+            let batch = await withTaskGroup(of: IndexedTrackRecord.self, returning: [IndexedTrackRecord].self) { group in
+                for file in chunk {
+                    group.addTask {
+                        await readOne(file: file, labelsByPath: labelsByPath)
+                    }
+                }
+                var out: [IndexedTrackRecord] = []
+                out.reserveCapacity(chunk.count)
+                for await record in group {
+                    out.append(record)
+                }
+                return out
+            }
+            records.append(contentsOf: batch)
+            processed += chunk.count
+            await progress(processed, files.count)
+        }
+        return records
+    }
+
+    private static func readOne(file: FileFingerprint, labelsByPath: [String: [String]]) async -> IndexedTrackRecord {
+        let meta = await MetadataReader.read(url: file.url)
+        let artworkHash = meta.artworkData.flatMap { ArtworkCache.shared.store($0) }
+        return IndexedTrackRecord(
+            path: file.path,
+            title: meta.title,
+            artist: meta.artist,
+            album: meta.album,
+            trackNumber: meta.trackNumber,
+            year: meta.year,
+            duration: meta.duration,
+            format: meta.format,
+            sampleRateHz: meta.sampleRateHz,
+            bitDepth: meta.bitDepth,
+            channelCount: meta.channelCount,
+            fileSize: file.fileSize,
+            mtime: file.mtime,
+            artworkHash: artworkHash,
+            filename: file.url.lastPathComponent,
+            labels: labelsByPath[file.path] ?? []
+        )
+    }
+}
+
+private extension Array {
+    func chunked(into size: Int) -> [[Element]] {
+        guard size > 0, !isEmpty else { return isEmpty ? [] : [self] }
+        var chunks: [[Element]] = []
+        chunks.reserveCapacity((count + size - 1) / size)
+        var index = startIndex
+        while index < endIndex {
+            let next = self.index(index, offsetBy: size, limitedBy: endIndex) ?? endIndex
+            chunks.append(Array(self[index..<next]))
+            index = next
+        }
+        return chunks
     }
 }

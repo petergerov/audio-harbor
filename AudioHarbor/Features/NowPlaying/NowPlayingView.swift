@@ -261,7 +261,7 @@ struct NowPlayingView: View {
     }
 
     private func artworkImage(_ track: Track?) -> Image? {
-        guard let data = track?.artworkData else { return nil }
+        guard let data = track.flatMap({ ArtworkCache.data(for: $0) }) else { return nil }
         #if os(macOS)
         if let ns = NSImage(data: data) { return Image(nsImage: ns) }
         #else

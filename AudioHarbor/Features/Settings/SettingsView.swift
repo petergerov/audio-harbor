@@ -159,6 +159,27 @@ struct SettingsView: View {
         }
         .buttonStyle(.plain)
         .disabled(appModel.library.isScanning)
+
+        if let status = appModel.library.indexStatusText {
+            Text(status)
+                .font(HarborFont.mono(11))
+                .foregroundStyle(HarborColor.ivoryDim)
+        }
+
+        Button {
+            appModel.library.rebuildIndex()
+        } label: {
+            Label("Rebuild Index", systemImage: "arrow.triangle.2.circlepath")
+                .font(HarborFont.title(14))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(HarborColor.aluminumDark)
+                .foregroundStyle(HarborColor.ivory)
+                .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(appModel.library.isScanning || appModel.library.folders.isEmpty)
+        .help("Re-read every file and rebuild the catalogue index")
     }
 
     private func presentAddDirectory() {

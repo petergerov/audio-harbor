@@ -19,6 +19,13 @@ struct AudioHarborApp: App {
                 }
                 .keyboardShortcut("o", modifiers: [.command])
             }
+            CommandMenu("Catalogue") {
+                Button("Rebuild Index") {
+                    appModel.library.rebuildIndex()
+                }
+                .keyboardShortcut("r", modifiers: [.command, .shift])
+                .disabled(appModel.library.isScanning || appModel.library.folders.isEmpty)
+            }
             CommandMenu("Playback") {
                 Button(appModel.playback.isPlaying ? "Pause" : "Play") {
                     appModel.playback.togglePlayPause()

@@ -1,6 +1,8 @@
 import AVFoundation
+import CryptoKit
 import Foundation
 import ImageIO
+import UniformTypeIdentifiers
 
 struct TrackMetadata: Sendable {
     var title: String
@@ -164,9 +166,102 @@ enum MetadataReader {
     }
 
     private static func normalizedImageData(_ data: Data) -> Data? {
+        guard !data.isEmpty else { return nil }
         guard let source = CGImageSourceCreateWithData(data as CFData, nil),
               CGImageSourceGetCount(source) > 0
         else { return data }
+
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: 512,
+        ]
+        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            return data
+        }
+
+        let destData = NSMutableData()
+        guard let dest = CGImageDestinationCreateWithData(
+            destData,
+            UTType.jpeg.identifier as CFString,
+            1,
+            nil
+        ) else { return data }
+        CGImageDestinationAddImage(
+            dest,
+            image,
+            [kCGImageDestinationLossyCompressionQuality: 0.82] as CFDictionary
+        )
+        guard CGImageDestinationFinalize(dest) else { return data }
+        return destData as Data
+    }
+}
+
+/// On-disk artwork store keyed by content hash. Tracks keep the hash, not pixels.
+final class ArtworkCache: @unchecked Sendable {
+    static let shared = ArtworkCache()
+
+    private let directory: URL
+    private let memory = NSCache<NSString, NSData>()
+    private let io = DispatchQueue(label: "app.audioharbor.artwork-cache", qos: .utility)
+
+    private init() {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? URL(fileURLWithPath: NSTemporaryDirectory())
+        directory = base
+            .appendingPathComponent("AudioHarbor", isDirectory: true)
+            .appendingPathComponent("Artwork", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        memory.countLimit = 256
+        memory.totalCostLimit = 32 * 1024 * 1024
+    }
+
+    static func data(for track: Track) -> Data? {
+        track.artworkData ?? track.artworkHash.flatMap { shared.load($0) }
+    }
+
+    func store(_ data: Data) -> String? {
+        guard !data.isEmpty else { return nil }
+        let hash = Self.hash(data)
+        let url = fileURL(for: hash)
+        if !FileManager.default.fileExists(atPath: url.path) {
+            io.sync {
+                try? data.write(to: url, options: .atomic)
+            }
+        }
+        memory.setObject(data as NSData, forKey: hash as NSString, cost: data.count)
+        return hash
+    }
+
+    func load(_ hash: String) -> Data? {
+        if let cached = memory.object(forKey: hash as NSString) {
+            return cached as Data
+        }
+        let url = fileURL(for: hash)
+        guard let data = try? Data(contentsOf: url), !data.isEmpty else { return nil }
+        memory.setObject(data as NSData, forKey: hash as NSString, cost: data.count)
         return data
+    }
+
+    func removeUnreferenced(keeping hashes: Set<String>) {
+        io.async { [directory] in
+            guard let files = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) else {
+                return
+            }
+            for file in files {
+                let name = file.deletingPathExtension().lastPathComponent
+                if !hashes.contains(name) {
+                    try? FileManager.default.removeItem(at: file)
+                }
+            }
+        }
+    }
+
+    private func fileURL(for hash: String) -> URL {
+        directory.appendingPathComponent(hash).appendingPathExtension("jpg")
+    }
+
+    private static func hash(_ data: Data) -> String {
+        SHA256.hash(data: data).prefix(16).map { String(format: "%02x", $0) }.joined()
     }
 }

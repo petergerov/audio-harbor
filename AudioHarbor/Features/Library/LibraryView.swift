@@ -10,6 +10,7 @@ import UIKit
 struct LibraryView: View {
     @Environment(AppModel.self) private var appModel
     @State private var isImporterPresented = false
+    @State private var confirmRebuild = false
 
     var body: some View {
         @Bindable var library = appModel.library
@@ -62,31 +63,71 @@ struct LibraryView: View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 8) {
                 BrandMark(compact: true)
-                Text(appModel.library.showsDemoLibrary
-                     ? "Demo library — add a directory to start."
-                     : appModel.library.browseMode == .smart
-                        ? "Smart catalogue — albums & metadata search."
-                        : "Directories — walk your music as it sits on disk.")
+                Text(catalogueSubtitle)
                     .font(HarborFont.body(13))
                     .foregroundStyle(HarborColor.ivoryDim)
                 EngravedLabel(text: "Catalogue")
             }
             Spacer(minLength: 8)
-            Button(action: presentAddDirectory) {
-                Label("Add Directory", systemImage: "folder.badge.plus")
-                    .font(HarborFont.title(13))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .background(HarborColor.amber)
-                    .foregroundStyle(HarborColor.faceplate)
-                    .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+            HStack(spacing: 8) {
+                Button {
+                    confirmRebuild = true
+                } label: {
+                    Label("Rebuild Index", systemImage: "arrow.triangle.2.circlepath")
+                        .font(HarborFont.title(13))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(HarborColor.aluminumDark)
+                        .foregroundStyle(HarborColor.ivory)
+                        .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .disabled(appModel.library.isScanning || appModel.library.folders.isEmpty)
+                .help("Rebuild the catalogue index from disk")
+
+                Button(action: presentAddDirectory) {
+                    Label("Add Directory", systemImage: "folder.badge.plus")
+                        .font(HarborFont.title(13))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(HarborColor.amber)
+                        .foregroundStyle(HarborColor.faceplate)
+                        .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .disabled(appModel.library.isScanning)
+                .help("Connect a music directory to the catalogue")
             }
-            .buttonStyle(.plain)
-            .disabled(appModel.library.isScanning)
-            .help("Connect a music directory to the catalogue")
         }
         .padding(.horizontal, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .confirmationDialog(
+            "Rebuild catalogue index?",
+            isPresented: $confirmRebuild,
+            titleVisibility: .visible
+        ) {
+            Button("Rebuild Index") {
+                appModel.library.rebuildIndex()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Every connected file will be re-read. Unchanged libraries usually only take a moment on the next launch — this forces a full rebuild.")
+        }
+    }
+
+    private var catalogueSubtitle: String {
+        if appModel.library.showsDemoLibrary {
+            return "Demo library — add a directory to start."
+        }
+        if let status = appModel.library.indexStatusText {
+            let mode = appModel.library.browseMode == .smart
+                ? "Smart catalogue"
+                : "Directories"
+            return "\(mode) — \(status)."
+        }
+        return appModel.library.browseMode == .smart
+            ? "Smart catalogue — albums & metadata search."
+            : "Directories — walk your music as it sits on disk."
     }
 
     private func presentAddDirectory() {

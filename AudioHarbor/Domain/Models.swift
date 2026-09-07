@@ -45,6 +45,8 @@ struct Track: Identifiable, Hashable, Sendable {
     var channelCount: Int?
     var url: URL
     var artworkData: Data?
+    /// Content hash into `ArtworkCache` — keeps the in-memory catalogue light.
+    var artworkHash: String?
     /// User-assigned labels (persisted by file path).
     var labels: [String]
 
@@ -62,6 +64,7 @@ struct Track: Identifiable, Hashable, Sendable {
         channelCount: Int? = nil,
         url: URL,
         artworkData: Data? = nil,
+        artworkHash: String? = nil,
         labels: [String] = []
     ) {
         // Stable across rescans so playlists (and other ID refs) survive relaunch.
@@ -78,6 +81,7 @@ struct Track: Identifiable, Hashable, Sendable {
         self.channelCount = channelCount
         self.url = url
         self.artworkData = artworkData
+        self.artworkHash = artworkHash
         self.labels = labels
     }
 
@@ -106,19 +110,32 @@ struct Album: Identifiable, Hashable, Sendable {
     var artworkData: Data?
 
     init(
-        id: UUID = UUID(),
+        id: UUID? = nil,
         title: String,
         artist: String,
         year: Int? = nil,
         tracks: [Track],
         artworkData: Data? = nil
     ) {
-        self.id = id
+        self.id = id ?? Self.stableID(title: title, artist: artist)
         self.title = title
         self.artist = artist
         self.year = year
         self.tracks = tracks
         self.artworkData = artworkData
+    }
+
+    static func stableID(title: String, artist: String) -> UUID {
+        let digest = SHA256.hash(data: Data("\(title.lowercased())|\(artist.lowercased())".utf8))
+        var bytes = Array(digest.prefix(16))
+        bytes[6] = (bytes[6] & 0x0F) | 0x50
+        bytes[8] = (bytes[8] & 0x3F) | 0x80
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
     }
 }
 
