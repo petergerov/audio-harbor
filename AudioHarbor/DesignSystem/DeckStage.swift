@@ -1,0 +1,90 @@
+import SwiftUI
+
+enum DeckStyle: String, CaseIterable, Identifiable {
+    case turntable
+    case reelToReel
+    case cassette
+    case receiver
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .turntable: "Turntable"
+        case .reelToReel: "Reel-to-Reel"
+        case .cassette: "Cassette"
+        case .receiver: "Receiver"
+        }
+    }
+
+    var engraved: String {
+        switch self {
+        case .turntable: "Listening Desk"
+        case .reelToReel: "Tape Transport"
+        case .cassette: "Compact Cassette"
+        case .receiver: "Stereo Receiver"
+        }
+    }
+}
+
+struct DeckStage: View {
+    @Binding var style: DeckStyle
+    let artwork: Image?
+    let isPlaying: Bool
+    let progress: Double
+    let currentTime: TimeInterval
+
+    var body: some View {
+        VStack(spacing: 14) {
+            stylePicker
+
+            Group {
+                switch style {
+                case .turntable:
+                    ListeningRig(artwork: artwork, isPlaying: isPlaying, progress: progress)
+                case .reelToReel:
+                    ReelToReelRig(isPlaying: isPlaying, progress: progress)
+                case .cassette:
+                    CassetteDeckRig(
+                        artwork: artwork,
+                        isPlaying: isPlaying,
+                        progress: progress,
+                        currentTime: currentTime
+                    )
+                case .receiver:
+                    ReceiverVURig(isPlaying: isPlaying, progress: progress)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .animation(.easeInOut(duration: 0.25), value: style)
+        }
+    }
+
+    private var stylePicker: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(DeckStyle.allCases) { option in
+                    Button {
+                        style = option
+                    } label: {
+                        Text(option.title.uppercased())
+                            .font(HarborFont.panel(9))
+                            .tracking(0.8)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 7)
+                            .foregroundStyle(style == option ? HarborColor.faceplate : HarborColor.ivoryDim)
+                            .background(
+                                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                    .fill(style == option ? HarborColor.amber : HarborColor.faceplate.opacity(0.5))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                            .stroke(HarborColor.aluminumDark, lineWidth: 1)
+                                    )
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+}

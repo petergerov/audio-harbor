@@ -1,0 +1,582 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		03A68829B59F9C3173CD4276 /* EffectsRackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71D38A709EFA1D65294A9CD7 /* EffectsRackView.swift */; };
+		0868606C96FE00837683B871 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200F2AA72FB1C84DADBDB384 /* SettingsView.swift */; };
+		11F1015657E5FD73E02319C3 /* ListeningRig.swift in Sources */ = {isa = PBXBuildFile; fileRef = B46479C25FC8808DAFFF49F9 /* ListeningRig.swift */; };
+		209A370E3F37F3DE158DBB2A /* HALAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 798CED25B49983F451051372 /* HALAudioPlayer.swift */; };
+		22B5B5A591CFB5033382EC3E /* HarborTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA07B3758CAB9B2E18996EDE /* HarborTheme.swift */; };
+		2E6EEF2214B20646F6C97B99 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 093F0AE98C88F16FEB7AF75A /* Models.swift */; };
+		2FC801E8754C2241E956439F /* HarborChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68579D8D9972759EF8D48E1A /* HarborChrome.swift */; };
+		3A6F62480B2FB5FA4768A615 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2FB99AAF30D0FD2BC810C67 /* LibraryView.swift */; };
+		421C5622F95862C6D870443C /* DSDDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE0277F8E124960C06139C61 /* DSDDecoder.swift */; };
+		45123F24370F36D3534914B2 /* AudioHarborApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 089AF7698AE7FC5C84762FE5 /* AudioHarborApp.swift */; };
+		4E77DAD93A74C594DC36FDAE /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBA8EC8CD38B2C8BDB195995 /* NowPlayingView.swift */; };
+		A9C101DEC401000000000001 /* DeckContextRail.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9C101DEC401000000000002 /* DeckContextRail.swift */; };
+		59C959CD2CD6F92F99C9BDDA /* LibraryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D98ADE5F74A9FFD2F60000B /* LibraryService.swift */; };
+		5FC40BA03A1E8DC0E96BEC95 /* CoreAudioPlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2DCF3754E5DF184BE6DDD50 /* CoreAudioPlaybackEngine.swift */; };
+		691EA766B90873B6014E4270 /* CassetteDeckRig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F113F862C9E69D188CC9DE3 /* CassetteDeckRig.swift */; };
+		6E8F1A2B3C4D5E6F708192A3 /* PluginEditorPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F9A2B3C4D5E6F708192A3B4 /* PluginEditorPresenter.swift */; };
+		72AC3D43010A0065825644E4 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB48620484188A3E79D0E5E8 /* AppModel.swift */; };
+		73A1610AE13FE6B475EA9F6A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 40A45E5B8213AE05D262F470 /* Assets.xcassets */; };
+		84FB1B82B04EC42053D29986 /* PluginModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 995ED09285F2DF7B44DADBB3 /* PluginModels.swift */; };
+		8924E3092AEAEC3714A2AC9F /* MacAudioDeviceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5AC60844417CA335B0CDA96 /* MacAudioDeviceController.swift */; };
+		99450450F3D9268044E4C720 /* PlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53FFE55BC32CF1A7706C1FB8 /* PlaybackEngine.swift */; };
+		A692674AF7B4415B48E15E8B /* PlaylistsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BD0C6F97FBE4AFC33CFC218 /* PlaylistsView.swift */; };
+		B1ABBE0CD9CC54DC22612982 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39783E66128487305A0C7D56 /* RootView.swift */; };
+		C8A1E5C001ABCDE101 /* AHExceptionCatcher.m in Sources */ = {isa = PBXBuildFile; fileRef = C8A1E5C001ABCDE102 /* AHExceptionCatcher.m */; };
+		D25979B7C11D28CF35877269 /* EffectHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7791DBBE83A46FD67D0FF7AF /* EffectHost.swift */; };
+		DC90E70F88326A380D4E5DAB /* DeckStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FD9C674B1601479DDAB0618 /* DeckStage.swift */; };
+		E7B419AAC9F68C0C95416D42 /* ReelToReelRig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 702C1397DDCA4175A2C29057 /* ReelToReelRig.swift */; };
+		E9E467C8091B249C1755CD7F /* MetadataReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = C98A719353878C893B9C45EC /* MetadataReader.swift */; };
+		F1B40DCA41BE9ED20B03C3AB /* PlaybackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 594FBEA5AC9E0B4C87D22424 /* PlaybackService.swift */; };
+		F25714D3F82281FBF48EF86F /* ReceiverVURig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86014A84599DFFC94B7542AD /* ReceiverVURig.swift */; };
+		FBF3EECAC0BB2240010ABF1F /* PlaylistService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2F79E705295934168D2B714 /* PlaylistService.swift */; };
+		FE99BD8D8179E02001401C60 /* BookmarkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FA726BDA6ACC238C61BCBAA /* BookmarkStore.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		089AF7698AE7FC5C84762FE5 /* AudioHarborApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioHarborApp.swift; sourceTree = "<group>"; };
+		093F0AE98C88F16FEB7AF75A /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		0D8D21EAF749ACBCAE9D2C72 /* AudioHarbor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AudioHarbor.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		200F2AA72FB1C84DADBDB384 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		2D98ADE5F74A9FFD2F60000B /* LibraryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryService.swift; sourceTree = "<group>"; };
+		39783E66128487305A0C7D56 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		40A45E5B8213AE05D262F470 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		53FFE55BC32CF1A7706C1FB8 /* PlaybackEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackEngine.swift; sourceTree = "<group>"; };
+		594FBEA5AC9E0B4C87D22424 /* PlaybackService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackService.swift; sourceTree = "<group>"; };
+		5BD0C6F97FBE4AFC33CFC218 /* PlaylistsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistsView.swift; sourceTree = "<group>"; };
+		68579D8D9972759EF8D48E1A /* HarborChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HarborChrome.swift; sourceTree = "<group>"; };
+		702C1397DDCA4175A2C29057 /* ReelToReelRig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReelToReelRig.swift; sourceTree = "<group>"; };
+		71D38A709EFA1D65294A9CD7 /* EffectsRackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EffectsRackView.swift; sourceTree = "<group>"; };
+		7791DBBE83A46FD67D0FF7AF /* EffectHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EffectHost.swift; sourceTree = "<group>"; };
+		798CED25B49983F451051372 /* HALAudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HALAudioPlayer.swift; sourceTree = "<group>"; };
+		7F113F862C9E69D188CC9DE3 /* CassetteDeckRig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CassetteDeckRig.swift; sourceTree = "<group>"; };
+		7F9A2B3C4D5E6F708192A3B4 /* PluginEditorPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginEditorPresenter.swift; sourceTree = "<group>"; };
+		86014A84599DFFC94B7542AD /* ReceiverVURig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiverVURig.swift; sourceTree = "<group>"; };
+		8FA726BDA6ACC238C61BCBAA /* BookmarkStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkStore.swift; sourceTree = "<group>"; };
+		995ED09285F2DF7B44DADBB3 /* PluginModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginModels.swift; sourceTree = "<group>"; };
+		9FD9C674B1601479DDAB0618 /* DeckStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckStage.swift; sourceTree = "<group>"; };
+		A2F79E705295934168D2B714 /* PlaylistService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistService.swift; sourceTree = "<group>"; };
+		B46479C25FC8808DAFFF49F9 /* ListeningRig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListeningRig.swift; sourceTree = "<group>"; };
+		BA07B3758CAB9B2E18996EDE /* HarborTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HarborTheme.swift; sourceTree = "<group>"; };
+		C8A1E5C001ABCDE102 /* AHExceptionCatcher.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AHExceptionCatcher.m; sourceTree = "<group>"; };
+		C8A1E5C001ABCDE103 /* AHExceptionCatcher.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AHExceptionCatcher.h; sourceTree = "<group>"; };
+		C8A1E5C001ABCDE104 /* AudioHarbor-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "AudioHarbor-Bridging-Header.h"; sourceTree = "<group>"; };
+		C98A719353878C893B9C45EC /* MetadataReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataReader.swift; sourceTree = "<group>"; };
+		CE0277F8E124960C06139C61 /* DSDDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSDDecoder.swift; sourceTree = "<group>"; };
+		D2DCF3754E5DF184BE6DDD50 /* CoreAudioPlaybackEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreAudioPlaybackEngine.swift; sourceTree = "<group>"; };
+		DBA8EC8CD38B2C8BDB195995 /* NowPlayingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingView.swift; sourceTree = "<group>"; };
+		A9C101DEC401000000000002 /* DeckContextRail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckContextRail.swift; sourceTree = "<group>"; };
+		E2FB99AAF30D0FD2BC810C67 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
+		EB48620484188A3E79D0E5E8 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		F5AC60844417CA335B0CDA96 /* MacAudioDeviceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacAudioDeviceController.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		200A2AC3D2E95867A9D6C4D8 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				40A45E5B8213AE05D262F470 /* Assets.xcassets */,
+				C8A1E5C001ABCDE104 /* AudioHarbor-Bridging-Header.h */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		26F63DC0BFE6CD02A2597325 /* Domain */ = {
+			isa = PBXGroup;
+			children = (
+				093F0AE98C88F16FEB7AF75A /* Models.swift */,
+			);
+			path = Domain;
+			sourceTree = "<group>";
+		};
+		2FAFAB6E9FFDCB03A377415C /* AudioHarbor */ = {
+			isa = PBXGroup;
+			children = (
+				97FE7434BF4244D32EEE7E71 /* App */,
+				CD4A3916879D35928A6C5C90 /* Audio */,
+				47BC47AB5A2185E22B1B2710 /* DesignSystem */,
+				26F63DC0BFE6CD02A2597325 /* Domain */,
+				C7F4E31239B41ED812C76E71 /* Features */,
+				200A2AC3D2E95867A9D6C4D8 /* Resources */,
+				491DF155EC5C3EE5C7949E5A /* Services */,
+			);
+			path = AudioHarbor;
+			sourceTree = "<group>";
+		};
+		2FE9DE9EF0B10302FDF4BEDB /* Library */ = {
+			isa = PBXGroup;
+			children = (
+				E2FB99AAF30D0FD2BC810C67 /* LibraryView.swift */,
+			);
+			path = Library;
+			sourceTree = "<group>";
+		};
+		39B3F072440278B0080ADE99 /* Playlists */ = {
+			isa = PBXGroup;
+			children = (
+				5BD0C6F97FBE4AFC33CFC218 /* PlaylistsView.swift */,
+			);
+			path = Playlists;
+			sourceTree = "<group>";
+		};
+		47BC47AB5A2185E22B1B2710 /* DesignSystem */ = {
+			isa = PBXGroup;
+			children = (
+				7F113F862C9E69D188CC9DE3 /* CassetteDeckRig.swift */,
+				9FD9C674B1601479DDAB0618 /* DeckStage.swift */,
+				68579D8D9972759EF8D48E1A /* HarborChrome.swift */,
+				BA07B3758CAB9B2E18996EDE /* HarborTheme.swift */,
+				B46479C25FC8808DAFFF49F9 /* ListeningRig.swift */,
+				86014A84599DFFC94B7542AD /* ReceiverVURig.swift */,
+				702C1397DDCA4175A2C29057 /* ReelToReelRig.swift */,
+			);
+			path = DesignSystem;
+			sourceTree = "<group>";
+		};
+		491DF155EC5C3EE5C7949E5A /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				7E233267332545939B083DE5 /* Library */,
+				E6C5048052C27282B56C44D3 /* Playback */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		4F541CA308995E1C74791727 = {
+			isa = PBXGroup;
+			children = (
+				2FAFAB6E9FFDCB03A377415C /* AudioHarbor */,
+				E3D6692E4AE46FDC6C2AFE5D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		6190667759BEBC87BFA5CCBB /* Effects */ = {
+			isa = PBXGroup;
+			children = (
+				71D38A709EFA1D65294A9CD7 /* EffectsRackView.swift */,
+			);
+			path = Effects;
+			sourceTree = "<group>";
+		};
+		725A2663D702DE6ED83E963B /* NowPlaying */ = {
+			isa = PBXGroup;
+			children = (
+				A9C101DEC401000000000002 /* DeckContextRail.swift */,
+				DBA8EC8CD38B2C8BDB195995 /* NowPlayingView.swift */,
+			);
+			path = NowPlaying;
+			sourceTree = "<group>";
+		};
+		7E233267332545939B083DE5 /* Library */ = {
+			isa = PBXGroup;
+			children = (
+				8FA726BDA6ACC238C61BCBAA /* BookmarkStore.swift */,
+				2D98ADE5F74A9FFD2F60000B /* LibraryService.swift */,
+				C98A719353878C893B9C45EC /* MetadataReader.swift */,
+				A2F79E705295934168D2B714 /* PlaylistService.swift */,
+			);
+			path = Library;
+			sourceTree = "<group>";
+		};
+		97FE7434BF4244D32EEE7E71 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				EB48620484188A3E79D0E5E8 /* AppModel.swift */,
+				089AF7698AE7FC5C84762FE5 /* AudioHarborApp.swift */,
+				39783E66128487305A0C7D56 /* RootView.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		AEB148ED441954FE49F4652C /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				200F2AA72FB1C84DADBDB384 /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		C7F4E31239B41ED812C76E71 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				6190667759BEBC87BFA5CCBB /* Effects */,
+				2FE9DE9EF0B10302FDF4BEDB /* Library */,
+				725A2663D702DE6ED83E963B /* NowPlaying */,
+				39B3F072440278B0080ADE99 /* Playlists */,
+				AEB148ED441954FE49F4652C /* Settings */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		CD4A3916879D35928A6C5C90 /* Audio */ = {
+			isa = PBXGroup;
+			children = (
+				EAEBC954F636F8E28044E1EC /* Effects */,
+				C8A1E5C001ABCDE103 /* AHExceptionCatcher.h */,
+				C8A1E5C001ABCDE102 /* AHExceptionCatcher.m */,
+				D2DCF3754E5DF184BE6DDD50 /* CoreAudioPlaybackEngine.swift */,
+				CE0277F8E124960C06139C61 /* DSDDecoder.swift */,
+				798CED25B49983F451051372 /* HALAudioPlayer.swift */,
+				F5AC60844417CA335B0CDA96 /* MacAudioDeviceController.swift */,
+				53FFE55BC32CF1A7706C1FB8 /* PlaybackEngine.swift */,
+			);
+			path = Audio;
+			sourceTree = "<group>";
+		};
+		E3D6692E4AE46FDC6C2AFE5D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				0D8D21EAF749ACBCAE9D2C72 /* AudioHarbor.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		E6C5048052C27282B56C44D3 /* Playback */ = {
+			isa = PBXGroup;
+			children = (
+				594FBEA5AC9E0B4C87D22424 /* PlaybackService.swift */,
+			);
+			path = Playback;
+			sourceTree = "<group>";
+		};
+		EAEBC954F636F8E28044E1EC /* Effects */ = {
+			isa = PBXGroup;
+			children = (
+				7791DBBE83A46FD67D0FF7AF /* EffectHost.swift */,
+				7F9A2B3C4D5E6F708192A3B4 /* PluginEditorPresenter.swift */,
+				995ED09285F2DF7B44DADBB3 /* PluginModels.swift */,
+			);
+			path = Effects;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		8B50C79F26C86498C3A85358 /* AudioHarbor */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = ED64E8BEF65FAB40847D7991 /* Build configuration list for PBXNativeTarget "AudioHarbor" */;
+			buildPhases = (
+				A021CA33B917DA06C6A82A92 /* Sources */,
+				C47B4952F7172EC815265268 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AudioHarbor;
+			packageProductDependencies = (
+			);
+			productName = AudioHarbor;
+			productReference = 0D8D21EAF749ACBCAE9D2C72 /* AudioHarbor.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		78263C0366AB0019EC2C10A3 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					8B50C79F26C86498C3A85358 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 50D0BBF992C16F56D9560DCB /* Build configuration list for PBXProject "AudioHarbor" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 4F541CA308995E1C74791727;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = E3D6692E4AE46FDC6C2AFE5D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				8B50C79F26C86498C3A85358 /* AudioHarbor */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		C47B4952F7172EC815265268 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				73A1610AE13FE6B475EA9F6A /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A021CA33B917DA06C6A82A92 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				72AC3D43010A0065825644E4 /* AppModel.swift in Sources */,
+				45123F24370F36D3534914B2 /* AudioHarborApp.swift in Sources */,
+				FE99BD8D8179E02001401C60 /* BookmarkStore.swift in Sources */,
+				691EA766B90873B6014E4270 /* CassetteDeckRig.swift in Sources */,
+				5FC40BA03A1E8DC0E96BEC95 /* CoreAudioPlaybackEngine.swift in Sources */,
+				C8A1E5C001ABCDE101 /* AHExceptionCatcher.m in Sources */,
+				421C5622F95862C6D870443C /* DSDDecoder.swift in Sources */,
+				DC90E70F88326A380D4E5DAB /* DeckStage.swift in Sources */,
+				D25979B7C11D28CF35877269 /* EffectHost.swift in Sources */,
+				6E8F1A2B3C4D5E6F708192A3 /* PluginEditorPresenter.swift in Sources */,
+				03A68829B59F9C3173CD4276 /* EffectsRackView.swift in Sources */,
+				209A370E3F37F3DE158DBB2A /* HALAudioPlayer.swift in Sources */,
+				2FC801E8754C2241E956439F /* HarborChrome.swift in Sources */,
+				22B5B5A591CFB5033382EC3E /* HarborTheme.swift in Sources */,
+				59C959CD2CD6F92F99C9BDDA /* LibraryService.swift in Sources */,
+				3A6F62480B2FB5FA4768A615 /* LibraryView.swift in Sources */,
+				11F1015657E5FD73E02319C3 /* ListeningRig.swift in Sources */,
+				8924E3092AEAEC3714A2AC9F /* MacAudioDeviceController.swift in Sources */,
+				E9E467C8091B249C1755CD7F /* MetadataReader.swift in Sources */,
+				2E6EEF2214B20646F6C97B99 /* Models.swift in Sources */,
+				4E77DAD93A74C594DC36FDAE /* NowPlayingView.swift in Sources */,
+				A9C101DEC401000000000001 /* DeckContextRail.swift in Sources */,
+				99450450F3D9268044E4C720 /* PlaybackEngine.swift in Sources */,
+				F1B40DCA41BE9ED20B03C3AB /* PlaybackService.swift in Sources */,
+				FBF3EECAC0BB2240010ABF1F /* PlaylistService.swift in Sources */,
+				A692674AF7B4415B48E15E8B /* PlaylistsView.swift in Sources */,
+				84FB1B82B04EC42053D29986 /* PluginModels.swift in Sources */,
+				F25714D3F82281FBF48EF86F /* ReceiverVURig.swift in Sources */,
+				E7B419AAC9F68C0C95416D42 /* ReelToReelRig.swift in Sources */,
+				B1ABBE0CD9CC54DC22612982 /* RootView.swift in Sources */,
+				0868606C96FE00837683B871 /* SettingsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		0DC06FB5B33C99621EAD83FA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		4E2EDC2E785C9B5BF1D42673 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				AD_HOC_CODE_SIGNING_ALLOWED = YES;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = AudioHarbor/Resources/AudioHarbor.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = C9LBGZNZ6P;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AudioHarbor/Resources/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Audio Harbor";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.audioharbor.player;
+				PRODUCT_NAME = AudioHarbor;
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "AudioHarbor/Resources/AudioHarbor-Bridging-Header.h";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		7AE6542F4EAAE9B8B8F7D06E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		E3DE19DDF511C6A37E4689D8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				AD_HOC_CODE_SIGNING_ALLOWED = YES;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = AudioHarbor/Resources/AudioHarbor.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = C9LBGZNZ6P;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AudioHarbor/Resources/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Audio Harbor";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.audioharbor.player;
+				PRODUCT_NAME = AudioHarbor;
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "AudioHarbor/Resources/AudioHarbor-Bridging-Header.h";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		50D0BBF992C16F56D9560DCB /* Build configuration list for PBXProject "AudioHarbor" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7AE6542F4EAAE9B8B8F7D06E /* Debug */,
+				0DC06FB5B33C99621EAD83FA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		ED64E8BEF65FAB40847D7991 /* Build configuration list for PBXNativeTarget "AudioHarbor" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E3DE19DDF511C6A37E4689D8 /* Debug */,
+				4E2EDC2E785C9B5BF1D42673 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 78263C0366AB0019EC2C10A3 /* Project object */;
+}
