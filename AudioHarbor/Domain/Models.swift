@@ -101,6 +101,12 @@ struct Track: Identifiable, Hashable, Sendable {
     }
 }
 
+struct LibraryFacet: Identifiable, Hashable, Sendable {
+    var id: String
+    var name: String
+    var count: Int
+}
+
 struct Album: Identifiable, Hashable, Sendable {
     let id: UUID
     var title: String
@@ -108,6 +114,7 @@ struct Album: Identifiable, Hashable, Sendable {
     var year: Int?
     var tracks: [Track]
     var artworkData: Data?
+    var artworkHash: String?
 
     init(
         id: UUID? = nil,
@@ -115,7 +122,8 @@ struct Album: Identifiable, Hashable, Sendable {
         artist: String,
         year: Int? = nil,
         tracks: [Track],
-        artworkData: Data? = nil
+        artworkData: Data? = nil,
+        artworkHash: String? = nil
     ) {
         self.id = id ?? Self.stableID(title: title, artist: artist)
         self.title = title
@@ -123,6 +131,7 @@ struct Album: Identifiable, Hashable, Sendable {
         self.year = year
         self.tracks = tracks
         self.artworkData = artworkData
+        self.artworkHash = artworkHash
     }
 
     static func stableID(title: String, artist: String) -> UUID {

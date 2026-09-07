@@ -14,8 +14,23 @@ final class LibraryService {
     private(set) var folders: [FolderBookmark] = []
     private(set) var isScanning = false
     private(set) var scanProgressText: String?
-    var searchQuery = ""
+    var searchQuery = "" {
+        didSet {
+            guard oldValue != searchQuery else { return }
+            refreshSearchHits()
+        }
+    }
     var showsDemoLibrary = true
+
+    private(set) var artistFacets: [LibraryFacet] = []
+    private(set) var labelFacets: [LibraryFacet] = []
+    private(set) var yearFacets: [LibraryFacet] = []
+    private(set) var folderSearchHits: [FolderSearchHit] = []
+    private var searchHitPaths: Set<String>?
+    private var tracksByArtistKey: [String: [Track]] = [:]
+    private var tracksByLabelKey: [String: [Track]] = [:]
+    private var tracksByYear: [Int: [Track]] = [:]
+    private var indexedDirectoryPaths: [String] = []
 
     /// Smart (metadata albums) vs Folders (filesystem tree).
     var browseMode: CatalogueBrowseMode = {
@@ -28,9 +43,19 @@ final class LibraryService {
     }
 
     /// Selected shelf root while browsing folders (`nil` = root picker).
-    var folderRootID: UUID?
+    var folderRootID: UUID? {
+        didSet {
+            guard oldValue != folderRootID else { return }
+            refreshSearchHits()
+        }
+    }
     /// Relative path components under the selected root.
-    var folderPathComponents: [String] = []
+    var folderPathComponents: [String] = [] {
+        didSet {
+            guard oldValue != folderPathComponents else { return }
+            refreshSearchHits()
+        }
+    }
 
     /// Resolved URLs currently held open via security scope.
     private(set) var accessibleFolderURLs: [UUID: URL] = [:]
@@ -62,30 +87,34 @@ final class LibraryService {
 
     var allTracks: [Track] { tracks }
 
-    var allArtists: [String] {
-        Array(Set(tracks.map(\.artist).filter { !$0.isEmpty && $0 != "Unknown Artist" }))
-            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
-    }
+    var allArtists: [String] { artistFacets.map(\.name) }
 
-    var allYears: [Int] {
-        Array(Set(tracks.compactMap(\.year))).sorted(by: >)
-    }
+    var allYears: [Int] { yearFacets.compactMap { Int($0.name) } }
 
-    var allLabels: [String] {
-        Array(Set(tracks.flatMap(\.labels)))
-            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
-    }
+    var allLabels: [String] { labelFacets.map(\.name) }
 
     var filteredAlbums: [Album] {
-        let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty else { return albums }
-        guard let hits = searchIndex.matchingIndices(query: q, trackCount: tracks.count) else {
-            return albums
-        }
-        let paths = Set(hits.compactMap { tracks.indices.contains($0) ? tracks[$0].url.path : nil })
+        guard let paths = searchHitPaths else { return albums }
         return albums.filter { album in
             album.tracks.contains { paths.contains($0.url.path) }
         }
+    }
+
+    func visibleTracks(in album: Album) -> [Track] {
+        guard let paths = searchHitPaths else { return album.tracks }
+        return album.tracks.filter { paths.contains($0.url.path) }
+    }
+
+    func tracks(forArtist name: String) -> [Track] {
+        tracksByArtistKey[name.lowercased()] ?? []
+    }
+
+    func tracks(forLabel name: String) -> [Track] {
+        tracksByLabelKey[name.lowercased()] ?? []
+    }
+
+    func tracks(forYear year: Int) -> [Track] {
+        tracksByYear[year] ?? []
     }
 
     var selectedFolderRoot: FolderBookmark? {
@@ -120,59 +149,6 @@ final class LibraryService {
         return folders.filter {
             $0.name.localizedCaseInsensitiveContains(q)
                 || $0.displayPath.localizedCaseInsensitiveContains(q)
-        }
-    }
-
-    /// Recursive hits under the current directory scope (or all roots at picker).
-    var folderSearchHits: [FolderSearchHit] {
-        let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty else { return [] }
-
-        let scopes: [(root: FolderBookmark, base: URL)]
-        if let root = selectedFolderRoot, let base = folderBrowseURL {
-            scopes = [(root, base)]
-        } else {
-            scopes = folders.compactMap { bookmark in
-                guard let url = accessibleFolderURLs[bookmark.id] else { return nil }
-                return (bookmark, url)
-            }
-        }
-
-        var hits: [FolderSearchHit] = []
-        var seen = Set<String>()
-        let matchingTracks: [Track]
-        if let indices = searchIndex.matchingIndices(query: q, trackCount: tracks.count) {
-            matchingTracks = indices.compactMap { tracks.indices.contains($0) ? tracks[$0] : nil }
-        } else {
-            matchingTracks = []
-        }
-
-        for (root, base) in scopes {
-            let prefix = normalizedPrefix(base.path)
-            for track in matchingTracks where track.url.path.hasPrefix(prefix) {
-                guard seen.insert(track.url.path).inserted else { continue }
-                hits.append(
-                    FolderSearchHit(
-                        entry: FolderBrowseEntry(name: track.url.lastPathComponent, url: track.url, kind: .audioFile),
-                        relativePath: relativePath(for: track.url, under: root)
-                    )
-                )
-            }
-
-            for directory in indexedDirectories(under: base) {
-                guard directory.lastPathComponent.localizedCaseInsensitiveContains(q) else { continue }
-                guard seen.insert(directory.path).inserted else { continue }
-                hits.append(
-                    FolderSearchHit(
-                        entry: FolderBrowseEntry(name: directory.lastPathComponent, url: directory, kind: .directory),
-                        relativePath: relativePath(for: directory, under: root)
-                    )
-                )
-            }
-        }
-
-        return hits.sorted {
-            $0.relativePath.localizedStandardCompare($1.relativePath) == .orderedAscending
         }
     }
 
@@ -297,6 +273,24 @@ final class LibraryService {
         return (track, queue.isEmpty ? [track] : queue)
     }
 
+    /// Immediate files in `url`, or every indexed track under it if the folder only has albums.
+    func directoryPlaybackQueue(at url: URL) -> (track: Track, queue: [Track])? {
+        let parentPath = normalizedPath(url.path)
+        let immediate = (tracksByParent[parentPath] ?? []).sorted {
+            $0.url.lastPathComponent.localizedStandardCompare($1.url.lastPathComponent) == .orderedAscending
+        }
+        if let first = immediate.first {
+            return (first, immediate)
+        }
+
+        let prefix = normalizedPrefix(url.path)
+        let nested = tracks
+            .filter { $0.url.path.hasPrefix(prefix) }
+            .sorted { $0.url.path.localizedStandardCompare($1.url.path) == .orderedAscending }
+        guard let first = nested.first else { return nil }
+        return (first, nested)
+    }
+
     func addLabel(_ label: String, to track: Track) {
         let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -350,6 +344,8 @@ final class LibraryService {
         }
         reindexLookups()
         rebuildAlbums()
+        rebuildFacets()
+        refreshSearchHits()
     }
 
     private func labeled(_ track: Track) -> Track {
@@ -411,7 +407,7 @@ final class LibraryService {
                 loadDemoLibrary()
             } else {
                 showsDemoLibrary = false
-                applyIndexedRecords(remaining)
+                await applyIndexedRecords(remaining)
             }
         }
     }
@@ -527,7 +523,7 @@ final class LibraryService {
         let indexed = await CatalogueIndexStore.shared.loadAll()
         if !indexed.isEmpty {
             showsDemoLibrary = false
-            applyIndexedRecords(indexed)
+            await applyIndexedRecords(indexed)
             await refreshIndex(force: false)
         } else if !accessibleFolderURLs.isEmpty {
             showsDemoLibrary = false
@@ -595,16 +591,21 @@ final class LibraryService {
             loadDemoLibrary()
         } else {
             showsDemoLibrary = false
-            applyIndexedRecords(loaded)
+            await applyIndexedRecords(loaded)
             let hashes = await CatalogueIndexStore.shared.artworkHashes()
             ArtworkCache.shared.removeUnreferenced(keeping: hashes)
         }
     }
 
-    private func applyIndexedRecords(_ records: [IndexedTrackRecord]) {
+    private func applyIndexedRecords(_ records: [IndexedTrackRecord]) async {
         tracks = records.map { $0.asTrack(labelsByPath: labelsByPath) }
         reindexLookups()
-        rebuildAlbums()
+        let snapshot = tracks
+        albums = await Task.detached(priority: .userInitiated) {
+            LibraryService.makeAlbums(from: snapshot)
+        }.value
+        rebuildFacets()
+        refreshSearchHits()
     }
 
     private func reindexLookups() {
@@ -612,23 +613,166 @@ final class LibraryService {
         tracksByParent = Dictionary(grouping: tracks) { $0.url.deletingLastPathComponent().path }
         searchIndex.rebuild(from: tracks)
         indexedTrackCount = showsDemoLibrary ? 0 : tracks.count
+        rebuildDirectoryCatalog()
     }
 
     private func rebuildAlbums() {
-        let grouped = Dictionary(grouping: tracks) { "\($0.album)|\($0.artist)" }
-        albums = grouped.values
+        albums = Self.makeAlbums(from: tracks)
+    }
+
+    nonisolated private static func makeAlbums(from tracks: [Track]) -> [Album] {
+        Dictionary(grouping: tracks) { "\($0.album)|\($0.artist)" }
+            .values
             .map { list in
                 let first = list[0]
-                let art = list.lazy.compactMap { ArtworkCache.data(for: $0) }.first
                 return Album(
                     title: first.album,
                     artist: first.artist,
                     year: first.year,
                     tracks: list.sorted { ($0.trackNumber ?? 9999) < ($1.trackNumber ?? 9999) },
-                    artworkData: art
+                    artworkHash: list.first(where: { $0.artworkHash != nil })?.artworkHash
                 )
             }
             .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+    }
+
+    private func rebuildFacets() {
+        var artists: [String: [Track]] = [:]
+        var labels: [String: [Track]] = [:]
+        var years: [Int: [Track]] = [:]
+        artists.reserveCapacity(256)
+        labels.reserveCapacity(64)
+        years.reserveCapacity(64)
+
+        for track in tracks {
+            let artistKey = track.artist.lowercased()
+            if !track.artist.isEmpty {
+                artists[artistKey, default: []].append(track)
+            }
+            for label in track.labels {
+                labels[label.lowercased(), default: []].append(track)
+            }
+            if let year = track.year {
+                years[year, default: []].append(track)
+            }
+        }
+
+        func sortAlbumThenTrack(_ lhs: Track, _ rhs: Track) -> Bool {
+            let album = lhs.album.localizedCaseInsensitiveCompare(rhs.album)
+            if album != .orderedSame { return album == .orderedAscending }
+            return (lhs.trackNumber ?? 9999) < (rhs.trackNumber ?? 9999)
+        }
+
+        func sortArtistThenAlbum(_ lhs: Track, _ rhs: Track) -> Bool {
+            let artist = lhs.artist.localizedCaseInsensitiveCompare(rhs.artist)
+            if artist != .orderedSame { return artist == .orderedAscending }
+            return lhs.album.localizedCaseInsensitiveCompare(rhs.album) == .orderedAscending
+        }
+
+        for key in artists.keys { artists[key]?.sort(by: sortAlbumThenTrack) }
+        for key in labels.keys { labels[key]?.sort(by: sortArtistThenAlbum) }
+        for key in years.keys { years[key]?.sort(by: sortArtistThenAlbum) }
+
+        tracksByArtistKey = artists
+        tracksByLabelKey = labels
+        tracksByYear = years
+
+        artistFacets = artists.values.compactMap { group in
+            let name = group.first?.artist ?? ""
+            guard !name.isEmpty, name != "Unknown Artist" else { return nil }
+            return LibraryFacet(id: "artist-\(name)", name: name, count: group.count)
+        }
+        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+
+        labelFacets = labels.map { key, group in
+            let name = group.flatMap(\.labels).first { $0.lowercased() == key } ?? key
+            return LibraryFacet(id: "label-\(name)", name: name, count: group.count)
+        }
+        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+
+        yearFacets = years.keys.sorted(by: >).map { year in
+            LibraryFacet(id: "year-\(year)", name: String(year), count: years[year]?.count ?? 0)
+        }
+    }
+
+    private func refreshSearchHits() {
+        let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else {
+            searchHitPaths = nil
+            folderSearchHits = []
+            return
+        }
+        if let indices = searchIndex.matchingIndices(query: q, trackCount: tracks.count) {
+            searchHitPaths = Set(indices.compactMap { tracks.indices.contains($0) ? tracks[$0].url.path : nil })
+        } else {
+            searchHitPaths = []
+        }
+        folderSearchHits = computeFolderHits(query: q)
+    }
+
+    private func computeFolderHits(query: String) -> [FolderSearchHit] {
+        let scopes: [(root: FolderBookmark, base: URL)]
+        if let root = selectedFolderRoot, let base = folderBrowseURL {
+            scopes = [(root, base)]
+        } else {
+            scopes = folders.compactMap { bookmark in
+                guard let url = accessibleFolderURLs[bookmark.id] else { return nil }
+                return (bookmark, url)
+            }
+        }
+
+        var hits: [FolderSearchHit] = []
+        var seen = Set<String>()
+        let matchingTracks: [Track]
+        if let paths = searchHitPaths {
+            matchingTracks = paths.compactMap { tracksByPath[$0] }
+        } else {
+            matchingTracks = []
+        }
+
+        for (root, base) in scopes {
+            let prefix = normalizedPrefix(base.path)
+            for track in matchingTracks where track.url.path.hasPrefix(prefix) {
+                guard seen.insert(track.url.path).inserted else { continue }
+                hits.append(
+                    FolderSearchHit(
+                        entry: FolderBrowseEntry(name: track.url.lastPathComponent, url: track.url, kind: .audioFile),
+                        relativePath: relativePath(for: track.url, under: root)
+                    )
+                )
+            }
+
+            for path in indexedDirectoryPaths where path.hasPrefix(prefix) {
+                let url = URL(fileURLWithPath: path, isDirectory: true)
+                guard url.lastPathComponent.localizedCaseInsensitiveContains(query) else { continue }
+                guard seen.insert(path).inserted else { continue }
+                hits.append(
+                    FolderSearchHit(
+                        entry: FolderBrowseEntry(name: url.lastPathComponent, url: url, kind: .directory),
+                        relativePath: relativePath(for: url, under: root)
+                    )
+                )
+            }
+        }
+
+        return hits.sorted {
+            $0.relativePath.localizedStandardCompare($1.relativePath) == .orderedAscending
+        }
+    }
+
+    private func rebuildDirectoryCatalog() {
+        var dirs = Set<String>()
+        dirs.reserveCapacity(tracks.count)
+        for track in tracks {
+            var directory = track.url.deletingLastPathComponent()
+            while directory.path.count > 1 {
+                if !dirs.insert(directory.path).inserted { break }
+                let parent = directory.deletingLastPathComponent()
+                if parent.path == directory.path { break }
+                directory = parent
+            }
+        }
+        indexedDirectoryPaths = Array(dirs)
     }
 
     private func normalizedPath(_ path: String) -> String {
@@ -711,6 +855,8 @@ final class LibraryService {
         tracks = demo
         reindexLookups()
         rebuildAlbums()
+        rebuildFacets()
+        refreshSearchHits()
     }
 }
 

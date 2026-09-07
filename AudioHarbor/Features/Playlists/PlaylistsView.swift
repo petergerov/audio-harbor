@@ -143,7 +143,7 @@ struct PlaylistsView: View {
                     ForEach(appModel.playlists.playlists.filter { !$0.isSmart }) { playlist in
                         sidebarRow(
                             title: playlist.name,
-                            subtitle: "\(trackCount(for: .playlist(playlist.id))) tracks",
+                            subtitle: "\(playlist.trackPaths.count) tracks",
                             systemImage: "music.note.list",
                             item: .playlist(playlist.id)
                         )
@@ -169,21 +169,21 @@ struct PlaylistsView: View {
             }
 
             Section {
-                if appModel.library.allArtists.isEmpty {
+                if appModel.library.artistFacets.isEmpty {
                     Text("No artists yet")
                         .font(HarborFont.body(13))
                         .foregroundStyle(HarborColor.ivoryDim)
                         .listRowBackground(HarborColor.faceplate)
                 } else {
-                    ForEach(appModel.library.allArtists, id: \.self) { artist in
+                    ForEach(appModel.library.artistFacets) { facet in
                         sidebarRow(
-                            title: artist,
-                            subtitle: "\(trackCount(for: .artist(artist))) tracks",
+                            title: facet.name,
+                            subtitle: "\(facet.count) tracks",
                             systemImage: "person.wave.2",
-                            item: .artist(artist)
+                            item: .artist(facet.name)
                         )
                         .contextMenu {
-                            Button("Play") { play(item: .artist(artist)) }
+                            Button("Play") { play(item: .artist(facet.name)) }
                         }
                     }
                 }
@@ -192,21 +192,21 @@ struct PlaylistsView: View {
             }
 
             Section {
-                if appModel.library.allLabels.isEmpty {
+                if appModel.library.labelFacets.isEmpty {
                     Text("Add labels from Catalogue (right‑click a track).")
                         .font(HarborFont.body(13))
                         .foregroundStyle(HarborColor.ivoryDim)
                         .listRowBackground(HarborColor.faceplate)
                 } else {
-                    ForEach(appModel.library.allLabels, id: \.self) { label in
+                    ForEach(appModel.library.labelFacets) { facet in
                         sidebarRow(
-                            title: label,
-                            subtitle: "\(trackCount(for: .label(label))) tracks",
+                            title: facet.name,
+                            subtitle: "\(facet.count) tracks",
                             systemImage: "tag",
-                            item: .label(label)
+                            item: .label(facet.name)
                         )
                         .contextMenu {
-                            Button("Play") { play(item: .label(label)) }
+                            Button("Play") { play(item: .label(facet.name)) }
                         }
                     }
                 }
@@ -215,16 +215,17 @@ struct PlaylistsView: View {
             }
 
             Section {
-                if appModel.library.allYears.isEmpty {
+                if appModel.library.yearFacets.isEmpty {
                     Text("No release years in metadata yet")
                         .font(HarborFont.body(13))
                         .foregroundStyle(HarborColor.ivoryDim)
                         .listRowBackground(HarborColor.faceplate)
                 } else {
-                    ForEach(appModel.library.allYears, id: \.self) { year in
+                    ForEach(appModel.library.yearFacets) { facet in
+                        let year = Int(facet.name) ?? 0
                         sidebarRow(
-                            title: String(year),
-                            subtitle: "\(trackCount(for: .year(year))) tracks",
+                            title: facet.name,
+                            subtitle: "\(facet.count) tracks",
                             systemImage: "calendar",
                             item: .year(year)
                         )
@@ -314,11 +315,13 @@ struct PlaylistsView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
+                    let playlists = appModel.playlists.playlists.filter { !$0.isSmart }
+                    let labels = appModel.library.allLabels
                     List {
                         ForEach(tracks) { track in
                             TrackRow(
                                 track: track,
-                                playlists: appModel.playlists.playlists.filter { !$0.isSmart },
+                                playlists: playlists,
                                 onPlay: {
                                     appModel.playback.play(
                                         track: track,
@@ -337,7 +340,7 @@ struct PlaylistsView: View {
                                 onRemoveLabel: { label in
                                     appModel.library.removeLabel(label, from: track)
                                 },
-                                knownLabels: appModel.library.allLabels
+                                knownLabels: labels
                             )
                             .listRowBackground(HarborColor.faceplate)
                             .listRowSeparatorTint(HarborColor.aluminumDark.opacity(0.5))
@@ -365,42 +368,17 @@ struct PlaylistsView: View {
     }
 
     private func tracks(for item: PlaylistBrowserItem) -> [Track] {
-        let all = appModel.library.allTracks
         switch item {
         case .playlist(let id):
             guard let playlist = appModel.playlists.playlists.first(where: { $0.id == id }) else { return [] }
-            return appModel.playlists.tracks(for: playlist, from: all)
+            return appModel.playlists.tracks(for: playlist, from: appModel.library.allTracks)
         case .artist(let name):
-            return all
-                .filter { $0.artist.caseInsensitiveCompare(name) == .orderedSame }
-                .sorted {
-                    if $0.album.localizedCaseInsensitiveCompare($1.album) != .orderedSame {
-                        return $0.album.localizedCaseInsensitiveCompare($1.album) == .orderedAscending
-                    }
-                    return ($0.trackNumber ?? 9999) < ($1.trackNumber ?? 9999)
-                }
+            return appModel.library.tracks(forArtist: name)
         case .label(let name):
-            return all
-                .filter { track in
-                    track.labels.contains { $0.caseInsensitiveCompare(name) == .orderedSame }
-                }
-                .sorted {
-                    $0.artist.localizedCaseInsensitiveCompare($1.artist) == .orderedAscending
-                }
+            return appModel.library.tracks(forLabel: name)
         case .year(let year):
-            return all
-                .filter { $0.year == year }
-                .sorted {
-                    if $0.artist.localizedCaseInsensitiveCompare($1.artist) != .orderedSame {
-                        return $0.artist.localizedCaseInsensitiveCompare($1.artist) == .orderedAscending
-                    }
-                    return $0.album.localizedCaseInsensitiveCompare($1.album) == .orderedAscending
-                }
+            return appModel.library.tracks(forYear: year)
         }
-    }
-
-    private func trackCount(for item: PlaylistBrowserItem) -> Int {
-        tracks(for: item).count
     }
 
     private func detailTitle(for item: PlaylistBrowserItem) -> String {
