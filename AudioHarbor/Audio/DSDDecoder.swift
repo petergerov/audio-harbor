@@ -154,6 +154,60 @@ enum DSDDecoder {
     }
 }
 
+/// Two cascaded RBJ biquads = 4th-order Butterworth. Cheap enough for real-time DSD.
+private struct BiquadCoeffs {
+    let b0: Double
+    let b1: Double
+    let b2: Double
+    let a1: Double
+    let a2: Double
+
+    static func lowpass(fc: Double, fs: Double, q: Double) -> BiquadCoeffs {
+        let w0 = 2 * Double.pi * fc / max(fs, 1)
+        let cosw = cos(w0)
+        let sinw = sin(w0)
+        let alpha = sinw / (2 * max(q, 0.05))
+        let b0 = (1 - cosw) / 2
+        let b1 = 1 - cosw
+        let b2 = (1 - cosw) / 2
+        let a0 = 1 + alpha
+        let a1 = -2 * cosw
+        let a2 = 1 - alpha
+        return BiquadCoeffs(b0: b0 / a0, b1: b1 / a0, b2: b2 / a0, a1: a1 / a0, a2: a2 / a0)
+    }
+}
+
+private struct DSDLowpass {
+    private let c1: BiquadCoeffs
+    private let c2: BiquadCoeffs
+    private var z11 = 0.0
+    private var z12 = 0.0
+    private var z21 = 0.0
+    private var z22 = 0.0
+
+    init(section1: BiquadCoeffs, section2: BiquadCoeffs) {
+        c1 = section1
+        c2 = section2
+    }
+
+    mutating func reset() {
+        z11 = 0
+        z12 = 0
+        z21 = 0
+        z22 = 0
+    }
+
+    mutating func process(_ x: Double) -> Double {
+        let y1 = c1.b0 * x + z11
+        z11 = c1.b1 * x - c1.a1 * y1 + z12
+        z12 = c1.b2 * x - c1.a2 * y1
+        let y2 = c2.b0 * y1 + z21
+        z21 = c2.b1 * y1 - c2.a1 * y2 + z22
+        z22 = c2.b2 * y1 - c2.a2 * y2
+        return y2
+    }
+}
+
 /// Memory-mapped DSF bitstream. Encodes DoP / PCM a render quantum at a time.
 final class DSDStreamSource: @unchecked Sendable {
     let header: DSDDecoder.Header
@@ -172,6 +226,11 @@ final class DSDStreamSource: @unchecked Sendable {
     private let dataEnd: Int
     /// DSD bytes packed into one PCM/DoP frame (2 = 16 DSD bits = standard DoP).
     private let bytesPerPCM: Int
+    private let bitsPerFrame: Int
+    private let totalBits: UInt64
+    private let lock = NSLock()
+    private var filters: [DSDLowpass]
+    private var nextBit: Int
 
     init(url: URL, strategy: DSDStrategy) throws {
         let map = try NSData(contentsOf: url, options: [.mappedIfSafe])
@@ -208,8 +267,22 @@ final class DSDStreamSource: @unchecked Sendable {
         self.bytes = map.bytes.assumingMemoryBound(to: UInt8.self)
         let bitsPerFrame = bytesPerPCM * 8
         guard bitsPerFrame > 0, header.sampleCountPerChannel > 0 else { throw DSDError.truncated }
+        self.bitsPerFrame = bitsPerFrame
+        self.totalBits = header.sampleCountPerChannel
         self.frameCount = Int(header.sampleCountPerChannel / UInt64(bitsPerFrame))
         self.sampleRate = Double(header.sampleRate / bitsPerFrame)
+        self.nextBit = 0
+        if preferDoP {
+            self.filters = []
+        } else {
+            let fs = Double(header.sampleRate)
+            let fc = min(20_000, Double(header.sampleRate / bitsPerFrame) * 0.40)
+            let section1 = BiquadCoeffs.lowpass(fc: fc, fs: fs, q: 0.541196)
+            let section2 = BiquadCoeffs.lowpass(fc: fc, fs: fs, q: 1.306563)
+            self.filters = (0..<header.channelCount).map { _ in
+                DSDLowpass(section1: section1, section2: section2)
+            }
+        }
         guard frameCount > 0, channelCount > 0, sampleRate > 0 else { throw DSDError.truncated }
     }
 
@@ -237,26 +310,30 @@ final class DSDStreamSource: @unchecked Sendable {
         let src = bytes
         let channels = channelCount
         let out = dest.assumingMemoryBound(to: UInt8.self)
-        var o = 0
-        for frame in startFrame..<(startFrame + frames) {
-            let byteIndex = frame * bytesPerPCM
-            for ch in 0..<channels {
-                if isDoP {
+        if isDoP {
+            var o = 0
+            for frame in startFrame..<(startFrame + frames) {
+                let byteIndex = frame * bytesPerPCM
+                for ch in 0..<channels {
                     let payload = read16(src: src, channel: ch, byteIndex: byteIndex)
                     let marker: UInt8 = (frame & 1) == 0 ? 0x05 : 0xFA
                     out[o] = UInt8(payload & 0xFF)
                     out[o + 1] = UInt8((payload >> 8) & 0xFF)
                     out[o + 2] = marker
-                } else {
-                    let sample = pcmInt24(src: src, channel: ch, byteIndex: byteIndex)
-                    out[o] = UInt8(sample & 0xFF)
-                    out[o + 1] = UInt8((sample >> 8) & 0xFF)
-                    out[o + 2] = UInt8((sample >> 16) & 0xFF)
+                    o += 3
                 }
-                o += 3
             }
+            return frames
         }
-        return frames
+
+        var o = 0
+        return decodePCM(from: startFrame, count: frames) { _, _, sample in
+            let v = Self.int24(from: sample)
+            out[o] = UInt8(v & 0xFF)
+            out[o + 1] = UInt8((v >> 8) & 0xFF)
+            out[o + 2] = UInt8((v >> 16) & 0xFF)
+            o += 3
+        }
     }
 
     /// Interleaved float −1…1 for the Shared AVAudioEngine path.
@@ -264,18 +341,28 @@ final class DSDStreamSource: @unchecked Sendable {
     func copyFloatInterleaved(at startFrame: Int, count: Int, into dest: UnsafeMutablePointer<Float>) -> Int {
         let frames = min(count, max(0, frameCount - startFrame))
         guard frames > 0 else { return 0 }
-        let src = bytes
         var o = 0
-        let scale = 1.0 / Double(bytesPerPCM * 8)
-        for frame in startFrame..<(startFrame + frames) {
-            let byteIndex = frame * bytesPerPCM
-            for ch in 0..<channelCount {
-                let acc = popcount(src: src, channel: ch, byteIndex: byteIndex)
-                dest[o] = Float((Double(acc) * 2.0 - Double(bytesPerPCM * 8)) * scale)
-                o += 1
-            }
+        return decodePCM(from: startFrame, count: frames) { _, _, sample in
+            dest[o] = sample
+            o += 1
         }
-        return frames
+    }
+
+    /// Non-interleaved float planes (AVAudioPCMBuffer.floatChannelData).
+    @discardableResult
+    func copyFloatPlanar(
+        at startFrame: Int,
+        count: Int,
+        planes: UnsafePointer<UnsafeMutablePointer<Float>>,
+        channelCount destChannels: Int
+    ) -> Int {
+        let frames = min(count, max(0, frameCount - startFrame))
+        guard frames > 0 else { return 0 }
+        let channels = min(self.channelCount, destChannels)
+        return decodePCM(from: startFrame, count: frames) { channel, frame, sample in
+            guard channel < channels else { return }
+            planes[channel][frame] = sample
+        }
     }
 
     /// Only for tiny files / tests. Prefer streaming.
@@ -296,20 +383,100 @@ final class DSDStreamSource: @unchecked Sendable {
         )
     }
 
-    private func pcmInt24(src: UnsafePointer<UInt8>, channel: Int, byteIndex: Int) -> Int32 {
-        let bits = bytesPerPCM * 8
-        let acc = popcount(src: src, channel: channel, byteIndex: byteIndex)
-        let sample = Int32((Double(acc * 2 - bits) / Double(bits)) * Double(1 << 22))
-        return max(min(sample, (1 << 23) - 1), -(1 << 23))
+    /// Sequential 4th-order Butterworth at the DSD rate, then keep every `bitsPerFrame` sample.
+    @discardableResult
+    private func decodePCM(
+        from startFrame: Int,
+        count: Int,
+        emit: (_ channel: Int, _ frame: Int, _ sample: Float) -> Void
+    ) -> Int {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !filters.isEmpty else { return 0 }
+
+        let startBit = startFrame * bitsPerFrame
+        if startBit != nextBit {
+            preroll(to: startBit)
+        }
+
+        let src = bytes
+        for frame in 0..<count {
+            let base = nextBit
+            for ch in 0..<channelCount {
+                var y = 0.0
+                var cachedByteIndex = Int.min
+                var cachedByte: UInt8 = 0
+                for i in 0..<bitsPerFrame {
+                    let x = Double(signedBit(
+                        src,
+                        channel: ch,
+                        bitIndex: base + i,
+                        cachedByteIndex: &cachedByteIndex,
+                        cachedByte: &cachedByte
+                    ))
+                    y = filters[ch].process(x)
+                }
+                emit(ch, frame, Float(max(-1, min(1, y))))
+            }
+            nextBit = base + bitsPerFrame
+        }
+        return count
     }
 
-    private func popcount(src: UnsafePointer<UInt8>, channel: Int, byteIndex: Int) -> Int {
-        var acc = 0
-        for i in 0..<bytesPerPCM {
-            let raw = byte(src, channel: channel, index: byteIndex + i)
-            acc += Int((lsbFirst ? raw : raw.bitReversed).nonzeroBitCount)
+    private func preroll(to startBit: Int) {
+        for i in filters.indices { filters[i].reset() }
+        nextBit = 0
+        guard startBit > 0 else { return }
+        let prerollBits = min(startBit, bitsPerFrame * 48)
+        let from = startBit - prerollBits
+        let src = bytes
+        var bit = from
+        while bit < startBit {
+            let take = min(bitsPerFrame, startBit - bit)
+            for ch in 0..<channelCount {
+                var cachedByteIndex = Int.min
+                var cachedByte: UInt8 = 0
+                for i in 0..<take {
+                    let x = Double(signedBit(
+                        src,
+                        channel: ch,
+                        bitIndex: bit + i,
+                        cachedByteIndex: &cachedByteIndex,
+                        cachedByte: &cachedByte
+                    ))
+                    _ = filters[ch].process(x)
+                }
+            }
+            bit += take
         }
-        return acc
+        nextBit = startBit
+    }
+
+    private func signedBit(
+        _ src: UnsafePointer<UInt8>,
+        channel: Int,
+        bitIndex: Int,
+        cachedByteIndex: inout Int,
+        cachedByte: inout UInt8
+    ) -> Float {
+        if bitIndex < 0 || UInt64(bitIndex) >= totalBits { return 0 }
+        let byteIndex = bitIndex >> 3
+        if byteIndex != cachedByteIndex {
+            cachedByteIndex = byteIndex
+            cachedByte = byte(src, channel: channel, index: byteIndex)
+        }
+        let on: Bool
+        if lsbFirst {
+            on = ((cachedByte >> (bitIndex & 7)) & 1) != 0
+        } else {
+            on = ((cachedByte >> (7 - (bitIndex & 7))) & 1) != 0
+        }
+        return on ? 1 : -1
+    }
+
+    private static func int24(from sample: Float) -> Int32 {
+        let v = Int32((sample * Float((1 << 23) - 1)).rounded())
+        return max(min(v, (1 << 23) - 1), -(1 << 23))
     }
 
     private func read16(src: UnsafePointer<UInt8>, channel: Int, byteIndex: Int) -> UInt16 {

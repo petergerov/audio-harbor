@@ -601,7 +601,7 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         let rate = dsdStream?.sampleRate ?? 1
         let total = dsdStream?.frameCount ?? 0
         dsdPlayFrame = min(total, max(0, Int((seekOffset * rate).rounded(.down))))
-        while dsdQueuedChunks < 4 {
+        while dsdQueuedChunks < 8 {
             guard scheduleOneDSDChunk(generation: generation) else { break }
         }
     }
@@ -614,24 +614,20 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         let remaining = source.frameCount - dsdPlayFrame
         guard remaining > 0 else { return false }
 
-        let frames = min(4_096, remaining)
-        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(frames)) else {
+        let frames = min(8_192, remaining)
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(frames)),
+              let planes = buffer.floatChannelData else {
             return false
         }
 
-        var interleaved = [Float](repeating: 0, count: frames * source.channelCount)
-        let copied = interleaved.withUnsafeMutableBufferPointer { buf in
-            guard let base = buf.baseAddress else { return 0 }
-            return source.copyFloatInterleaved(at: dsdPlayFrame, count: frames, into: base)
-        }
-        guard copied > 0, let planes = buffer.floatChannelData else { return false }
+        let copied = source.copyFloatPlanar(
+            at: dsdPlayFrame,
+            count: frames,
+            planes: planes,
+            channelCount: Int(format.channelCount)
+        )
+        guard copied > 0 else { return false }
         buffer.frameLength = AVAudioFrameCount(copied)
-        let channels = source.channelCount
-        for frame in 0..<copied {
-            for channel in 0..<channels {
-                planes[channel][frame] = interleaved[frame * channels + channel]
-            }
-        }
 
         dsdPlayFrame += copied
         dsdQueuedChunks += 1

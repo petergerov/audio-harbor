@@ -15,34 +15,35 @@ struct SettingsView: View {
                         ScreenHeader(
                             kicker: "House",
                             title: "Settings",
-                            subtitle: "Output path, DSD strategy, and connected directories."
+                            subtitle: "How music plays, plus your music folders."
                         )
                     }
 
                     panel(title: "Output") {
-                        Picker("Mode", selection: $playback.outputMode) {
-                            ForEach(OutputMode.allCases) { mode in
-                                Text(mode.title).tag(mode)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .tint(HarborColor.amber)
-
-                        Text(playback.outputMode.detail)
+                        Text("How sound leaves the app. If you are unsure, leave Shared on.")
                             .font(HarborFont.body(13))
                             .foregroundStyle(HarborColor.ivoryDim)
 
+                        VStack(spacing: 0) {
+                            ForEach(Array(OutputMode.allCases.enumerated()), id: \.element.id) { index, mode in
+                                if index > 0 {
+                                    Divider().overlay(HarborColor.aluminumDark.opacity(0.45))
+                                }
+                                outputChoice(mode)
+                            }
+                        }
+
                         #if os(macOS)
-                        Text("Start with Shared. Exclusive hog-locks the DAC — use with a known-good device.")
+                        Text("Exclusive and DoP need a USB DAC. Built-in speakers and Bluetooth stay on Shared.")
                             .font(HarborFont.body(12))
                             .foregroundStyle(HarborColor.ivoryDim)
                         #else
-                        Text("On iOS, playback uses the shared session. Exclusive/DoP are Mac strengths.")
+                        Text("On iPhone, playback always uses Shared. Exclusive and DoP are Mac-only.")
                             .font(HarborFont.body(12))
                             .foregroundStyle(HarborColor.ivoryDim)
                         #endif
 
-                        Text("Inserts on the Deck rack force Shared · FX and disable Exclusive/DoP while they are loaded.")
+                        Text("Effects on the Deck switch you back to Shared until you clear the rack.")
                             .font(HarborFont.body(12))
                             .foregroundStyle(HarborColor.ivoryDim)
                     }
@@ -56,7 +57,7 @@ struct SettingsView: View {
                         .pickerStyle(.menu)
                         .tint(HarborColor.amber)
 
-                        Text("DoP keeps 1-bit streams for capable DACs. PCM conversion is the compatibility path.")
+                        Text(playback.dsdStrategy.detail)
                             .font(HarborFont.body(13))
                             .foregroundStyle(HarborColor.ivoryDim)
                     }
@@ -90,6 +91,65 @@ struct SettingsView: View {
         #if os(iOS)
         .navigationTitle("Settings")
         #endif
+    }
+
+    @ViewBuilder
+    private func outputChoice(_ mode: OutputMode) -> some View {
+        let selected = appModel.playback.outputMode == mode
+        #if os(iOS)
+        let available = !mode.isMacOnly
+        #else
+        let available = true
+        #endif
+
+        Button {
+            appModel.playback.outputMode = mode
+        } label: {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: selected ? "largecircle.fill.circle" : "circle")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(selected ? HarborColor.amber : HarborColor.aluminumDark)
+                    .padding(.top, 2)
+                    .frame(width: 22)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(mode.title)
+                            .font(HarborFont.title(14))
+                            .foregroundStyle(HarborColor.ivory)
+                        if mode == .shared {
+                            Text("Recommended")
+                                .font(HarborFont.panel(10))
+                                .foregroundStyle(HarborColor.amber)
+                        }
+                        if mode.isMacOnly {
+                            Text("Mac")
+                                .font(HarborFont.panel(10))
+                                .foregroundStyle(HarborColor.ivoryDim)
+                        }
+                    }
+                    Text(mode.blurb)
+                        .font(HarborFont.body(13))
+                        .foregroundStyle(HarborColor.ivoryDim)
+                    if selected {
+                        Text(mode.detail)
+                            .font(HarborFont.body(13))
+                            .foregroundStyle(HarborColor.ivoryDim)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 2)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+            .opacity(available ? 1 : 0.45)
+        }
+        .buttonStyle(.plain)
+        .disabled(!available)
+        .accessibilityLabel("\(mode.title). \(mode.blurb)")
+        .accessibilityHint(mode.detail)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     @ViewBuilder

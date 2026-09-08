@@ -198,16 +198,36 @@ enum OutputMode: String, CaseIterable, Identifiable, Sendable {
     var title: String {
         switch self {
         case .shared: "Shared"
-        case .exclusive: "Exclusive (bit-perfect)"
-        case .dop: "Force DoP path"
+        case .exclusive: "Exclusive"
+        case .dop: "DoP"
         }
     }
 
+    /// One line under the title — what this is for.
+    var blurb: String {
+        switch self {
+        case .shared: "Everyday listening — start here"
+        case .exclusive: "Bit-perfect into a USB DAC"
+        case .dop: "DSD files into a DSD DAC"
+        }
+    }
+
+    /// Plain-language explanation for the selected mode.
     var detail: String {
         switch self {
-        case .shared: "Uses the system mixer. Most compatible."
-        case .exclusive: "Hog mode + sample-rate match on Mac. Preserves 24-bit PCM."
-        case .dop: "Prefer DSD over PCM framing for capable DACs."
+        case .shared:
+            "Plays like any other app. Other sound still works (calls, YouTube, notifications). Fine for built-in speakers, Bluetooth, AirPlay, and headphones. If you are not sure, stay here."
+        case .exclusive:
+            "Audio Harbor takes over a USB DAC so the file plays unchanged — same sample rate, nothing mixed in. Other apps go silent. Skip this for Mac speakers, Bluetooth, or AirPlay; they cannot do exclusive."
+        case .dop:
+            "For DSF (DSD) files. Sends DSD to a DAC that understands DoP. If the DAC cannot, Audio Harbor converts to ordinary PCM so the track still plays. Ignore this unless you collect DSD."
+        }
+    }
+
+    var isMacOnly: Bool {
+        switch self {
+        case .shared: false
+        case .exclusive, .dop: true
         }
     }
 }
@@ -222,6 +242,15 @@ enum DSDStrategy: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .preferDoP: "Prefer DoP"
         case .convertToPCM: "Convert to PCM"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .preferDoP:
+            "When Output is Exclusive or DoP, try sending DSD as DoP first. If the DAC cannot, Audio Harbor converts to PCM."
+        case .convertToPCM:
+            "Always turn DSD into ordinary PCM. Safest for speakers, headphones, and DACs that do not do DSD."
         }
     }
 }
