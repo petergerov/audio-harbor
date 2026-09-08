@@ -18,7 +18,6 @@
 		421C5622F95862C6D870443C /* DSDDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE0277F8E124960C06139C61 /* DSDDecoder.swift */; };
 		45123F24370F36D3534914B2 /* AudioHarborApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 089AF7698AE7FC5C84762FE5 /* AudioHarborApp.swift */; };
 		4E77DAD93A74C594DC36FDAE /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBA8EC8CD38B2C8BDB195995 /* NowPlayingView.swift */; };
-		A9C101DEC401000000000001 /* DeckContextRail.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9C101DEC401000000000002 /* DeckContextRail.swift */; };
 		59C959CD2CD6F92F99C9BDDA /* LibraryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D98ADE5F74A9FFD2F60000B /* LibraryService.swift */; };
 		5FC40BA03A1E8DC0E96BEC95 /* CoreAudioPlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2DCF3754E5DF184BE6DDD50 /* CoreAudioPlaybackEngine.swift */; };
 		691EA766B90873B6014E4270 /* CassetteDeckRig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F113F862C9E69D188CC9DE3 /* CassetteDeckRig.swift */; };
@@ -29,6 +28,7 @@
 		8924E3092AEAEC3714A2AC9F /* MacAudioDeviceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5AC60844417CA335B0CDA96 /* MacAudioDeviceController.swift */; };
 		99450450F3D9268044E4C720 /* PlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53FFE55BC32CF1A7706C1FB8 /* PlaybackEngine.swift */; };
 		A692674AF7B4415B48E15E8B /* PlaylistsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BD0C6F97FBE4AFC33CFC218 /* PlaylistsView.swift */; };
+		A9C101DEC401000000000001 /* DeckContextRail.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9C101DEC401000000000002 /* DeckContextRail.swift */; };
 		B1ABBE0CD9CC54DC22612982 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39783E66128487305A0C7D56 /* RootView.swift */; };
 		C8A1E5C001ABCDE101 /* AHExceptionCatcher.m in Sources */ = {isa = PBXBuildFile; fileRef = C8A1E5C001ABCDE102 /* AHExceptionCatcher.m */; };
 		D25979B7C11D28CF35877269 /* EffectHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7791DBBE83A46FD67D0FF7AF /* EffectHost.swift */; };
@@ -64,6 +64,7 @@
 		995ED09285F2DF7B44DADBB3 /* PluginModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginModels.swift; sourceTree = "<group>"; };
 		9FD9C674B1601479DDAB0618 /* DeckStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckStage.swift; sourceTree = "<group>"; };
 		A2F79E705295934168D2B714 /* PlaylistService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistService.swift; sourceTree = "<group>"; };
+		A9C101DEC401000000000002 /* DeckContextRail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckContextRail.swift; sourceTree = "<group>"; };
 		B46479C25FC8808DAFFF49F9 /* ListeningRig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListeningRig.swift; sourceTree = "<group>"; };
 		BA07B3758CAB9B2E18996EDE /* HarborTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HarborTheme.swift; sourceTree = "<group>"; };
 		C8A1E5C001ABCDE102 /* AHExceptionCatcher.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AHExceptionCatcher.m; sourceTree = "<group>"; };
@@ -73,7 +74,6 @@
 		CE0277F8E124960C06139C61 /* DSDDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSDDecoder.swift; sourceTree = "<group>"; };
 		D2DCF3754E5DF184BE6DDD50 /* CoreAudioPlaybackEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreAudioPlaybackEngine.swift; sourceTree = "<group>"; };
 		DBA8EC8CD38B2C8BDB195995 /* NowPlayingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingView.swift; sourceTree = "<group>"; };
-		A9C101DEC401000000000002 /* DeckContextRail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckContextRail.swift; sourceTree = "<group>"; };
 		E2FB99AAF30D0FD2BC810C67 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		EB48620484188A3E79D0E5E8 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		F5AC60844417CA335B0CDA96 /* MacAudioDeviceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacAudioDeviceController.swift; sourceTree = "<group>"; };
@@ -431,6 +431,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = AudioHarbor/Resources/AudioHarbor.entitlements;
 				CODE_SIGN_IDENTITY = "-";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = C9LBGZNZ6P;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -438,6 +439,7 @@
 				INFOPLIST_FILE = AudioHarbor/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Audio Harbor";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
+				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -530,6 +532,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = AudioHarbor/Resources/AudioHarbor.entitlements;
 				CODE_SIGN_IDENTITY = "-";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = C9LBGZNZ6P;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -537,6 +540,7 @@
 				INFOPLIST_FILE = AudioHarbor/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Audio Harbor";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
+				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

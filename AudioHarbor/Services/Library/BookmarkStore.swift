@@ -37,17 +37,37 @@ actor BookmarkStore {
     }
 
     func makeBookmark(for url: URL) throws -> FolderBookmark {
-        #if os(macOS)
-        let options: URL.BookmarkCreationOptions = [.withSecurityScope]
-        #else
-        let options: URL.BookmarkCreationOptions = [.minimalBookmark]
-        #endif
-        let data = try url.bookmarkData(
-            options: options,
-            includingResourceValuesForKeys: nil,
-            relativeTo: nil
-        )
-        return FolderBookmark(displayPath: url.path, bookmarkData: data)
+        let started = url.startAccessingSecurityScopedResource()
+        defer {
+            if started {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        var created: FolderBookmark?
+        var coordError: NSError?
+        var bookmarkError: Error?
+        NSFileCoordinator().coordinate(
+            readingItemAt: url,
+            options: [.withoutChanges],
+            error: &coordError
+        ) { coordinated in
+            do {
+                created = try Self.bookmark(from: coordinated)
+            } catch {
+                bookmarkError = error
+            }
+        }
+        if let created {
+            return created
+        }
+        if let bookmarkError {
+            throw bookmarkError
+        }
+        if let coordError {
+            throw coordError
+        }
+        return try Self.bookmark(from: url)
     }
 
     /// Resolves and starts security-scoped access. Caller must eventually `stopAccess`.
@@ -57,14 +77,9 @@ actor BookmarkStore {
         }
 
         var isStale = false
-        #if os(macOS)
-        let resolveOptions: URL.BookmarkResolutionOptions = [.withSecurityScope]
-        #else
-        let resolveOptions: URL.BookmarkResolutionOptions = []
-        #endif
         let url = try URL(
             resolvingBookmarkData: bookmark.bookmarkData,
-            options: resolveOptions,
+            options: Self.resolutionOptions,
             relativeTo: nil,
             bookmarkDataIsStale: &isStale
         )
@@ -89,6 +104,31 @@ actor BookmarkStore {
         }
         activeURLs.removeAll()
     }
+
+    private static func bookmark(from url: URL) throws -> FolderBookmark {
+        let data = try url.bookmarkData(
+            options: creationOptions,
+            includingResourceValuesForKeys: nil,
+            relativeTo: nil
+        )
+        return FolderBookmark(displayPath: url.path, bookmarkData: data)
+    }
+
+    private static var creationOptions: URL.BookmarkCreationOptions {
+        #if os(macOS)
+        [.withSecurityScope]
+        #else
+        []
+        #endif
+    }
+
+    private static var resolutionOptions: URL.BookmarkResolutionOptions {
+        #if os(macOS)
+        [.withSecurityScope]
+        #else
+        []
+        #endif
+    }
 }
 
 enum BookmarkError: LocalizedError {
@@ -98,6 +138,57 @@ enum BookmarkError: LocalizedError {
         switch self {
         case .accessDenied(let path):
             "Could not access folder: \(path)"
+        }
+    }
+}
+
+/// iCloud Drive placeholders are hidden `*.icloud` files until downloaded.
+enum ICloudItem {
+    static func resolvedAudioURL(from item: URL, extensions: Set<String>) -> URL? {
+        let name = item.lastPathComponent
+        if name.hasSuffix(".icloud") {
+            var realName = (name as NSString).deletingPathExtension
+            if realName.hasPrefix(".") {
+                realName.removeFirst()
+            }
+            let ext = (realName as NSString).pathExtension.lowercased()
+            guard extensions.contains(ext) else { return nil }
+            return item.deletingLastPathComponent().appendingPathComponent(realName)
+        }
+        let ext = item.pathExtension.lowercased()
+        guard extensions.contains(ext) else { return nil }
+        return item
+    }
+
+    static func isHiddenJunk(_ item: URL) -> Bool {
+        let name = item.lastPathComponent
+        if name.hasSuffix(".icloud") { return false }
+        return name.hasPrefix(".")
+    }
+
+    static func ensureDownloaded(_ url: URL) async {
+        let keys: Set<URLResourceKey> = [
+            .isUbiquitousItemKey,
+            .ubiquitousItemDownloadingStatusKey
+        ]
+        guard let values = try? url.resourceValues(forKeys: keys),
+              values.isUbiquitousItem == true
+        else { return }
+
+        if values.ubiquitousItemDownloadingStatus == .current
+            || values.ubiquitousItemDownloadingStatus == .downloaded {
+            return
+        }
+
+        try? FileManager.default.startDownloadingUbiquitousItem(at: url)
+
+        for _ in 0..<150 {
+            try? await Task.sleep(for: .milliseconds(200))
+            let status = try? url.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey])
+                .ubiquitousItemDownloadingStatus
+            if status == .current || status == .downloaded {
+                return
+            }
         }
     }
 }

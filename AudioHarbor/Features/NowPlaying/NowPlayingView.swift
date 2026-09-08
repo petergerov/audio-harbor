@@ -113,7 +113,9 @@ struct NowPlayingView: View {
                     }
                     .faceplate()
 
-                    DeckRackPanel()
+                    if track != nil {
+                        DeckRackPanel()
+                    }
                 }
                 .padding(.bottom, 8)
             }

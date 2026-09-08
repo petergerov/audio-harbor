@@ -1,8 +1,8 @@
 # Audio Harbor
 
-Local audiophile player for macOS and iOS — bit-perfect where it matters, calm UI.
+Local audiophile player for macOS and iOS. Add music folders, browse a quiet catalogue, and play high-res files as they are — bit-perfect Exclusive and DoP on Mac, Shared as the stable default.
 
-**Subtitle:** Local audiophile player
+Optional AUv3 inserts sit on the Deck rack when you want processing. No streaming, no accounts, no feature maze: open a folder, hear the file.
 
 ## Docs
 

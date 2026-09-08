@@ -141,6 +141,7 @@ final class PlaybackService {
         stopSyncing()
         playbackState = .loading
         do {
+            await ICloudItem.ensureDownloaded(track.url)
             try await engine.load(track)
             engine.play()
             syncFromEngine()

@@ -56,7 +56,13 @@ final class EffectHost {
                 || type == kAudioUnitType_Panner
                 || type == kAudioUnitType_Mixer
             guard isEffectType else { return false }
+            #if os(macOS)
             return component.supportsNumberInputChannels(2, outputChannels: 2)
+            #else
+            // iOS does not support supportsNumberInputChannels API.
+            // Assume AUv3 plugins are properly filtered elsewhere.
+            return true
+            #endif
         })
 
         available = effects
@@ -221,10 +227,16 @@ final class EffectHost {
     // MARK: - Private
 
     private func isStereoCapable(_ descriptor: PluginDescriptor) -> Bool {
+        #if os(macOS)
         let desc = descriptor.audioComponentDescription
         let matches = AVAudioUnitComponentManager.shared().components(matching: desc)
         guard let component = matches.first else { return false }
         return component.supportsNumberInputChannels(2, outputChannels: 2)
+        #else
+        // iOS does not expose supportsNumberInputChannels API.
+        // Assume AUv3 plugins are filtered elsewhere and are stereo-capable.
+        return true
+        #endif
     }
 
     private func loadUnit(for slot: EffectSlotState) async throws {

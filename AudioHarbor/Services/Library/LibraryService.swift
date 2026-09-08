@@ -378,7 +378,7 @@ final class LibraryService {
         panel.prompt = "Add"
         if panel.runModal() == .OK {
             for url in panel.urls {
-                Task { await ingestFolder(url: url) }
+                claimPickerURL(url)
             }
         }
         #endif
@@ -386,7 +386,20 @@ final class LibraryService {
 
     func addFolders(urls: [URL]) {
         for url in urls {
-            Task { await ingestFolder(url: url) }
+            claimPickerURL(url)
+        }
+    }
+
+    /// Document-picker URLs die unless security scope starts in the callback, before any `Task`.
+    private func claimPickerURL(_ url: URL) {
+        let started = url.startAccessingSecurityScopedResource()
+        Task {
+            defer {
+                if started {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+            await ingestFolder(url: url)
         }
     }
 
@@ -445,21 +458,21 @@ final class LibraryService {
         guard let items = try? fm.contentsOfDirectory(
             at: url,
             includingPropertiesForKeys: [.isDirectoryKey, .isRegularFileKey],
-            options: [.skipsHiddenFiles]
+            options: [.skipsPackageDescendants]
         ) else { return [] }
 
         var directories: [FolderBrowseEntry] = []
         var files: [FolderBrowseEntry] = []
 
         for item in items {
+            if ICloudItem.isHiddenJunk(item) { continue }
             let values = try? item.resourceValues(forKeys: [.isDirectoryKey, .isRegularFileKey])
             if values?.isDirectory == true {
                 if directoryContainsSupportedAudioOnDisk(item) {
                     directories.append(FolderBrowseEntry(name: item.lastPathComponent, url: item, kind: .directory))
                 }
-            } else if values?.isRegularFile == true,
-                      Self.audioExtensions.contains(item.pathExtension.lowercased()) {
-                files.append(FolderBrowseEntry(name: item.lastPathComponent, url: item, kind: .audioFile))
+            } else if let audioURL = ICloudItem.resolvedAudioURL(from: item, extensions: Self.audioExtensions) {
+                files.append(FolderBrowseEntry(name: audioURL.lastPathComponent, url: audioURL, kind: .audioFile))
             }
         }
 
@@ -498,10 +511,11 @@ final class LibraryService {
         guard let enumerator = fm.enumerator(
             at: url,
             includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles]
+            options: [.skipsPackageDescendants]
         ) else { return false }
         while let fileURL = enumerator.nextObject() as? URL {
-            if Self.audioExtensions.contains(fileURL.pathExtension.lowercased()) {
+            if ICloudItem.isHiddenJunk(fileURL) { continue }
+            if ICloudItem.resolvedAudioURL(from: fileURL, extensions: Self.audioExtensions) != nil {
                 return true
             }
         }
@@ -543,6 +557,7 @@ final class LibraryService {
                 await BookmarkStore.shared.save(folders)
             }
             accessibleFolderURLs[bookmark.id] = accessed
+            await ICloudItem.ensureDownloaded(accessed)
             await refreshIndex(force: false)
         } catch {
             scanProgressText = error.localizedDescription
@@ -1414,20 +1429,32 @@ enum CatalogueIndexer {
         for root in roots {
             guard let enumerator = fm.enumerator(
                 at: root,
-                includingPropertiesForKeys: [.isRegularFileKey, .contentModificationDateKey, .fileSizeKey],
-                options: [.skipsHiddenFiles, .skipsPackageDescendants]
+                includingPropertiesForKeys: [
+                    .isRegularFileKey,
+                    .contentModificationDateKey,
+                    .fileSizeKey,
+                    .isUbiquitousItemKey
+                ],
+                options: [.skipsPackageDescendants]
             ) else { continue }
 
             while let item = enumerator.nextObject() as? URL {
-                let ext = item.pathExtension.lowercased()
-                guard audioExtensions.contains(ext) else { continue }
-                let values = try? item.resourceValues(forKeys: [.isRegularFileKey, .contentModificationDateKey, .fileSizeKey])
-                guard values?.isRegularFile == true else { continue }
-                let path = item.path
+                if ICloudItem.isHiddenJunk(item) { continue }
+                guard let audioURL = ICloudItem.resolvedAudioURL(from: item, extensions: audioExtensions) else {
+                    continue
+                }
+                let values = try? audioURL.resourceValues(forKeys: [
+                    .isRegularFileKey,
+                    .contentModificationDateKey,
+                    .fileSizeKey
+                ])
+                let isPlaceholder = item.pathExtension.lowercased() == "icloud"
+                if values?.isRegularFile != true, !isPlaceholder { continue }
+                let path = audioURL.path
                 guard seen.insert(path).inserted else { continue }
                 files.append(
                     FileFingerprint(
-                        url: item,
+                        url: audioURL,
                         path: path,
                         fileSize: Int64(values?.fileSize ?? 0),
                         mtime: values?.contentModificationDate?.timeIntervalSince1970 ?? 0
@@ -1500,6 +1527,7 @@ enum CatalogueIndexer {
     }
 
     private static func readOne(file: FileFingerprint, labelsByPath: [String: [String]]) async -> IndexedTrackRecord {
+        await ICloudItem.ensureDownloaded(file.url)
         let meta = await MetadataReader.read(url: file.url)
         let artworkHash = meta.artworkData.flatMap { ArtworkCache.shared.store($0) }
         return IndexedTrackRecord(
