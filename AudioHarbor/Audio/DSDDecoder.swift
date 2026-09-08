@@ -1,6 +1,6 @@
 import Foundation
 
-/// DSF (and light DFF) probe + decode into DoP frames or float PCM.
+/// DSF (and light DFF) probe + streamed DoP / PCM — never loads the whole bitstream twice.
 enum DSDDecoder {
     struct Header: Equatable, Sendable {
         var sampleRate: Int
@@ -26,70 +26,61 @@ enum DSDDecoder {
         var sampleRate: Double
         var channelCount: Int
         var frames: Int
-        /// Interleaved little-endian 24-bit packed samples (3 bytes × channels × frames).
         var packed24: Data
         var isDoP: Bool
         var sourceSampleRate: Int
     }
 
     static func probe(url: URL) throws -> Header {
-        let handle = try FileHandle(forReadingFrom: url)
-        defer { try? handle.close() }
+        let data = try Data(contentsOf: url, options: [.mappedIfSafe])
+        return try parseHeader(data)
+    }
 
-        let magic = try readBytes(handle, count: 4)
+    static func decode(url: URL, strategy: DSDStrategy) throws -> DecodedPCM {
+        let source = try DSDStreamSource(url: url, strategy: strategy)
+        return try source.materialize()
+    }
+
+    static func stream(url: URL, strategy: DSDStrategy) throws -> DSDStreamSource {
+        try DSDStreamSource(url: url, strategy: strategy)
+    }
+
+    // MARK: - Header
+
+    static func parseHeader(_ data: Data) throws -> Header {
+        guard data.count >= 4 else { throw DSDError.truncated }
+        let magic = data.prefix(4)
         if magic == Data("DSD ".utf8) {
-            return try probeDSF(handle: handle, url: url)
+            return try parseDSF(data)
         }
         if magic == Data("FRM8".utf8) {
-            return try probeDFF(handle: handle, url: url)
+            return try parseDFF(data)
         }
         throw DSDError.unsupportedContainer
     }
 
-    static func decode(
-        url: URL,
-        strategy: DSDStrategy
-    ) throws -> DecodedPCM {
-        let header = try probe(url: url)
-        switch header.format {
-        case .dsf:
-            let bits = try readDSFBits(url: url, header: header)
-            switch strategy {
-            case .preferDoP:
-                return try encodeDoP(bits: bits, header: header)
-            case .convertToPCM:
-                return convertToPCM(bits: bits, header: header)
-            }
-        case .dff:
-            // DFF full bitstream decode is more involved; probe works, playback uses PCM stub path message.
-            throw DSDError.dffPlaybackNotReady
-        default:
-            throw DSDError.unsupportedContainer
-        }
-    }
+    private static func parseDSF(_ data: Data) throws -> Header {
+        var c = Cursor(data)
+        try c.expect("DSD ")
+        _ = try c.u64le() // chunk size
+        _ = try c.u64le() // file size
+        _ = try c.u64le() // id3 offset
 
-    // MARK: - DSF
+        try c.expect("fmt ")
+        _ = try c.u64le()
+        _ = try c.u32le() // version
+        _ = try c.u32le() // format id
+        _ = try c.u32le() // channel type
+        let channelCount = Int(try c.u32le())
+        let sampleRate = Int(try c.u32le())
+        let bitsPerSample = Int(try c.u32le())
+        let sampleCount = try c.u64le()
+        let blockSize = Int(try c.u32le())
+        _ = try c.u32le() // reserved
 
-    private static func probeDSF(handle: FileHandle, url: URL) throws -> Header {
-        _ = try readBytes(handle, count: 24)
-
-        let fmtMagic = try readBytes(handle, count: 4)
-        guard fmtMagic == Data("fmt ".utf8) else { throw DSDError.badFormatChunk }
-        _ = try readUInt64LE(handle) // fmt chunk size
-        _ = try readUInt32LE(handle) // format version
-        _ = try readUInt32LE(handle) // format ID
-        _ = try readUInt32LE(handle) // channel type
-        let channelCount = Int(try readUInt32LE(handle))
-        let sampleRate = Int(try readUInt32LE(handle))
-        let bitsPerSample = Int(try readUInt32LE(handle))
-        let sampleCount = try readUInt64LE(handle)
-        let blockSize = Int(try readUInt32LE(handle))
-        _ = try readUInt32LE(handle) // reserved
-
-        let dataMagic = try readBytes(handle, count: 4)
-        guard dataMagic == Data("data".utf8) else { throw DSDError.badDataChunk }
-        let dataChunkSize = try readUInt64LE(handle)
-        let dataOffset = Int(handle.offsetInFile)
+        try c.expect("data")
+        let dataChunkSize = try c.u64le()
+        let dataOffset = c.offset
         let dataSize = max(0, Int(dataChunkSize) - 12)
 
         return Header(
@@ -104,42 +95,11 @@ enum DSDDecoder {
         )
     }
 
-    private static func readDSFBits(url: URL, header: Header) throws -> [[UInt8]] {
-        let handle = try FileHandle(forReadingFrom: url)
-        defer { try? handle.close() }
-        try handle.seek(toOffset: UInt64(header.dataOffset))
-
-        var planar = Array(repeating: [UInt8](), count: header.channelCount)
-        var remaining = header.dataSize
-        let block = header.blockSizePerChannel
-
-        while remaining > 0 {
-            for ch in 0..<header.channelCount {
-                let toRead = min(block, remaining)
-                guard toRead > 0 else { break }
-                let chunk = try readBytes(handle, count: toRead)
-                planar[ch].append(contentsOf: chunk)
-                remaining -= chunk.count
-                if chunk.count < toRead { break }
-            }
-        }
-
-        // Trim to sampleCount bits
-        let bytesNeeded = Int((header.sampleCountPerChannel + 7) / 8)
-        for ch in 0..<header.channelCount {
-            if planar[ch].count > bytesNeeded {
-                planar[ch].removeLast(planar[ch].count - bytesNeeded)
-            }
-        }
-        return planar
-    }
-
-    // MARK: - DFF (probe only)
-
-    private static func probeDFF(handle: FileHandle, url: URL) throws -> Header {
-        _ = try readUInt64BE(handle) // form size
-        let formType = try readBytes(handle, count: 4)
-        guard formType == Data("DSD ".utf8) else { throw DSDError.unsupportedContainer }
+    private static func parseDFF(_ data: Data) throws -> Header {
+        var c = Cursor(data)
+        try c.expect("FRM8")
+        _ = try c.u64be()
+        try c.expect("DSD ")
 
         var sampleRate = 2_822_400
         var channelCount = 2
@@ -147,51 +107,44 @@ enum DSDDecoder {
         var dataOffset = 0
         var dataSize = 0
 
-        // Scan top-level chunks until DSD data
-        while true {
-            let chunkIDData = try readBytes(handle, count: 4)
-            guard chunkIDData.count == 4 else { break }
-            let chunkID = String(data: chunkIDData, encoding: .ascii) ?? ""
-            let chunkSize = Int(try readUInt64BE(handle))
-            let payloadStart = Int(handle.offsetInFile)
+        while c.remaining >= 12 {
+            let id = try c.fourCC()
+            let chunkSize = Int(try c.u64be())
+            let payloadStart = c.offset
+            guard payloadStart + chunkSize <= data.count else { break }
 
-            if chunkID == "FVER" {
-                try handle.seek(toOffset: UInt64(payloadStart + chunkSize + (chunkSize % 2)))
-            } else if chunkID == "PROP" {
-                // Look for FS and CHNL inside PROP
+            if id == "PROP" {
                 let propEnd = payloadStart + chunkSize
-                _ = try readBytes(handle, count: 4) // "SND "
-                while Int(handle.offsetInFile) + 12 <= propEnd {
-                    let subID = String(data: try readBytes(handle, count: 4), encoding: .ascii) ?? ""
-                    let subSize = Int(try readUInt64BE(handle))
-                    let subStart = Int(handle.offsetInFile)
+                _ = try? c.fourCC()
+                while c.offset + 12 <= propEnd {
+                    let subID = try c.fourCC()
+                    let subSize = Int(try c.u64be())
+                    let subStart = c.offset
                     if subID == "FS  ", subSize >= 4 {
-                        sampleRate = Int(try readUInt32BE(handle))
+                        sampleRate = Int(try c.u32be())
                     } else if subID == "CHNL", subSize >= 2 {
-                        channelCount = Int(try readUInt16BE(handle))
+                        channelCount = Int(try c.u16be())
                     }
-                    try handle.seek(toOffset: UInt64(subStart + subSize + (subSize % 2)))
+                    c.offset = min(data.count, subStart + subSize + (subSize % 2))
                 }
-                try handle.seek(toOffset: UInt64(propEnd + (chunkSize % 2)))
-            } else if chunkID == "DSD " {
+                c.offset = min(data.count, propEnd + (chunkSize % 2))
+            } else if id == "DSD " {
                 dataOffset = payloadStart
                 dataSize = chunkSize
-                // Estimate sample count: data bytes * 8 / channels
                 if channelCount > 0 {
                     sampleCount = UInt64(dataSize * 8 / channelCount)
                 }
                 break
             } else {
-                try handle.seek(toOffset: UInt64(payloadStart + chunkSize + (chunkSize % 2)))
+                c.offset = min(data.count, payloadStart + chunkSize + (chunkSize % 2))
             }
         }
 
         guard dataSize > 0 else { throw DSDError.badDataChunk }
-
         return Header(
             sampleRate: sampleRate,
             channelCount: channelCount,
-            bitsPerSample: 8, // DFF is typically MSB first
+            bitsPerSample: 8,
             blockSizePerChannel: 1,
             sampleCountPerChannel: sampleCount,
             dataOffset: dataOffset,
@@ -199,139 +152,215 @@ enum DSDDecoder {
             format: .dff
         )
     }
+}
 
-    // MARK: - DoP / PCM
+/// Memory-mapped DSF bitstream. Encodes DoP / PCM a render quantum at a time.
+final class DSDStreamSource: @unchecked Sendable {
+    let header: DSDDecoder.Header
+    let isDoP: Bool
+    let sampleRate: Double
+    let channelCount: Int
+    let frameCount: Int
+    let sourceSampleRate: Int
 
-    private static func encodeDoP(bits: [[UInt8]], header: Header) throws -> DecodedPCM {
-        let channels = header.channelCount
-        guard channels >= 1, bits.count == channels else { throw DSDError.channelMismatch }
+    private let map: Data
+    private let lsbFirst: Bool
+    private let block: Int
+    private let dataEnd: Int
 
-        let totalBits = Int(header.sampleCountPerChannel)
-        let dopFrames = totalBits / 16
-        let lsbFirst = header.bitsPerSample == 1
+    init(url: URL, strategy: DSDStrategy) throws {
+        let map = try Data(contentsOf: url, options: [.mappedIfSafe])
+        let header = try DSDDecoder.parseHeader(map)
+        guard header.format == .dsf else { throw DSDError.dffPlaybackNotReady }
 
-        var out = Data(capacity: dopFrames * channels * 3)
-        var markers: [UInt8] = Array(repeating: 0x05, count: channels)
-
-        for frame in 0..<dopFrames {
-            for ch in 0..<channels {
-                let bitIndex = frame * 16
-                let payload = read16Bits(from: bits[ch], bitIndex: bitIndex, lsbFirst: lsbFirst)
-                let marker = markers[ch]
-                // 24-bit little-endian: [lo][mid][hi=marker]
-                out.append(UInt8(payload & 0xFF))
-                out.append(UInt8((payload >> 8) & 0xFF))
-                out.append(marker)
-                markers[ch] = (marker == 0x05) ? 0xFA : 0x05
+        let preferDoP: Bool = {
+            switch strategy {
+            case .preferDoP: true
+            case .convertToPCM: false
             }
-        }
+        }()
 
-        return DecodedPCM(
-            sampleRate: Double(header.dopSampleRate),
-            channelCount: channels,
-            frames: dopFrames,
-            packed24: out,
-            isDoP: true,
-            sourceSampleRate: header.sampleRate
+        self.map = map
+        self.header = header
+        self.isDoP = preferDoP
+        self.lsbFirst = header.bitsPerSample == 1
+        self.block = header.blockSizePerChannel
+        self.channelCount = header.channelCount
+        self.sourceSampleRate = header.sampleRate
+        self.dataEnd = min(map.count, header.dataOffset + header.dataSize)
+        self.frameCount = Int(header.sampleCountPerChannel / 16)
+        self.sampleRate = Double(header.dopSampleRate)
+        guard frameCount > 0, channelCount > 0 else { throw DSDError.truncated }
+    }
+
+    var label: String {
+        let mode = isDoP ? "DoP" : "DSD→PCM"
+        return "\(mode) · \(Int(sampleRate)) Hz (src \(sourceSampleRate))"
+    }
+
+    func makeRenderBuffer() -> RenderBuffer {
+        RenderBuffer(
+            sampleRate: sampleRate,
+            channelCount: channelCount,
+            frameCount: frameCount,
+            packed24: Data(),
+            label: label,
+            isDoP: isDoP
         )
     }
 
-    /// Simple 16× decimation to soft PCM (compatibility path — not audiophile-grade).
-    private static func convertToPCM(bits: [[UInt8]], header: Header) -> DecodedPCM {
-        let channels = header.channelCount
-        let totalBits = Int(header.sampleCountPerChannel)
-        let pcmFrames = totalBits / 16
-        let lsbFirst = header.bitsPerSample == 1
-        var out = Data(capacity: pcmFrames * channels * 3)
-
-        for frame in 0..<pcmFrames {
-            for ch in 0..<channels {
-                var acc = 0
-                let base = frame * 16
-                for i in 0..<16 {
-                    let bit = readBit(from: bits[ch], bitIndex: base + i, lsbFirst: lsbFirst)
-                    acc += bit ? 1 : -1
+    /// Fill interleaved 24-bit LE samples. Audio-thread safe (read-only map).
+    @discardableResult
+    func copyPacked24(at startFrame: Int, count: Int, into dest: UnsafeMutableRawPointer) -> Int {
+        let frames = min(count, max(0, frameCount - startFrame))
+        guard frames > 0 else { return 0 }
+        let channels = channelCount
+        map.withUnsafeBytes { raw in
+            let src = raw.bindMemory(to: UInt8.self)
+            let out = dest.assumingMemoryBound(to: UInt8.self)
+            var o = 0
+            for frame in startFrame..<(startFrame + frames) {
+                let byteIndex = frame * 2
+                for ch in 0..<channels {
+                    let payload = read16(src: src, channel: ch, byteIndex: byteIndex)
+                    if isDoP {
+                        let marker: UInt8 = (frame & 1) == 0 ? 0x05 : 0xFA
+                        out[o] = UInt8(payload & 0xFF)
+                        out[o + 1] = UInt8((payload >> 8) & 0xFF)
+                        out[o + 2] = marker
+                    } else {
+                        let acc = payload.nonzeroBitCount * 2 - 16
+                        let sample = Int32((Double(acc) / 16.0) * Double(1 << 22))
+                        let clipped = max(min(sample, (1 << 23) - 1), -(1 << 23))
+                        out[o] = UInt8(clipped & 0xFF)
+                        out[o + 1] = UInt8((clipped >> 8) & 0xFF)
+                        out[o + 2] = UInt8((clipped >> 16) & 0xFF)
+                    }
+                    o += 3
                 }
-                // Map [-16,16] → roughly 24-bit
-                let sample = Int32((Double(acc) / 16.0) * Double(1 << 22))
-                let clipped = max(min(sample, (1 << 23) - 1), -(1 << 23))
-                out.append(UInt8(clipped & 0xFF))
-                out.append(UInt8((clipped >> 8) & 0xFF))
-                out.append(UInt8((clipped >> 16) & 0xFF))
             }
         }
+        return frames
+    }
 
-        return DecodedPCM(
-            sampleRate: Double(header.dopSampleRate),
-            channelCount: channels,
-            frames: pcmFrames,
-            packed24: out,
-            isDoP: false,
-            sourceSampleRate: header.sampleRate
+    /// 16-bit interleaved PCM for the Shared WAV fallback.
+    func copyInt16(at startFrame: Int, count: Int, into dest: UnsafeMutablePointer<Int16>) -> Int {
+        let frames = min(count, max(0, frameCount - startFrame))
+        guard frames > 0 else { return 0 }
+        map.withUnsafeBytes { raw in
+            let src = raw.bindMemory(to: UInt8.self)
+            var o = 0
+            for frame in startFrame..<(startFrame + frames) {
+                let byteIndex = frame * 2
+                for ch in 0..<channelCount {
+                    let payload = read16(src: src, channel: ch, byteIndex: byteIndex)
+                    let acc = payload.nonzeroBitCount * 2 - 16
+                    dest[o] = Int16(clamping: acc * 2048)
+                    o += 1
+                }
+            }
+        }
+        return frames
+    }
+
+    /// Only for tiny files / tests. Prefer streaming.
+    func materialize() throws -> DSDDecoder.DecodedPCM {
+        let bytes = frameCount * channelCount * 3
+        var packed = Data(count: bytes)
+        packed.withUnsafeMutableBytes { raw in
+            guard let base = raw.baseAddress else { return }
+            _ = copyPacked24(at: 0, count: frameCount, into: base)
+        }
+        return DSDDecoder.DecodedPCM(
+            sampleRate: sampleRate,
+            channelCount: channelCount,
+            frames: frameCount,
+            packed24: packed,
+            isDoP: isDoP,
+            sourceSampleRate: sourceSampleRate
         )
     }
 
-    private static func read16Bits(from bytes: [UInt8], bitIndex: Int, lsbFirst: Bool) -> UInt16 {
-        var value: UInt16 = 0
-        for i in 0..<16 {
-            if readBit(from: bytes, bitIndex: bitIndex + i, lsbFirst: lsbFirst) {
-                value |= (1 << i)
-            }
+    private func read16(src: UnsafeBufferPointer<UInt8>, channel: Int, byteIndex: Int) -> UInt16 {
+        let b0 = byte(src, channel: channel, index: byteIndex)
+        let b1 = byte(src, channel: channel, index: byteIndex + 1)
+        if lsbFirst {
+            return UInt16(b0) | (UInt16(b1) << 8)
         }
-        return value
+        return UInt16(b0.bitReversed) | (UInt16(b1.bitReversed) << 8)
     }
 
-    private static func readBit(from bytes: [UInt8], bitIndex: Int, lsbFirst: Bool) -> Bool {
-        let byteIndex = bitIndex / 8
-        guard byteIndex < bytes.count else { return false }
-        let bitInByte = bitIndex % 8
-        let mask: UInt8 = lsbFirst ? (1 << bitInByte) : (0x80 >> bitInByte)
-        return (bytes[byteIndex] & mask) != 0
+    private func byte(_ src: UnsafeBufferPointer<UInt8>, channel: Int, index: Int) -> UInt8 {
+        let blockIndex = index / block
+        let offsetInBlock = index % block
+        let pos = header.dataOffset + blockIndex * block * channelCount + channel * block + offsetInBlock
+        guard pos < dataEnd, pos < src.count else { return 0 }
+        return src[pos]
+    }
+}
+
+private struct Cursor {
+    let data: Data
+    var offset: Int = 0
+
+    init(_ data: Data) { self.data = data }
+
+    var remaining: Int { max(0, data.count - offset) }
+
+    mutating func expect(_ four: String) throws {
+        let got = try fourCC()
+        guard got == four else { throw DSDError.badFormatChunk }
     }
 
-    // MARK: - Binary helpers
+    mutating func fourCC() throws -> String {
+        let d = try take(4)
+        return String(data: d, encoding: .ascii) ?? ""
+    }
 
-    private static func readUInt16BE(_ handle: FileHandle) throws -> UInt16 {
-        let d = handle.readData(ofLength: 2)
-        guard d.count == 2 else { throw DSDError.truncated }
+    mutating func take(_ n: Int) throws -> Data {
+        guard offset + n <= data.count else { throw DSDError.truncated }
+        let slice = data.subdata(in: offset..<(offset + n))
+        offset += n
+        return slice
+    }
+
+    mutating func u16be() throws -> UInt16 {
+        let d = try take(2)
         return (UInt16(d[0]) << 8) | UInt16(d[1])
     }
 
-    private static func readUInt32LE(_ handle: FileHandle) throws -> UInt32 {
-        let d = handle.readData(ofLength: 4)
-        guard d.count == 4 else { throw DSDError.truncated }
+    mutating func u32le() throws -> UInt32 {
+        let d = try take(4)
         return UInt32(d[0]) | (UInt32(d[1]) << 8) | (UInt32(d[2]) << 16) | (UInt32(d[3]) << 24)
     }
 
-    private static func readUInt32BE(_ handle: FileHandle) throws -> UInt32 {
-        let d = handle.readData(ofLength: 4)
-        guard d.count == 4 else { throw DSDError.truncated }
+    mutating func u32be() throws -> UInt32 {
+        let d = try take(4)
         return (UInt32(d[0]) << 24) | (UInt32(d[1]) << 16) | (UInt32(d[2]) << 8) | UInt32(d[3])
     }
 
-    private static func readUInt64LE(_ handle: FileHandle) throws -> UInt64 {
-        let d = handle.readData(ofLength: 8)
-        guard d.count == 8 else { throw DSDError.truncated }
-        var value: UInt64 = 0
-        for i in 0..<8 { value |= UInt64(d[i]) << (8 * i) }
-        return value
+    mutating func u64le() throws -> UInt64 {
+        let d = try take(8)
+        var v: UInt64 = 0
+        for i in 0..<8 { v |= UInt64(d[i]) << (8 * i) }
+        return v
     }
 
-    private static func readUInt64BE(_ handle: FileHandle) throws -> UInt64 {
-        let d = handle.readData(ofLength: 8)
-        guard d.count == 8 else { throw DSDError.truncated }
-        var value: UInt64 = 0
-        for i in 0..<8 { value = (value << 8) | UInt64(d[i]) }
-        return value
+    mutating func u64be() throws -> UInt64 {
+        let d = try take(8)
+        var v: UInt64 = 0
+        for i in 0..<8 { v = (v << 8) | UInt64(d[i]) }
+        return v
     }
+}
 
-    private static func readBytes(_ handle: FileHandle, count: Int) throws -> Data {
-        let d = handle.readData(ofLength: count)
-        guard d.count == count || count == 0 else {
-            if d.isEmpty { throw DSDError.truncated }
-            return d
-        }
-        return d
+private extension UInt8 {
+    var bitReversed: UInt8 {
+        var x = self
+        x = ((x & 0xF0) >> 4) | ((x & 0x0F) << 4)
+        x = ((x & 0xCC) >> 2) | ((x & 0x33) << 2)
+        x = ((x & 0xAA) >> 1) | ((x & 0x55) << 1)
+        return x
     }
 }
 
@@ -342,6 +371,7 @@ enum DSDError: LocalizedError {
     case truncated
     case channelMismatch
     case dffPlaybackNotReady
+    case tooLarge
 
     var errorDescription: String? {
         switch self {
@@ -351,6 +381,7 @@ enum DSDError: LocalizedError {
         case .truncated: "Truncated DSD file"
         case .channelMismatch: "DSD channel data mismatch"
         case .dffPlaybackNotReady: "DFF probe works; full DFF playback lands next. Use DSF for DoP now."
+        case .tooLarge: "This DSD file is too large to decode in memory on this device."
         }
     }
 }

@@ -288,27 +288,27 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
 
         #if os(macOS)
         if outputMode == .exclusive || outputMode == .dop || strategy == .preferDoP {
-            let render = try await Task.detached(priority: .userInitiated) {
-                try PCMBufferLoader.loadDSD(url: track.url, strategy: strategy)
+            let source = try await Task.detached(priority: .userInitiated) {
+                try DSDStreamSource(url: track.url, strategy: strategy)
             }.value
             usingHAL = true
-            activeRender = render
+            activeRender = source.makeRenderBuffer()
             sharedFile = nil
-            halPlayer.load(render)
-            duration = Double(render.frameCount) / render.sampleRate
+            halPlayer.loadStream(source)
+            duration = Double(source.frameCount) / source.sampleRate
             seekOffset = 0
             currentTime = 0
-            activeFormatLabel = "\(track.format.rawValue) · \(render.label)"
-            pathLabel = render.isDoP ? "DoP" : "DSD→PCM"
+            activeFormatLabel = "\(track.format.rawValue) · \(source.label)"
+            pathLabel = source.isDoP ? "DoP" : "DSD→PCM"
             return
         }
         #endif
 
-        // Shared / iOS: decode DSD→PCM into a temporary WAV, then use the safe AVAudioFile path.
-        let render = try await Task.detached(priority: .userInitiated) {
-            try PCMBufferLoader.loadDSD(url: track.url, strategy: .convertToPCM)
+        // Shared / iOS: stream DSD→PCM into a temporary WAV (no full-file RAM copy).
+        let source = try await Task.detached(priority: .userInitiated) {
+            try DSDStreamSource(url: track.url, strategy: .convertToPCM)
         }.value
-        let tempURL = try Self.writeTempWAV(from: render)
+        let tempURL = try Self.writeTempWAV(from: source)
         usingHAL = false
         activeRender = nil
         let file = try AVAudioFile(forReading: tempURL)
@@ -583,7 +583,64 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         }
     }
 
-    /// Minimal 16-bit WAV writer so DSD→PCM can reuse the safe AVAudioFile shared path.
+    /// Stream DSD→PCM into a 16-bit WAV without holding the whole DSF in RAM twice.
+    private static func writeTempWAV(from source: DSDStreamSource) throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("audioharbor-dsd-\(UUID().uuidString).wav")
+
+        let channels = source.channelCount
+        let frames = source.frameCount
+        let sampleRate = UInt32(source.sampleRate.rounded())
+        let dataSize = UInt32(frames * channels * 2)
+
+        FileManager.default.createFile(atPath: url.path, contents: nil)
+        let handle = try FileHandle(forWritingTo: url)
+        defer { try? handle.close() }
+
+        var header = Data()
+        func appendASCII(_ s: String) { header.append(contentsOf: s.utf8) }
+        func appendU32(_ v: UInt32) {
+            var le = v.littleEndian
+            withUnsafeBytes(of: &le) { header.append(contentsOf: $0) }
+        }
+        func appendU16(_ v: UInt16) {
+            var le = v.littleEndian
+            withUnsafeBytes(of: &le) { header.append(contentsOf: $0) }
+        }
+        appendASCII("RIFF")
+        appendU32(36 + dataSize)
+        appendASCII("WAVE")
+        appendASCII("fmt ")
+        appendU32(16)
+        appendU16(1)
+        appendU16(UInt16(channels))
+        appendU32(sampleRate)
+        appendU32(sampleRate * UInt32(channels) * 2)
+        appendU16(UInt16(channels * 2))
+        appendU16(16)
+        appendASCII("data")
+        appendU32(dataSize)
+        try handle.write(contentsOf: header)
+
+        let chunk = 8_192
+        var scratch = [Int16](repeating: 0, count: chunk * max(channels, 1))
+        var frame = 0
+        while frame < frames {
+            let n = min(chunk, frames - frame)
+            let copied = scratch.withUnsafeMutableBufferPointer { buf in
+                source.copyInt16(at: frame, count: n, into: buf.baseAddress!)
+            }
+            let bytes = copied * channels * MemoryLayout<Int16>.size
+            try scratch.withUnsafeBytes { raw in
+                try handle.write(contentsOf: raw.prefix(bytes))
+            }
+            frame += copied
+            if copied == 0 { break }
+        }
+        return url
+    }
+
+    /// Minimal 16-bit WAV writer so in-memory PCM can reuse the safe AVAudioFile shared path.
     private static func writeTempWAV(from render: RenderBuffer) throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("audioharbor-dsd-\(UUID().uuidString).wav")

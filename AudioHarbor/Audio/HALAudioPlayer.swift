@@ -28,6 +28,7 @@ final class HALAudioPlayer {
 
     var onReachedEnd: (() -> Void)?
     var meterProbe: StereoMeterProbe?
+    private var dsdSource: DSDStreamSource?
 
     deinit {
         stop()
@@ -36,7 +37,17 @@ final class HALAudioPlayer {
 
     func load(_ buffer: RenderBuffer) {
         lock.lock()
+        dsdSource = nil
         self.buffer = buffer
+        framePosition = 0
+        didSignalEnd = false
+        lock.unlock()
+    }
+
+    func loadStream(_ source: DSDStreamSource) {
+        lock.lock()
+        dsdSource = source
+        buffer = source.makeRenderBuffer()
         framePosition = 0
         didSignalEnd = false
         lock.unlock()
@@ -65,7 +76,7 @@ final class HALAudioPlayer {
         // "HALB_IOThread::_Start: there already is a thread".
         stop()
         disposeUnit()
-        guard let buffer, buffer.frameCount > 0, !buffer.packed24.isEmpty else {
+        guard let buffer, buffer.frameCount > 0 else {
             throw PlaybackEngineError.fileUnreadable
         }
 
@@ -225,18 +236,33 @@ final class HALAudioPlayer {
         let byteCount = framesToCopy * bytesPerFrame
         let srcOffset = framePosition * bytesPerFrame
 
-        buffer.packed24.withUnsafeBytes { raw in
-            if let base = raw.baseAddress, byteCount > 0, srcOffset + byteCount <= raw.count {
-                memcpy(dst, base.advanced(by: srcOffset), byteCount)
-                if !buffer.isDoP, let probe = meterProbe {
-                    probe.ingestPacked24(
-                        bytes: base.assumingMemoryBound(to: UInt8.self),
-                        count: raw.count,
-                        frames: framesToCopy,
-                        channels: buffer.channelCount,
-                        byteOffset: srcOffset,
-                        sampleRate: buffer.sampleRate
-                    )
+        if let source = dsdSource, framesToCopy > 0 {
+            let copied = source.copyPacked24(at: framePosition, count: framesToCopy, into: dst)
+            let copiedBytes = copied * bytesPerFrame
+            if !buffer.isDoP, let probe = meterProbe {
+                probe.ingestPacked24(
+                    bytes: dst.assumingMemoryBound(to: UInt8.self),
+                    count: copiedBytes,
+                    frames: copied,
+                    channels: buffer.channelCount,
+                    byteOffset: 0,
+                    sampleRate: buffer.sampleRate
+                )
+            }
+        } else {
+            buffer.packed24.withUnsafeBytes { raw in
+                if let base = raw.baseAddress, byteCount > 0, srcOffset + byteCount <= raw.count {
+                    memcpy(dst, base.advanced(by: srcOffset), byteCount)
+                    if !buffer.isDoP, let probe = meterProbe {
+                        probe.ingestPacked24(
+                            bytes: base.assumingMemoryBound(to: UInt8.self),
+                            count: raw.count,
+                            frames: framesToCopy,
+                            channels: buffer.channelCount,
+                            byteOffset: srcOffset,
+                            sampleRate: buffer.sampleRate
+                        )
+                    }
                 }
             }
         }
@@ -321,16 +347,7 @@ enum PCMBufferLoader {
     }
 
     static func loadDSD(url: URL, strategy: DSDStrategy) throws -> RenderBuffer {
-        let decoded = try DSDDecoder.decode(url: url, strategy: strategy)
-        let mode = decoded.isDoP ? "DoP" : "DSD→PCM"
-        return RenderBuffer(
-            sampleRate: decoded.sampleRate,
-            channelCount: decoded.channelCount,
-            frameCount: decoded.frames,
-            packed24: decoded.packed24,
-            label: "\(mode) · \(Int(decoded.sampleRate)) Hz (src \(decoded.sourceSampleRate))",
-            isDoP: decoded.isDoP
-        )
+        try DSDStreamSource(url: url, strategy: strategy).makeRenderBuffer()
     }
 
     private static func appendPacked24(
