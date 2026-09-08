@@ -102,18 +102,51 @@ final class MacAudioDeviceController: @unchecked Sendable {
             mScope: kAudioObjectPropertyScopeGlobal,
             mElement: kAudioObjectPropertyElementMain
         )
-        let status = AudioObjectSetPropertyData(
-            device,
-            &address,
-            0,
-            nil,
-            UInt32(MemoryLayout<Float64>.size),
-            &value
-        )
-        // Some devices reject unsupported rates; surface soft failure to caller via throw.
+        var status: OSStatus = noErr
+        var nsError: NSError?
+        let ok = AHPerformWithExceptionHandling({
+            status = AudioObjectSetPropertyData(
+                device,
+                &address,
+                0,
+                nil,
+                UInt32(MemoryLayout<Float64>.size),
+                &value
+            )
+        }, &nsError)
+        if !ok {
+            throw PlaybackEngineError.notImplemented(
+                nsError?.localizedDescription ?? "Device rejected sample rate \(Int(rate)) Hz."
+            )
+        }
         if status != noErr {
             throw PlaybackEngineError.notImplemented("Device rejected sample rate \(Int(rate)) Hz (OSStatus \(status)).")
         }
+    }
+
+    func supportsNominalRate(_ rate: Double, device: AudioDeviceID) -> Bool {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyAvailableNominalSampleRates,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var size: UInt32 = 0
+        guard AudioObjectGetPropertyDataSize(device, &address, 0, nil, &size) == noErr, size > 0 else {
+            return false
+        }
+        let count = Int(size) / MemoryLayout<AudioValueRange>.size
+        let raw = UnsafeMutablePointer<AudioValueRange>.allocate(capacity: count)
+        defer { raw.deallocate() }
+        guard AudioObjectGetPropertyData(device, &address, 0, nil, &size, raw) == noErr else {
+            return false
+        }
+        for i in 0..<count {
+            let range = raw[i]
+            if rate >= range.mMinimum - 1, rate <= range.mMaximum + 1 {
+                return true
+            }
+        }
+        return false
     }
 
     private func setHogMode(device: AudioDeviceID, enabled: Bool) throws {
@@ -123,19 +156,22 @@ final class MacAudioDeviceController: @unchecked Sendable {
             mScope: kAudioObjectPropertyScopeGlobal,
             mElement: kAudioObjectPropertyElementMain
         )
-        let status = AudioObjectSetPropertyData(
-            device,
-            &address,
-            0,
-            nil,
-            UInt32(MemoryLayout<pid_t>.size),
-            &pid
-        )
+        var status: OSStatus = noErr
+        let ok = AHPerformWithExceptionHandling({
+            status = AudioObjectSetPropertyData(
+                device,
+                &address,
+                0,
+                nil,
+                UInt32(MemoryLayout<pid_t>.size),
+                &pid
+            )
+        }, nil)
         if status != noErr && enabled {
             // Hog can fail if unsupported; still attempt rate switch without exclusive lock.
             return
         }
-        _ = status
+        _ = (status, ok)
     }
 
     private func deviceName(_ id: AudioDeviceID) -> String? {
@@ -190,6 +226,7 @@ final class MacAudioDeviceController: @unchecked Sendable {
     func prepareExclusive(sampleRate: Double, deviceID: UInt32? = nil) throws -> UInt32 { 0 }
     func releaseExclusive() {}
     func currentSampleRate(device: UInt32) throws -> Float64 { 0 }
+    func supportsNominalRate(_ rate: Double, device: UInt32) -> Bool { false }
 }
 
 #endif

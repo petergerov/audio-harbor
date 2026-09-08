@@ -224,43 +224,36 @@ final class HALAudioPlayer {
         guard let first = abl.first, let dst = first.mData else { return noErr }
 
         lock.lock()
-        guard let buffer else {
-            lock.unlock()
+        let source = dsdSource
+        let packed = buffer
+        let position = framePosition
+        lock.unlock()
+
+        guard let packed else {
             memset(dst, 0, Int(first.mDataByteSize))
             return noErr
         }
 
-        let bytesPerFrame = 3 * buffer.channelCount
-        let framesAvailable = max(0, buffer.frameCount - framePosition)
+        let bytesPerFrame = 3 * packed.channelCount
+        let framesAvailable = max(0, packed.frameCount - position)
         let framesToCopy = min(frames, framesAvailable)
         let byteCount = framesToCopy * bytesPerFrame
-        let srcOffset = framePosition * bytesPerFrame
+        let srcOffset = position * bytesPerFrame
 
-        if let source = dsdSource, framesToCopy > 0 {
-            let copied = source.copyPacked24(at: framePosition, count: framesToCopy, into: dst)
-            let copiedBytes = copied * bytesPerFrame
-            if !buffer.isDoP, let probe = meterProbe {
-                probe.ingestPacked24(
-                    bytes: dst.assumingMemoryBound(to: UInt8.self),
-                    count: copiedBytes,
-                    frames: copied,
-                    channels: buffer.channelCount,
-                    byteOffset: 0,
-                    sampleRate: buffer.sampleRate
-                )
-            }
+        if let source, framesToCopy > 0 {
+            _ = source.copyPacked24(at: position, count: framesToCopy, into: dst)
         } else {
-            buffer.packed24.withUnsafeBytes { raw in
+            packed.packed24.withUnsafeBytes { raw in
                 if let base = raw.baseAddress, byteCount > 0, srcOffset + byteCount <= raw.count {
                     memcpy(dst, base.advanced(by: srcOffset), byteCount)
-                    if !buffer.isDoP, let probe = meterProbe {
+                    if !packed.isDoP, let probe = meterProbe {
                         probe.ingestPacked24(
                             bytes: base.assumingMemoryBound(to: UInt8.self),
                             count: raw.count,
                             frames: framesToCopy,
-                            channels: buffer.channelCount,
+                            channels: packed.channelCount,
                             byteOffset: srcOffset,
-                            sampleRate: buffer.sampleRate
+                            sampleRate: packed.sampleRate
                         )
                     }
                 }
@@ -272,8 +265,9 @@ final class HALAudioPlayer {
             memset(dst.advanced(by: byteCount), 0, totalBytes - byteCount)
         }
 
-        framePosition += framesToCopy
-        let shouldSignal = framePosition >= buffer.frameCount && !didSignalEnd
+        lock.lock()
+        framePosition = position + framesToCopy
+        let shouldSignal = framePosition >= packed.frameCount && !didSignalEnd
         if shouldSignal {
             didSignalEnd = true
         }

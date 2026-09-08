@@ -163,15 +163,21 @@ final class DSDStreamSource: @unchecked Sendable {
     let frameCount: Int
     let sourceSampleRate: Int
 
-    private let map: Data
+    /// Kept so `bytes` stays valid for the source lifetime (mmap / NSData).
+    private let map: NSData
+    private let bytes: UnsafePointer<UInt8>
+    private let byteCount: Int
     private let lsbFirst: Bool
     private let block: Int
     private let dataEnd: Int
+    /// DSD bytes packed into one PCM/DoP frame (2 = 16 DSD bits = standard DoP).
+    private let bytesPerPCM: Int
 
     init(url: URL, strategy: DSDStrategy) throws {
-        let map = try Data(contentsOf: url, options: [.mappedIfSafe])
-        let header = try DSDDecoder.parseHeader(map)
+        let map = try NSData(contentsOf: url, options: [.mappedIfSafe])
+        let header = try DSDDecoder.parseHeader(Data(referencing: map))
         guard header.format == .dsf else { throw DSDError.dffPlaybackNotReady }
+        guard map.length > 0 else { throw DSDError.truncated }
 
         let preferDoP: Bool = {
             switch strategy {
@@ -180,17 +186,31 @@ final class DSDStreamSource: @unchecked Sendable {
             }
         }()
 
+        let bytesPerPCM: Int = {
+            if preferDoP { return 2 }
+            var width = 2
+            while width < 64, header.sampleRate / (width * 8) > 96_000 {
+                width *= 2
+            }
+            return width
+        }()
+
         self.map = map
         self.header = header
         self.isDoP = preferDoP
         self.lsbFirst = header.bitsPerSample == 1
-        self.block = header.blockSizePerChannel
+        self.block = max(1, header.blockSizePerChannel)
         self.channelCount = header.channelCount
         self.sourceSampleRate = header.sampleRate
-        self.dataEnd = min(map.count, header.dataOffset + header.dataSize)
-        self.frameCount = Int(header.sampleCountPerChannel / 16)
-        self.sampleRate = Double(header.dopSampleRate)
-        guard frameCount > 0, channelCount > 0 else { throw DSDError.truncated }
+        self.bytesPerPCM = bytesPerPCM
+        self.dataEnd = min(map.length, header.dataOffset + header.dataSize)
+        self.byteCount = map.length
+        self.bytes = map.bytes.assumingMemoryBound(to: UInt8.self)
+        let bitsPerFrame = bytesPerPCM * 8
+        guard bitsPerFrame > 0, header.sampleCountPerChannel > 0 else { throw DSDError.truncated }
+        self.frameCount = Int(header.sampleCountPerChannel / UInt64(bitsPerFrame))
+        self.sampleRate = Double(header.sampleRate / bitsPerFrame)
+        guard frameCount > 0, channelCount > 0, sampleRate > 0 else { throw DSDError.truncated }
     }
 
     var label: String {
@@ -214,50 +234,45 @@ final class DSDStreamSource: @unchecked Sendable {
     func copyPacked24(at startFrame: Int, count: Int, into dest: UnsafeMutableRawPointer) -> Int {
         let frames = min(count, max(0, frameCount - startFrame))
         guard frames > 0 else { return 0 }
+        let src = bytes
         let channels = channelCount
-        map.withUnsafeBytes { raw in
-            let src = raw.bindMemory(to: UInt8.self)
-            let out = dest.assumingMemoryBound(to: UInt8.self)
-            var o = 0
-            for frame in startFrame..<(startFrame + frames) {
-                let byteIndex = frame * 2
-                for ch in 0..<channels {
+        let out = dest.assumingMemoryBound(to: UInt8.self)
+        var o = 0
+        for frame in startFrame..<(startFrame + frames) {
+            let byteIndex = frame * bytesPerPCM
+            for ch in 0..<channels {
+                if isDoP {
                     let payload = read16(src: src, channel: ch, byteIndex: byteIndex)
-                    if isDoP {
-                        let marker: UInt8 = (frame & 1) == 0 ? 0x05 : 0xFA
-                        out[o] = UInt8(payload & 0xFF)
-                        out[o + 1] = UInt8((payload >> 8) & 0xFF)
-                        out[o + 2] = marker
-                    } else {
-                        let acc = payload.nonzeroBitCount * 2 - 16
-                        let sample = Int32((Double(acc) / 16.0) * Double(1 << 22))
-                        let clipped = max(min(sample, (1 << 23) - 1), -(1 << 23))
-                        out[o] = UInt8(clipped & 0xFF)
-                        out[o + 1] = UInt8((clipped >> 8) & 0xFF)
-                        out[o + 2] = UInt8((clipped >> 16) & 0xFF)
-                    }
-                    o += 3
+                    let marker: UInt8 = (frame & 1) == 0 ? 0x05 : 0xFA
+                    out[o] = UInt8(payload & 0xFF)
+                    out[o + 1] = UInt8((payload >> 8) & 0xFF)
+                    out[o + 2] = marker
+                } else {
+                    let sample = pcmInt24(src: src, channel: ch, byteIndex: byteIndex)
+                    out[o] = UInt8(sample & 0xFF)
+                    out[o + 1] = UInt8((sample >> 8) & 0xFF)
+                    out[o + 2] = UInt8((sample >> 16) & 0xFF)
                 }
+                o += 3
             }
         }
         return frames
     }
 
-    /// 16-bit interleaved PCM for the Shared WAV fallback.
-    func copyInt16(at startFrame: Int, count: Int, into dest: UnsafeMutablePointer<Int16>) -> Int {
+    /// Interleaved float −1…1 for the Shared AVAudioEngine path.
+    @discardableResult
+    func copyFloatInterleaved(at startFrame: Int, count: Int, into dest: UnsafeMutablePointer<Float>) -> Int {
         let frames = min(count, max(0, frameCount - startFrame))
         guard frames > 0 else { return 0 }
-        map.withUnsafeBytes { raw in
-            let src = raw.bindMemory(to: UInt8.self)
-            var o = 0
-            for frame in startFrame..<(startFrame + frames) {
-                let byteIndex = frame * 2
-                for ch in 0..<channelCount {
-                    let payload = read16(src: src, channel: ch, byteIndex: byteIndex)
-                    let acc = payload.nonzeroBitCount * 2 - 16
-                    dest[o] = Int16(clamping: acc * 2048)
-                    o += 1
-                }
+        let src = bytes
+        var o = 0
+        let scale = 1.0 / Double(bytesPerPCM * 8)
+        for frame in startFrame..<(startFrame + frames) {
+            let byteIndex = frame * bytesPerPCM
+            for ch in 0..<channelCount {
+                let acc = popcount(src: src, channel: ch, byteIndex: byteIndex)
+                dest[o] = Float((Double(acc) * 2.0 - Double(bytesPerPCM * 8)) * scale)
+                o += 1
             }
         }
         return frames
@@ -265,8 +280,8 @@ final class DSDStreamSource: @unchecked Sendable {
 
     /// Only for tiny files / tests. Prefer streaming.
     func materialize() throws -> DSDDecoder.DecodedPCM {
-        let bytes = frameCount * channelCount * 3
-        var packed = Data(count: bytes)
+        let packedBytes = frameCount * channelCount * 3
+        var packed = Data(count: packedBytes)
         packed.withUnsafeMutableBytes { raw in
             guard let base = raw.baseAddress else { return }
             _ = copyPacked24(at: 0, count: frameCount, into: base)
@@ -281,7 +296,23 @@ final class DSDStreamSource: @unchecked Sendable {
         )
     }
 
-    private func read16(src: UnsafeBufferPointer<UInt8>, channel: Int, byteIndex: Int) -> UInt16 {
+    private func pcmInt24(src: UnsafePointer<UInt8>, channel: Int, byteIndex: Int) -> Int32 {
+        let bits = bytesPerPCM * 8
+        let acc = popcount(src: src, channel: channel, byteIndex: byteIndex)
+        let sample = Int32((Double(acc * 2 - bits) / Double(bits)) * Double(1 << 22))
+        return max(min(sample, (1 << 23) - 1), -(1 << 23))
+    }
+
+    private func popcount(src: UnsafePointer<UInt8>, channel: Int, byteIndex: Int) -> Int {
+        var acc = 0
+        for i in 0..<bytesPerPCM {
+            let raw = byte(src, channel: channel, index: byteIndex + i)
+            acc += Int((lsbFirst ? raw : raw.bitReversed).nonzeroBitCount)
+        }
+        return acc
+    }
+
+    private func read16(src: UnsafePointer<UInt8>, channel: Int, byteIndex: Int) -> UInt16 {
         let b0 = byte(src, channel: channel, index: byteIndex)
         let b1 = byte(src, channel: channel, index: byteIndex + 1)
         if lsbFirst {
@@ -290,11 +321,11 @@ final class DSDStreamSource: @unchecked Sendable {
         return UInt16(b0.bitReversed) | (UInt16(b1.bitReversed) << 8)
     }
 
-    private func byte(_ src: UnsafeBufferPointer<UInt8>, channel: Int, index: Int) -> UInt8 {
+    private func byte(_ src: UnsafePointer<UInt8>, channel: Int, index: Int) -> UInt8 {
         let blockIndex = index / block
         let offsetInBlock = index % block
         let pos = header.dataOffset + blockIndex * block * channelCount + channel * block + offsetInBlock
-        guard pos < dataEnd, pos < src.count else { return 0 }
+        guard pos < dataEnd, pos < byteCount else { return 0 }
         return src[pos]
     }
 }
