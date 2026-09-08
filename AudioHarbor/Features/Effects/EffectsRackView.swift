@@ -27,7 +27,9 @@ struct EffectsRackView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 8)
                 }
+                Spacer(minLength: 0)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
         .sheet(isPresented: $showBrowser) {
             pluginBrowser
@@ -52,31 +54,18 @@ struct EffectsRackView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 8) {
-                EngravedLabel(text: "Output inserts")
-                Text("Rack")
-                    .font(HarborFont.display(28))
-                    .foregroundStyle(HarborColor.ivory)
-                Text("AUv3 on all platforms. Classic AU on Mac. Runs on the Shared output path.")
-                    .font(HarborFont.body(14))
-                    .foregroundStyle(HarborColor.ivoryDim)
-            }
-            Spacer()
-            Button {
-                showBrowser = true
-            } label: {
-                Label("Add Plugin", systemImage: "plus")
-                    .font(HarborFont.title(13))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(HarborColor.amber)
-                    .foregroundStyle(HarborColor.faceplate)
-                    .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
-            }
-            .buttonStyle(.plain)
+        ScreenHeader(
+            kicker: "Output inserts",
+            title: "Rack",
+            subtitle: "AUv3 on every platform. Classic AU on Mac. Shared output path."
+        ) {
+            HarborButton(
+                title: "Add Plugin",
+                systemImage: "plus",
+                kind: .primary,
+                action: { showBrowser = true }
+            )
         }
-        .padding(.horizontal, 8)
     }
 
     private var notice: some View {

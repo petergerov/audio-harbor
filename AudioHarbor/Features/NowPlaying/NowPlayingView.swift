@@ -98,7 +98,7 @@ struct NowPlayingView: View {
                     }
                     .padding(.horizontal, 4)
 
-                    VStack(spacing: 18) {
+                    VStack(spacing: 22) {
                         DeckStage(
                             style: deckStyle,
                             artwork: artworkImage(track),
@@ -154,13 +154,13 @@ struct NowPlayingView: View {
 
     @ViewBuilder
     private func metadata(_ track: Track?, style: DeckStyle) -> some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 10) {
             Text(track?.title ?? idleTitle(style))
-                .font(HarborFont.display(24))
+                .font(HarborFont.display(28))
                 .foregroundStyle(HarborColor.ivory)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
-            Text(track.map { "\($0.artist) — \($0.album)" } ?? idleSubtitle(style))
+            Text(track.map { "\($0.artist)  ·  \($0.album)" } ?? idleSubtitle(style))
                 .font(HarborFont.body(14))
                 .foregroundStyle(HarborColor.ivoryDim)
                 .multilineTextAlignment(.center)

@@ -12,13 +12,12 @@ struct SettingsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 8) {
-                        EngravedLabel(text: "Settings")
-                        BrandMark(compact: true)
-                        Text("Output paths and library directories.")
-                            .font(HarborFont.body(14))
-                            .foregroundStyle(HarborColor.ivoryDim)
+                        ScreenHeader(
+                            kicker: "House",
+                            title: "Settings",
+                            subtitle: "Output path, DSD strategy, and connected directories."
+                        )
                     }
-                    .padding(.horizontal, 4)
 
                     panel(title: "Output") {
                         Picker("Mode", selection: $playback.outputMode) {
@@ -153,9 +152,9 @@ struct SettingsView: View {
                 .font(HarborFont.title(14))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
+                .foregroundStyle(HarborColor.chassis)
                 .background(HarborColor.amber)
-                .foregroundStyle(HarborColor.faceplate)
-                .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
         .buttonStyle(.plain)
         .disabled(appModel.library.isScanning)
@@ -173,9 +172,9 @@ struct SettingsView: View {
                 .font(HarborFont.title(14))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
-                .background(HarborColor.aluminumDark)
                 .foregroundStyle(HarborColor.ivory)
-                .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+                .background(HarborColor.faceplateLift)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
         .buttonStyle(.plain)
         .disabled(appModel.library.isScanning || appModel.library.folders.isEmpty)

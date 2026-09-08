@@ -69,47 +69,31 @@ struct LibraryView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 8) {
-                BrandMark(compact: true)
-                Text(catalogueSubtitle)
-                    .font(HarborFont.body(13))
-                    .foregroundStyle(HarborColor.ivoryDim)
-                EngravedLabel(text: "Catalogue")
-            }
-            Spacer(minLength: 8)
+        ScreenHeader(
+            kicker: "Listening room",
+            title: "Catalogue",
+            subtitle: catalogueSubtitle
+        ) {
             HStack(spacing: 8) {
-                Button {
-                    confirmRebuild = true
-                } label: {
-                    Label("Rebuild Index", systemImage: "arrow.triangle.2.circlepath")
-                        .font(HarborFont.title(13))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                        .background(HarborColor.aluminumDark)
-                        .foregroundStyle(HarborColor.ivory)
-                        .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
-                }
-                .buttonStyle(.plain)
+                HarborButton(
+                    title: "Rebuild",
+                    systemImage: "arrow.triangle.2.circlepath",
+                    kind: .secondary,
+                    action: { confirmRebuild = true }
+                )
                 .disabled(appModel.library.isScanning || appModel.library.folders.isEmpty)
                 .help("Rebuild the catalogue index from disk")
 
-                Button(action: presentAddDirectory) {
-                    Label("Add Directory", systemImage: "folder.badge.plus")
-                        .font(HarborFont.title(13))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                        .background(HarborColor.amber)
-                        .foregroundStyle(HarborColor.faceplate)
-                        .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
-                }
-                .buttonStyle(.plain)
+                HarborButton(
+                    title: "Add Directory",
+                    systemImage: "folder.badge.plus",
+                    kind: .primary,
+                    action: presentAddDirectory
+                )
                 .disabled(appModel.library.isScanning)
                 .help("Connect a music directory to the catalogue")
             }
         }
-        .padding(.horizontal, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
         .confirmationDialog(
             "Rebuild catalogue index?",
             isPresented: $confirmRebuild,
@@ -390,7 +374,7 @@ struct LibraryView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 if let url = appModel.library.folderBrowseURL {
-                    FolderPlayButton {
+                    HarborIconButton(systemName: "play.fill", help: "Play this directory") {
                         playDirectory(url, name: appModel.library.folderBreadcrumb)
                     }
                 }
@@ -545,7 +529,7 @@ struct LibraryView: View {
             }
             .buttonStyle(.plain)
 
-            FolderPlayButton(action: onPlay)
+            HarborIconButton(systemName: "play.fill", help: "Play this directory", action: onPlay)
         }
     }
 
@@ -571,16 +555,12 @@ struct LibraryView: View {
                 .font(HarborFont.body(14))
                 .foregroundStyle(HarborColor.ivoryDim)
                 .multilineTextAlignment(.center)
-            Button(action: presentAddDirectory) {
-                Label("Add Directory", systemImage: "folder.badge.plus")
-                    .font(HarborFont.title(14))
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 11)
-                    .background(HarborColor.amber)
-                    .foregroundStyle(HarborColor.faceplate)
-                    .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
-            }
-            .buttonStyle(.plain)
+            HarborButton(
+                title: "Add Directory",
+                systemImage: "folder.badge.plus",
+                kind: .primary,
+                action: presentAddDirectory
+            )
             .disabled(appModel.library.isScanning)
             Spacer()
         }
@@ -588,23 +568,6 @@ struct LibraryView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-}
-
-private struct FolderPlayButton: View {
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: "play.fill")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(HarborColor.faceplate)
-                .frame(width: 28, height: 28)
-                .background(HarborColor.amber)
-                .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .help("Play this directory")
-    }
 }
 
 private struct CatalogueScanBanner: View {
@@ -679,16 +642,15 @@ private struct CatalogueAlbumList: View {
                 }
             } label: {
                 HStack(spacing: 12) {
-                    AlbumArtworkThumb(hash: album.artworkHash, data: album.artworkData)
-                    VStack(alignment: .leading, spacing: 3) {
+                    HarborArtwork(hash: album.artworkHash, data: album.artworkData, size: 56, corner: 8)
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(album.title)
                             .font(HarborFont.title(15))
                             .foregroundStyle(HarborColor.ivory)
                             .lineLimit(1)
-                        Text(album.artist.uppercased())
-                            .font(HarborFont.panel(10))
-                            .tracking(1.2)
-                            .foregroundStyle(HarborColor.amber)
+                        Text(album.artist)
+                            .font(HarborFont.body(12))
+                            .foregroundStyle(HarborColor.brass)
                         Text(trackCount == 1 ? "1 track" : "\(trackCount) tracks")
                             .font(HarborFont.body(11))
                             .foregroundStyle(HarborColor.ivoryDim)
@@ -703,7 +665,7 @@ private struct CatalogueAlbumList: View {
             }
             .buttonStyle(.plain)
 
-            Button {
+            HarborIconButton(systemName: "play.fill", help: "Play album") {
                 guard let first = album.tracks.first else { return }
                 appModel.playback.play(
                     track: first,
@@ -712,60 +674,9 @@ private struct CatalogueAlbumList: View {
                     sourceKind: "Album"
                 )
                 appModel.selectedTab = .nowPlaying
-            } label: {
-                Image(systemName: "play.fill")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(HarborColor.faceplate)
-                    .frame(width: 28, height: 28)
-                    .background(HarborColor.amber)
-                    .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
             }
-            .buttonStyle(.plain)
-            .help("Play album")
         }
         .padding(.vertical, 4)
-    }
-}
-
-private struct AlbumArtworkThumb: View {
-    let hash: String?
-    let data: Data?
-    @State private var image: Image?
-
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(HarborColor.aluminumDark)
-            if let image {
-                image
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                Image(systemName: "opticaldisc")
-                    .foregroundStyle(HarborColor.ivoryDim)
-            }
-        }
-        .frame(width: 40, height: 40)
-        .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 2)
-                .stroke(HarborColor.aluminumDark, lineWidth: 1)
-        )
-        .task(id: hash ?? data?.count.description) {
-            guard image == nil else { return }
-            let payload = data ?? hash.flatMap { ArtworkCache.shared.load($0) }
-            image = Self.makeImage(payload)
-        }
-    }
-
-    private static func makeImage(_ data: Data?) -> Image? {
-        guard let data else { return nil }
-        #if os(macOS)
-        if let ns = NSImage(data: data) { return Image(nsImage: ns) }
-        #else
-        if let ui = UIImage(data: data) { return Image(uiImage: ui) }
-        #endif
-        return nil
     }
 }
 
@@ -806,7 +717,7 @@ struct TrackRow: View {
                     bitDepth: track.bitDepth
                 )
             }
-            .padding(.vertical, 5)
+            .padding(.vertical, 7)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

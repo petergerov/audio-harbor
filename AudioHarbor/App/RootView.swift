@@ -9,21 +9,8 @@ struct RootView: View {
         Group {
             #if os(macOS)
             NavigationSplitView {
-                List(AppTab.allCases, selection: $appModel.selectedTab) { tab in
-                    Label(tab.title, systemImage: tab.systemImage)
-                        .tag(tab)
-                }
-                .navigationSplitViewColumnWidth(min: 180, ideal: 210)
-                .listStyle(.sidebar)
-                .scrollContentBackground(.hidden)
-                .background(HarborColor.chassis)
-                .safeAreaInset(edge: .bottom) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        PowerLamp(isOn: appModel.playback.isPlaying)
-                        BrandMark(compact: true)
-                    }
-                    .padding()
-                }
+                HarborSidebar()
+                    .navigationSplitViewColumnWidth(min: 212, ideal: 236, max: 280)
             } detail: {
                 detail
             }
@@ -39,6 +26,7 @@ struct RootView: View {
         }
         .tint(HarborColor.amber)
         .background(HarborColor.chassis.ignoresSafeArea())
+        .environment(\.harborPlaying, appModel.playback.isPlaying)
     }
 
     @ViewBuilder

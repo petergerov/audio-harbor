@@ -101,34 +101,21 @@ struct PlaylistsView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 16) {
-            VStack(alignment: .leading, spacing: 8) {
-                EngravedLabel(text: "Collections")
-                Text("Playlists")
-                    .font(HarborFont.display(28))
-                    .foregroundStyle(HarborColor.ivory)
-                Text("Your playlists, plus auto collections by artist, label, and year.")
-                    .font(HarborFont.body(14))
-                    .foregroundStyle(HarborColor.ivoryDim)
-            }
-            Spacer(minLength: 0)
-            Button {
-                newName = ""
-                isCreating = true
-            } label: {
-                Label("Add Playlist", systemImage: "plus")
-                    .font(HarborFont.panel(11))
-                    .foregroundStyle(HarborColor.faceplate)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 7)
-                    .background(HarborColor.amber)
-                    .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .padding(.top, 4)
+        ScreenHeader(
+            kicker: "Collections",
+            title: "Playlists",
+            subtitle: "Your lists, plus artists, labels, and years from the catalogue."
+        ) {
+            HarborButton(
+                title: "Add Playlist",
+                systemImage: "plus",
+                kind: .primary,
+                action: {
+                    newName = ""
+                    isCreating = true
+                }
+            )
         }
-        .padding(.horizontal, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var browserSidebar: some View {
