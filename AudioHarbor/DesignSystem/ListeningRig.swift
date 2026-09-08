@@ -6,23 +6,35 @@ struct ListeningRig: View {
     let artwork: Image?
     let isPlaying: Bool
     let progress: Double
+    var stageHeight: CGFloat? = nil
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
+        if let stageHeight {
             TurntableMacroView(
                 isPlaying: isPlaying,
                 progress: progress,
                 artwork: artwork,
-                layout: .wide
+                layout: .wide,
+                stageHeightOverride: stageHeight
             )
-            .frame(minWidth: 480, maxWidth: 720)
-            TurntableMacroView(
-                isPlaying: isPlaying,
-                progress: progress,
-                artwork: artwork,
-                layout: .portrait
-            )
-            .frame(maxWidth: 720)
+            .frame(maxWidth: .infinity)
+        } else {
+            ViewThatFits(in: .horizontal) {
+                TurntableMacroView(
+                    isPlaying: isPlaying,
+                    progress: progress,
+                    artwork: artwork,
+                    layout: .wide
+                )
+                .frame(minWidth: 480, maxWidth: 720)
+                TurntableMacroView(
+                    isPlaying: isPlaying,
+                    progress: progress,
+                    artwork: artwork,
+                    layout: .portrait
+                )
+                .frame(maxWidth: 720)
+            }
         }
     }
 }
@@ -49,17 +61,18 @@ private enum TurntableHeroLayout {
         }
     }
 
-    /// Dolly anchor toward the stylus / cartridge in each crop.
+    /// Dolly toward the stylus / cartridge. Wide crop stays left-weighted so the
+    /// truncated tonearm on the right of `nice_player_1` never sits on the frame edge.
     var dollyAnchor: UnitPoint {
         switch self {
-        case .wide: UnitPoint(x: 0.58, y: 0.48)
+        case .wide: UnitPoint(x: 0.36, y: 0.52)
         case .portrait: UnitPoint(x: 0.62, y: 0.42)
         }
     }
 
     var vignetteCenter: UnitPoint {
         switch self {
-        case .wide: UnitPoint(x: 0.55, y: 0.50)
+        case .wide: UnitPoint(x: 0.42, y: 0.52)
         case .portrait: UnitPoint(x: 0.55, y: 0.45)
         }
     }
@@ -71,6 +84,7 @@ private struct TurntableMacroView: View {
     let progress: Double
     let artwork: Image?
     let layout: TurntableHeroLayout
+    var stageHeightOverride: CGFloat? = nil
 
     /// 33⅓ RPM shimmer period.
     private static let secondsPerRevolution: Double = 1.8
@@ -86,7 +100,7 @@ private struct TurntableMacroView: View {
             GeometryReader { geo in
                 hero(size: geo.size)
             }
-            .frame(height: layout.stageHeight)
+            .frame(height: stageHeightOverride ?? layout.stageHeight)
             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
@@ -111,9 +125,13 @@ private struct TurntableMacroView: View {
 
     private func hero(size: CGSize) -> some View {
         let t = clampedProgress
-        let scale: CGFloat = 1.0 + 0.12 * t
-        let panX: CGFloat = size.width * (-0.02 - 0.06 * t)
-        let panY: CGFloat = size.height * (0.01 + 0.04 * t)
+        let cover: CGFloat = layout == .wide ? 1.22 : 1.06
+        let scale: CGFloat = cover + 0.08 * t
+        // Wide: keep the source's hard-cut tonearm off the right edge of the frame.
+        let panX: CGFloat = layout == .wide
+            ? size.width * (0.04 + 0.02 * t)
+            : size.width * (-0.02 - 0.06 * t)
+        let panY: CGFloat = size.height * (0.01 + 0.03 * t)
 
         return ZStack {
             Color(red: 0.06, green: 0.04, blue: 0.03)
@@ -136,6 +154,19 @@ private struct TurntableMacroView: View {
 
             warmGrade(size: size)
 
+            if layout == .wide {
+                LinearGradient(
+                    colors: [
+                        .clear,
+                        Color(red: 0.05, green: 0.03, blue: 0.02).opacity(0.35),
+                        Color(red: 0.04, green: 0.02, blue: 0.02).opacity(0.88),
+                    ],
+                    startPoint: UnitPoint(x: 0.58, y: 0.5),
+                    endPoint: .trailing
+                )
+                .allowsHitTesting(false)
+            }
+
             RadialGradient(
                 colors: [.clear, .clear, Color.black.opacity(0.45)],
                 center: layout.vignetteCenter,
@@ -144,6 +175,7 @@ private struct TurntableMacroView: View {
             )
             .allowsHitTesting(false)
         }
+        .clipped()
         .overlay(alignment: .bottomLeading) { artworkChip }
         .overlay(alignment: .topTrailing) {
             Circle()

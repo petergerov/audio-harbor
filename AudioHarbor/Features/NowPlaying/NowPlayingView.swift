@@ -12,6 +12,7 @@ struct NowPlayingView: View {
     @AppStorage("audioharbor.deckStyle") private var deckStyleRaw: String = DeckStyle.turntable.rawValue
     @AppStorage("audioharbor.deck.contextRailVisible") private var contextRailVisible = true
     #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showContextSheet = false
     #endif
 
@@ -55,14 +56,17 @@ struct NowPlayingView: View {
         }
         .animation(.easeInOut(duration: 0.2), value: contextRailVisible)
         #else
-        deckChrome(
-            playback: playback,
-            track: track,
-            style: style,
-            progress: progress,
-            display: display,
-            duration: duration
-        )
+        GeometryReader { geo in
+            deckChrome(
+                playback: playback,
+                track: track,
+                style: style,
+                progress: progress,
+                display: display,
+                duration: duration,
+                heroHeight: compactHeroHeight(in: geo.size.height, hasRack: track != nil)
+            )
+        }
         .sheet(isPresented: $showContextSheet) {
             NavigationStack {
                 DeckContextRail()
@@ -85,11 +89,13 @@ struct NowPlayingView: View {
         style: DeckStyle,
         progress: Double,
         display: TimeInterval,
-        duration: TimeInterval
+        duration: TimeInterval,
+        heroHeight: CGFloat? = nil
     ) -> some View {
-        ReceiverChassis {
+        let compact = heroHeight != nil
+        return ReceiverChassis {
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: compact ? 10 : 16) {
                     HStack {
                         EngravedLabel(text: style.engraved)
                         Spacer()
@@ -98,20 +104,21 @@ struct NowPlayingView: View {
                     }
                     .padding(.horizontal, 4)
 
-                    VStack(spacing: 22) {
+                    VStack(spacing: compact ? 12 : 22) {
                         DeckStage(
                             style: deckStyle,
                             artwork: artworkImage(track),
                             isPlaying: playback.isPlaying,
                             progress: progress,
-                            currentTime: display
+                            currentTime: display,
+                            heroHeight: heroHeight
                         )
 
-                        metadata(track, style: style)
+                        metadata(track, style: style, compact: compact)
                         meter(playback, progress: progress, display: display, duration: duration)
-                        transport(playback)
+                        transport(playback, compact: compact)
                     }
-                    .faceplate()
+                    .faceplate(compact: compact)
 
                     if track != nil {
                         DeckRackPanel()
@@ -119,11 +126,22 @@ struct NowPlayingView: View {
                 }
                 .padding(.bottom, 8)
             }
+            #if os(iOS)
+            .scrollBounceBehavior(.basedOnSize)
+            #endif
         }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
     }
+
+    #if os(iOS)
+    private func compactHeroHeight(in viewport: CGFloat, hasRack: Bool) -> CGFloat? {
+        guard horizontalSizeClass == .compact else { return nil }
+        let reserved: CGFloat = hasRack ? 390 : 310
+        return min(200, max(112, viewport - reserved))
+    }
+    #endif
 
     private var contextToggle: some View {
         Button {
@@ -157,17 +175,18 @@ struct NowPlayingView: View {
     }
 
     @ViewBuilder
-    private func metadata(_ track: Track?, style: DeckStyle) -> some View {
-        VStack(spacing: 10) {
+    private func metadata(_ track: Track?, style: DeckStyle, compact: Bool) -> some View {
+        VStack(spacing: compact ? 5 : 10) {
             Text(track?.title ?? idleTitle(style))
-                .font(HarborFont.display(28))
+                .font(HarborFont.display(compact ? 20 : 28))
                 .foregroundStyle(HarborColor.ivory)
                 .multilineTextAlignment(.center)
-                .lineLimit(2)
+                .lineLimit(compact ? 1 : 2)
             Text(track.map { "\($0.artist)  ·  \($0.album)" } ?? idleSubtitle(style))
-                .font(HarborFont.body(14))
+                .font(HarborFont.body(compact ? 12 : 14))
                 .foregroundStyle(HarborColor.ivoryDim)
                 .multilineTextAlignment(.center)
+                .lineLimit(1)
             if let track {
                 FormatBadge(
                     format: track.format,
@@ -244,8 +263,8 @@ struct NowPlayingView: View {
         }
     }
 
-    private func transport(_ playback: PlaybackService) -> some View {
-        HStack(spacing: 28) {
+    private func transport(_ playback: PlaybackService, compact: Bool) -> some View {
+        HStack(spacing: compact ? 22 : 28) {
             HardwareButton(systemName: "backward.fill") {
                 playback.playPrevious()
             }
@@ -260,8 +279,10 @@ struct NowPlayingView: View {
                 playback.playNext()
             }
         }
-        .padding(.top, 4)
-        .padding(.bottom, 8)
+        .padding(.top, compact ? 0 : 4)
+        .padding(.bottom, compact ? 2 : 8)
+        .scaleEffect(compact ? 0.86 : 1, anchor: .center)
+        .padding(.vertical, compact ? -6 : 0)
     }
 
     private func artworkImage(_ track: Track?) -> Image? {

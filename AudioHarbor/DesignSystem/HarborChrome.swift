@@ -55,9 +55,11 @@ struct ReceiverChassis<Content: View>: View {
 }
 
 struct Faceplate: ViewModifier {
+    var compact: Bool = false
+
     func body(content: Content) -> some View {
         content
-            .padding(18)
+            .padding(compact ? 12 : 18)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(HarborColor.faceplate)
@@ -86,8 +88,8 @@ struct Faceplate: ViewModifier {
 }
 
 extension View {
-    func faceplate() -> some View {
-        modifier(Faceplate())
+    func faceplate(compact: Bool = false) -> some View {
+        modifier(Faceplate(compact: compact))
     }
 }
 

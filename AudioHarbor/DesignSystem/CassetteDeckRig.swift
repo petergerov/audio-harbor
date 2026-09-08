@@ -6,9 +6,10 @@ struct CassetteDeckRig: View {
     let isPlaying: Bool
     let progress: Double
     let currentTime: TimeInterval
+    var compact: Bool = false
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: compact ? 8 : 12) {
             HStack {
                 EngravedLabel(text: "Cassette Deck", size: 9)
                 Spacer()
@@ -17,15 +18,17 @@ struct CassetteDeckRig: View {
 
             cassetteShell
 
-            HStack(spacing: 18) {
-                transportKey(symbol: "backward.fill", lit: false)
-                transportKey(symbol: isPlaying ? "pause.fill" : "play.fill", lit: isPlaying)
-                transportKey(symbol: "forward.fill", lit: false)
+            if !compact {
+                HStack(spacing: 18) {
+                    transportKey(symbol: "backward.fill", lit: false)
+                    transportKey(symbol: isPlaying ? "pause.fill" : "play.fill", lit: isPlaying)
+                    transportKey(symbol: "forward.fill", lit: false)
+                }
+                .opacity(0.55)
+                .allowsHitTesting(false)
             }
-            .opacity(0.55)
-            .allowsHitTesting(false)
         }
-        .padding(14)
+        .padding(compact ? 10 : 14)
         .background(
             RoundedRectangle(cornerRadius: 5, style: .continuous)
                 .fill(
@@ -82,7 +85,7 @@ struct CassetteDeckRig: View {
                     RoundedRectangle(cornerRadius: 6, style: .continuous)
                         .stroke(HarborColor.aluminumDark, lineWidth: 1.5)
                 )
-                .frame(height: 150)
+                .frame(height: compact ? 110 : 150)
 
             // Label area
             HStack(spacing: 12) {

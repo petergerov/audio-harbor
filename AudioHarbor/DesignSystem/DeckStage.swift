@@ -33,23 +33,30 @@ struct DeckStage: View {
     let isPlaying: Bool
     let progress: Double
     let currentTime: TimeInterval
+    var heroHeight: CGFloat? = nil
 
     var body: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: heroHeight == nil ? 14 : 8) {
             stylePicker
 
             Group {
                 switch style {
                 case .turntable:
-                    ListeningRig(artwork: artwork, isPlaying: isPlaying, progress: progress)
+                    ListeningRig(
+                        artwork: artwork,
+                        isPlaying: isPlaying,
+                        progress: progress,
+                        stageHeight: heroHeight
+                    )
                 case .reelToReel:
-                    ReelToReelRig(isPlaying: isPlaying, progress: progress)
+                    ReelToReelRig(isPlaying: isPlaying, progress: progress, stageHeight: heroHeight)
                 case .cassette:
                     CassetteDeckRig(
                         artwork: artwork,
                         isPlaying: isPlaying,
                         progress: progress,
-                        currentTime: currentTime
+                        currentTime: currentTime,
+                        compact: heroHeight != nil
                     )
                 case .receiver:
                     ReceiverVURig(isPlaying: isPlaying, progress: progress)

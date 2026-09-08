@@ -39,8 +39,18 @@ final class EffectHost {
 
     var hasChain: Bool { !chain.isEmpty }
 
+    private var registrationsObserver: NSObjectProtocol?
+
     init() {
         loadPersistedChain()
+        registrationsObserver = NotificationCenter.default.addObserver(
+            forName: AVAudioUnitComponentManager.registrationsChangedNotification,
+            object: AVAudioUnitComponentManager.shared(),
+            queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            Task { await self.refreshCatalog() }
+        }
         Task { await refreshCatalog() }
     }
 
@@ -49,27 +59,11 @@ final class EffectHost {
         defer { isLoadingCatalog = false }
 
         // Playback rack is stereo-only: hide mono / multi / MIDI-only units.
-        let effects = AVAudioUnitComponentManager.shared().components(passingTest: { component, _ in
-            let type = component.audioComponentDescription.componentType
-            let isEffectType = type == kAudioUnitType_Effect
-                || type == kAudioUnitType_MusicEffect
-                || type == kAudioUnitType_Panner
-                || type == kAudioUnitType_Mixer
-            guard isEffectType else { return false }
-            #if os(macOS)
-            return component.supportsNumberInputChannels(2, outputChannels: 2)
-            #else
-            // iOS does not support supportsNumberInputChannels API.
-            // Assume AUv3 plugins are properly filtered elsewhere.
-            return true
-            #endif
-        })
+        let effects = discoverEffectComponents()
 
         available = effects
             .map { component in
                 let desc = component.audioComponentDescription
-                // AUv3 components set IsV3AudioUnit; classic AU remain Mac-only catalog entries.
-                let isV3 = (desc.componentFlags & 1) != 0 // kAudioComponentFlag_IsV3AudioUnit
                 return PluginDescriptor(
                     id: "\(desc.componentType)-\(desc.componentSubType)-\(desc.componentManufacturer)",
                     name: component.name,
@@ -77,28 +71,26 @@ final class EffectHost {
                     typeName: component.typeName,
                     versionString: component.versionString,
                     audioComponentDescription: desc,
-                    isAUv3: isV3
+                    isAUv3: Self.isAUv3(desc)
                 )
             }
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
 
-        // Restore units for persisted chain.
+        var restored = false
         for slot in chain where loadedUnits[slot.id] == nil {
             do {
                 try await loadUnit(for: slot)
+                restored = true
             } catch {
                 statusMessage = error.localizedDescription
             }
         }
-        onChainChanged?()
+        if restored {
+            onChainChanged?()
+        }
     }
 
     func add(_ descriptor: PluginDescriptor) async {
-        #if !os(macOS)
-        if !descriptor.isAUv3 {
-            // On iOS only AUv3 should appear; still allow instantiate attempts.
-        }
-        #endif
         guard isStereoCapable(descriptor) else {
             statusMessage = "Only stereo (2-in / 2-out) plugins are supported."
             return
@@ -225,6 +217,45 @@ final class EffectHost {
     #endif
 
     // MARK: - Private
+
+    private static func isAUv3(_ desc: AudioComponentDescription) -> Bool {
+        #if os(iOS)
+        true
+        #else
+        AudioComponentFlags(rawValue: desc.componentFlags).contains(.isV3AudioUnit)
+        #endif
+    }
+
+    private func discoverEffectComponents() -> [AVAudioUnitComponent] {
+        let types: [OSType] = [
+            kAudioUnitType_Effect,
+            kAudioUnitType_MusicEffect,
+            kAudioUnitType_Panner,
+            kAudioUnitType_Mixer
+        ]
+        let manager = AVAudioUnitComponentManager.shared()
+        var seen = Set<String>()
+        var found: [AVAudioUnitComponent] = []
+        for type in types {
+            let desc = AudioComponentDescription(
+                componentType: type,
+                componentSubType: 0,
+                componentManufacturer: 0,
+                componentFlags: 0,
+                componentFlagsMask: 0
+            )
+            for component in manager.components(matching: desc) {
+                #if os(macOS)
+                guard component.supportsNumberInputChannels(2, outputChannels: 2) else { continue }
+                #endif
+                let id = "\(component.audioComponentDescription.componentType)-\(component.audioComponentDescription.componentSubType)-\(component.audioComponentDescription.componentManufacturer)"
+                if seen.insert(id).inserted {
+                    found.append(component)
+                }
+            }
+        }
+        return found
+    }
 
     private func isStereoCapable(_ descriptor: PluginDescriptor) -> Bool {
         #if os(macOS)

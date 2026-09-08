@@ -37,9 +37,14 @@ struct DeckRackPanel: View {
             }
 
             if appModel.effects.chain.isEmpty {
-                Text("No inserts. Add an AUv3\(macAUHint) if you want to process the output.")
+                Text("No inserts.")
                     .font(HarborFont.body(13))
                     .foregroundStyle(HarborColor.ivoryDim)
+                #if os(macOS)
+                Text("Add an AUv3 or AU if you want to process the output.")
+                    .font(HarborFont.body(13))
+                    .foregroundStyle(HarborColor.ivoryDim)
+                #endif
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(appModel.effects.chain.enumerated()), id: \.element.id) { index, slot in
@@ -84,14 +89,6 @@ struct DeckRackPanel: View {
         }
     }
 
-    private var macAUHint: String {
-        #if os(macOS)
-        " or AU"
-        #else
-        ""
-        #endif
-    }
-
     private var pluginBrowser: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -109,6 +106,14 @@ struct DeckRackPanel: View {
                 if appModel.effects.isLoadingCatalog {
                     ProgressView("Scanning Audio Units…")
                         .tint(HarborColor.amber)
+                        .padding()
+                } else if filteredPlugins.isEmpty {
+                    Text(search.isEmpty
+                         ? "No Audio Units found. Install an AUv3 app, then tap Refresh."
+                         : "No plugins match that search.")
+                        .font(HarborFont.body(13))
+                        .foregroundStyle(HarborColor.ivoryDim)
+                        .multilineTextAlignment(.center)
                         .padding()
                 }
 
@@ -144,6 +149,11 @@ struct DeckRackPanel: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { showBrowser = false }
                 }
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Refresh") {
+                        Task { await appModel.effects.refreshCatalog() }
+                    }
+                }
             }
             #else
             .toolbar {
@@ -162,11 +172,7 @@ struct DeckRackPanel: View {
 
     private var filteredPlugins: [PluginDescriptor] {
         let q = search.trimmingCharacters(in: .whitespacesAndNewlines)
-        #if os(iOS)
-        let base = appModel.effects.available.filter(\.isAUv3)
-        #else
         let base = appModel.effects.available
-        #endif
         guard !q.isEmpty else { return base }
         return base.filter {
             $0.name.localizedCaseInsensitiveContains(q)
