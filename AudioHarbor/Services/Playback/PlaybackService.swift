@@ -20,6 +20,8 @@ final class PlaybackService {
     private(set) var playbackState: PlaybackState = .idle
     private(set) var activeFormatLabel: String?
     private(set) var pathLabel: String = "Shared"
+    private(set) var meterLeft: Double = 0
+    private(set) var meterRight: Double = 0
 
     var outputMode: OutputMode = .shared {
         didSet {
@@ -154,7 +156,7 @@ final class PlaybackService {
 
     private func startSyncing() {
         stopSyncing()
-        let timer = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: 0.05, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.syncFromEngine()
             }
@@ -185,6 +187,8 @@ final class PlaybackService {
         }
         activeFormatLabel = engine.activeFormatLabel
         pathLabel = engine.pathLabel
+        meterLeft = engine.meterLeft
+        meterRight = engine.meterRight
 
         if newState != .playing {
             stopSyncing()

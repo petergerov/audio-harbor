@@ -10,6 +10,9 @@ protocol PlaybackEngine: AnyObject {
     var duration: TimeInterval { get }
     var activeFormatLabel: String? { get }
     var pathLabel: String { get }
+    /// VU-mapped 0…1 from the live stereo signal (0 VU ≈ −18 dBFS).
+    var meterLeft: Double { get }
+    var meterRight: Double { get }
 
     func load(_ track: Track) async throws
     func play()

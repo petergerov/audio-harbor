@@ -34,6 +34,8 @@ struct DeckStage: View {
     let progress: Double
     let currentTime: TimeInterval
     var heroHeight: CGFloat? = nil
+    var meterLeft: Double = 0
+    var meterRight: Double = 0
 
     var body: some View {
         VStack(spacing: heroHeight == nil ? 14 : 8) {
@@ -59,7 +61,12 @@ struct DeckStage: View {
                         compact: heroHeight != nil
                     )
                 case .receiver:
-                    ReceiverVURig(isPlaying: isPlaying, progress: progress)
+                    ReceiverVURig(
+                        isPlaying: isPlaying,
+                        progress: progress,
+                        leftLevel: meterLeft,
+                        rightLevel: meterRight
+                    )
                 }
             }
             .frame(maxWidth: .infinity)

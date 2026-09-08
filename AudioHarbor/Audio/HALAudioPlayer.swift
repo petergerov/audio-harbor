@@ -27,6 +27,7 @@ final class HALAudioPlayer {
     private let lock = NSLock()
 
     var onReachedEnd: (() -> Void)?
+    var meterProbe: StereoMeterProbe?
 
     deinit {
         stop()
@@ -227,6 +228,16 @@ final class HALAudioPlayer {
         buffer.packed24.withUnsafeBytes { raw in
             if let base = raw.baseAddress, byteCount > 0, srcOffset + byteCount <= raw.count {
                 memcpy(dst, base.advanced(by: srcOffset), byteCount)
+                if !buffer.isDoP, let probe = meterProbe {
+                    probe.ingestPacked24(
+                        bytes: base.assumingMemoryBound(to: UInt8.self),
+                        count: raw.count,
+                        frames: framesToCopy,
+                        channels: buffer.channelCount,
+                        byteOffset: srcOffset,
+                        sampleRate: buffer.sampleRate
+                    )
+                }
             }
         }
 

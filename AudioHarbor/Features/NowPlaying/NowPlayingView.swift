@@ -111,10 +111,19 @@ struct NowPlayingView: View {
                             isPlaying: playback.isPlaying,
                             progress: progress,
                             currentTime: display,
-                            heroHeight: heroHeight
+                            heroHeight: heroHeight,
+                            meterLeft: playback.meterLeft,
+                            meterRight: playback.meterRight
                         )
 
                         metadata(track, style: style, compact: compact)
+                        if style != .receiver {
+                            AnalogVUPair(
+                                left: playback.meterLeft,
+                                right: playback.meterRight,
+                                compact: compact
+                            )
+                        }
                         meter(playback, progress: progress, display: display, duration: duration)
                         transport(playback, compact: compact)
                     }
@@ -138,7 +147,7 @@ struct NowPlayingView: View {
     #if os(iOS)
     private func compactHeroHeight(in viewport: CGFloat, hasRack: Bool) -> CGFloat? {
         guard horizontalSizeClass == .compact else { return nil }
-        let reserved: CGFloat = hasRack ? 390 : 310
+        let reserved: CGFloat = hasRack ? 470 : 390
         return min(200, max(112, viewport - reserved))
     }
     #endif

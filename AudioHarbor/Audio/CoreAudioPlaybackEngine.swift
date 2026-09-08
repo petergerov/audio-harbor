@@ -16,12 +16,16 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
     private(set) var duration: TimeInterval = 0
     private(set) var activeFormatLabel: String?
     private(set) var pathLabel: String = "Shared"
+    private(set) var meterLeft: Double = 0
+    private(set) var meterRight: Double = 0
 
     private var sharedEngine = AVAudioEngine()
     private var sharedPlayer = AVAudioPlayerNode()
     private var sharedFile: AVAudioFile?
 
     private let halPlayer = HALAudioPlayer()
+    private let meterProbe = StereoMeterProbe()
+    private var meterTapInstalled = false
     private let deviceController = MacAudioDeviceController()
     private let effectHost: EffectHost
 
@@ -42,6 +46,7 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
 
     init(effectHost: EffectHost) {
         self.effectHost = effectHost
+        halPlayer.meterProbe = meterProbe
         wireSharedGraph()
         effectHost.onChainChanged = { [weak self] in
             self?.handleEffectChainChanged()
@@ -130,6 +135,7 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
             clearSharedAnchor()
             state = .paused
             stopTimer()
+            zeroMeters()
             return
         }
         captureSharedProgress()
@@ -138,6 +144,7 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         clearSharedAnchor()
         state = .paused
         stopTimer()
+        zeroMeters()
     }
 
     func stop() {
@@ -155,6 +162,7 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         duration = 0
         activeFormatLabel = nil
         state = .idle
+        zeroMeters()
     }
 
     func seek(to seconds: TimeInterval) {
@@ -390,6 +398,7 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         }
 
         sharedEngine.prepare()
+        installMeterTap()
 
         if !failedUnits.isEmpty {
             let names = failedUnits.map { effectHost.displayName(for: $0) }.joined(separator: ", ")
@@ -492,6 +501,7 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
     }
 
     private func stopSharedEngine() {
+        removeMeterTap()
         sharedPlayer.stop()
         if sharedEngine.isRunning {
             sharedEngine.stop()
@@ -513,11 +523,12 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         state = .paused
         stopTimer()
         halPlayer.stopIO()
+        zeroMeters()
     }
 
     private func startTimer() {
         stopTimer()
-        let timer = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: 0.05, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.tick() }
         }
         RunLoop.main.add(timer, forMode: .common)
@@ -531,6 +542,7 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
 
     private func tick() {
         guard state == .playing else { return }
+        updateMeters()
 
         if usingHAL, let render = activeRender {
             currentTime = Double(halPlayer.currentFrame) / render.sampleRate
@@ -624,5 +636,142 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
 
         try data.write(to: url, options: .atomic)
         return url
+    }
+
+    private func installMeterTap() {
+        removeMeterTap()
+        let mixer = sharedEngine.mainMixerNode
+        let format = mixer.outputFormat(forBus: 0)
+        guard format.sampleRate > 0, format.channelCount > 0 else { return }
+        let probe = meterProbe
+        mixer.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
+            probe.ingest(buffer)
+        }
+        meterTapInstalled = true
+    }
+
+    private func removeMeterTap() {
+        guard meterTapInstalled else { return }
+        sharedEngine.mainMixerNode.removeTap(onBus: 0)
+        meterTapInstalled = false
+    }
+
+    private func updateMeters() {
+        let envelope = meterProbe.takeEnvelope()
+        meterLeft = Self.needleStep(meterLeft, toward: Self.vuPosition(envelope.left))
+        meterRight = Self.needleStep(meterRight, toward: Self.vuPosition(envelope.right))
+    }
+
+    private func zeroMeters() {
+        meterProbe.reset()
+        meterLeft = 0
+        meterRight = 0
+    }
+
+    /// 0 VU ≈ −18 dBFS. Scale −20…+3 dB onto 0…1.
+    private static func vuPosition(_ rms: Float) -> Double {
+        let db = 20.0 * log10(Double(max(rms, 1e-7)))
+        return min(max((db + 20.0) / 23.0, 0), 1)
+    }
+
+    /// Extra mechanical inertia on the needle (~280 ms), same rise and fall.
+    private static func needleStep(_ current: Double, toward target: Double, dt: Double = 0.05) -> Double {
+        let alpha = 1 - exp(-dt / 0.28)
+        return current + (target - current) * alpha
+    }
+}
+
+/// Audio-thread-safe stereo RMS envelope. Analog VU: ~300 ms, not peak.
+final class StereoMeterProbe: @unchecked Sendable {
+    private let lock = NSLock()
+    private var vuLeft: Float = 0
+    private var vuRight: Float = 0
+
+    func ingest(_ buffer: AVAudioPCMBuffer) {
+        let frames = Int(buffer.frameLength)
+        guard frames > 0 else { return }
+        let channels = Int(buffer.format.channelCount)
+        var sumL = 0.0
+        var sumR = 0.0
+
+        if let data = buffer.floatChannelData {
+            for i in 0..<frames {
+                let l = Double(data[0][i])
+                sumL += l * l
+                if channels > 1 {
+                    let r = Double(data[1][i])
+                    sumR += r * r
+                }
+            }
+        } else if let data = buffer.int16ChannelData {
+            for i in 0..<frames {
+                let l = Double(data[0][i]) / 32768
+                sumL += l * l
+                if channels > 1 {
+                    let r = Double(data[1][i]) / 32768
+                    sumR += r * r
+                }
+            }
+        } else {
+            return
+        }
+
+        if channels < 2 { sumR = sumL }
+        let n = Double(frames)
+        let dt = n / max(buffer.format.sampleRate, 1)
+        apply(rmsLeft: Float(sqrt(sumL / n)), rmsRight: Float(sqrt(sumR / n)), dt: dt)
+    }
+
+    func ingestPacked24(
+        bytes: UnsafePointer<UInt8>,
+        count: Int,
+        frames: Int,
+        channels: Int,
+        byteOffset: Int,
+        sampleRate: Double
+    ) {
+        guard frames > 0, channels > 0 else { return }
+        var sumL = 0.0
+        var sumR = 0.0
+        for frame in 0..<frames {
+            let base = byteOffset + frame * channels * 3
+            let l = Double(Self.float24(bytes, base, count: count))
+            sumL += l * l
+            if channels > 1 {
+                let r = Double(Self.float24(bytes, base + 3, count: count))
+                sumR += r * r
+            }
+        }
+        if channels < 2 { sumR = sumL }
+        let n = Double(frames)
+        apply(rmsLeft: Float(sqrt(sumL / n)), rmsRight: Float(sqrt(sumR / n)), dt: n / max(sampleRate, 1))
+    }
+
+    func takeEnvelope() -> (left: Float, right: Float) {
+        lock.lock()
+        defer { lock.unlock() }
+        return (vuLeft, vuRight)
+    }
+
+    func reset() {
+        lock.lock()
+        vuLeft = 0
+        vuRight = 0
+        lock.unlock()
+    }
+
+    private func apply(rmsLeft: Float, rmsRight: Float, dt: Double) {
+        let alpha = Float(1 - exp(-dt / 0.300))
+        lock.lock()
+        vuLeft += alpha * (rmsLeft - vuLeft)
+        vuRight += alpha * (rmsRight - vuRight)
+        lock.unlock()
+    }
+
+    private static func float24(_ bytes: UnsafePointer<UInt8>, _ offset: Int, count: Int) -> Float {
+        guard offset + 2 < count else { return 0 }
+        var v = Int32(bytes[offset]) | (Int32(bytes[offset + 1]) << 8) | (Int32(bytes[offset + 2]) << 16)
+        if v & 0x800000 != 0 { v |= ~0xFFFFFF }
+        return Float(v) / 8_388_608
     }
 }
