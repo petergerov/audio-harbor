@@ -21,7 +21,7 @@ struct AudioHarborApp: App {
             }
             CommandMenu("Catalogue") {
                 Button("Rebuild Index") {
-                    appModel.library.rebuildIndex()
+                    appModel.requestIndexRebuild()
                 }
                 .keyboardShortcut("r", modifiers: [.command, .shift])
                 .disabled(appModel.library.isScanning || appModel.library.folders.isEmpty)

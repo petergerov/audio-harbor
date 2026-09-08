@@ -27,6 +27,17 @@ struct RootView: View {
         .tint(HarborColor.amber)
         .background(HarborColor.chassis.ignoresSafeArea())
         .environment(\.harborPlaying, appModel.playback.isPlaying)
+        .alert(
+            "Rebuild the catalogue index?",
+            isPresented: $appModel.isRebuildWarningPresented
+        ) {
+            Button("Rebuild") {
+                appModel.library.rebuildIndex()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Every connected file will be re-read from disk. On a large library this can take a long time.")
+        }
     }
 
     @ViewBuilder
@@ -38,8 +49,6 @@ struct RootView: View {
             PlaylistsView()
         case .nowPlaying:
             NowPlayingView()
-        case .effects:
-            EffectsRackView()
         case .settings:
             SettingsView()
         }
@@ -54,8 +63,6 @@ struct RootView: View {
             NavigationStack { PlaylistsView() }
         case .nowPlaying:
             NavigationStack { NowPlayingView() }
-        case .effects:
-            NavigationStack { EffectsRackView() }
         case .settings:
             NavigationStack { SettingsView() }
         }

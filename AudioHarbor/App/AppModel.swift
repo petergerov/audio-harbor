@@ -10,6 +10,12 @@ final class AppModel {
     let effects: EffectHost
 
     var selectedTab: AppTab = .library
+    var isRebuildWarningPresented = false
+
+    func requestIndexRebuild() {
+        guard !library.isScanning, !library.folders.isEmpty else { return }
+        isRebuildWarningPresented = true
+    }
 
     init() {
         let effects = EffectHost()
@@ -25,7 +31,6 @@ enum AppTab: String, CaseIterable, Identifiable {
     case library
     case playlists
     case nowPlaying
-    case effects
     case settings
 
     var id: String { rawValue }
@@ -35,7 +40,6 @@ enum AppTab: String, CaseIterable, Identifiable {
         case .library: "Catalogue"
         case .playlists: "Playlists"
         case .nowPlaying: "Deck"
-        case .effects: "Rack"
         case .settings: "Settings"
         }
     }
@@ -45,7 +49,6 @@ enum AppTab: String, CaseIterable, Identifiable {
         case .library: "rectangle.stack"
         case .playlists: "music.note.list"
         case .nowPlaying: "hifispeaker.fill"
-        case .effects: "slider.vertical.3"
         case .settings: "gearshape"
         }
     }

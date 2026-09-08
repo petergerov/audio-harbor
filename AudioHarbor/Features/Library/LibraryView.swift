@@ -10,7 +10,6 @@ import UIKit
 struct LibraryView: View {
     @Environment(AppModel.self) private var appModel
     @State private var isImporterPresented = false
-    @State private var confirmRebuild = false
     @State private var searchDraft = ""
     @State private var searchTask: Task<Void, Never>?
     @State private var expandedAlbumID: UUID?
@@ -79,7 +78,7 @@ struct LibraryView: View {
                     title: "Rebuild",
                     systemImage: "arrow.triangle.2.circlepath",
                     kind: .secondary,
-                    action: { confirmRebuild = true }
+                    action: { appModel.requestIndexRebuild() }
                 )
                 .disabled(appModel.library.isScanning || appModel.library.folders.isEmpty)
                 .help("Rebuild the catalogue index from disk")
@@ -93,18 +92,6 @@ struct LibraryView: View {
                 .disabled(appModel.library.isScanning)
                 .help("Connect a music directory to the catalogue")
             }
-        }
-        .confirmationDialog(
-            "Rebuild catalogue index?",
-            isPresented: $confirmRebuild,
-            titleVisibility: .visible
-        ) {
-            Button("Rebuild Index") {
-                appModel.library.rebuildIndex()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Every connected file will be re-read. Unchanged libraries usually only take a moment on the next launch — this forces a full rebuild.")
         }
     }
 

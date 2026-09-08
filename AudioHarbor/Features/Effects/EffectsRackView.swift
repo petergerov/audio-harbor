@@ -4,7 +4,7 @@ import SwiftUI
 import UIKit
 #endif
 
-struct EffectsRackView: View {
+struct DeckRackPanel: View {
     @Environment(AppModel.self) private var appModel
     @State private var showBrowser = false
     #if os(iOS)
@@ -13,24 +13,56 @@ struct EffectsRackView: View {
     @State private var search = ""
 
     var body: some View {
-        @Bindable var effects = appModel.effects
-
-        ReceiverChassis {
-            VStack(spacing: 14) {
-                header
-                notice
-                chainPanel
-                if let message = effects.statusMessage {
-                    Text(message)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    EngravedLabel(text: "Rack")
+                    Text(appModel.effects.hasActiveEffects ? "Shared · FX" : "Exclusive / DoP available")
                         .font(HarborFont.mono(11))
-                        .foregroundStyle(HarborColor.amber)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 8)
+                        .foregroundStyle(appModel.effects.hasActiveEffects ? HarborColor.amber : HarborColor.ivoryDim)
                 }
-                Spacer(minLength: 0)
+                Spacer(minLength: 8)
+                HarborButton(
+                    title: "Add",
+                    systemImage: "plus",
+                    kind: .primary,
+                    action: { showBrowser = true }
+                )
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
+            if let message = appModel.effects.statusMessage {
+                Text(message)
+                    .font(HarborFont.mono(11))
+                    .foregroundStyle(HarborColor.amber)
+            }
+
+            if appModel.effects.chain.isEmpty {
+                Text("No inserts. Add an AUv3\(macAUHint) if you want to process the output.")
+                    .font(HarborFont.body(13))
+                    .foregroundStyle(HarborColor.ivoryDim)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(appModel.effects.chain.enumerated()), id: \.element.id) { index, slot in
+                        if index > 0 {
+                            Divider().overlay(HarborColor.aluminumDark.opacity(0.45))
+                        }
+                        EffectSlotRow(
+                            slot: slot,
+                            onBypass: { appModel.effects.setBypass(slot.id, bypassed: $0) },
+                            onEdit: {
+                                #if os(macOS)
+                                Task { await appModel.effects.openEditor(for: slot.id) }
+                                #else
+                                editorSlotID = slot.id
+                                #endif
+                            },
+                            onRemove: { appModel.effects.remove(slot.id) }
+                        )
+                    }
+                }
+            }
         }
+        .faceplate()
         .sheet(isPresented: $showBrowser) {
             pluginBrowser
                 #if os(macOS)
@@ -46,84 +78,10 @@ struct EffectsRackView: View {
                 PluginEditorSheet(slotID: editorSlotID)
             }
         }
-        .navigationTitle("Rack")
         #endif
         .task {
-            await effects.refreshCatalog()
+            await appModel.effects.refreshCatalog()
         }
-    }
-
-    private var header: some View {
-        ScreenHeader(
-            kicker: "Output inserts",
-            title: "Rack",
-            subtitle: "AUv3 on every platform. Classic AU on Mac. Shared output path."
-        ) {
-            HarborButton(
-                title: "Add Plugin",
-                systemImage: "plus",
-                kind: .primary,
-                action: { showBrowser = true }
-            )
-        }
-    }
-
-    private var notice: some View {
-        AluminumField {
-            VStack(alignment: .leading, spacing: 6) {
-                EngravedLabel(text: "Bit-perfect note", size: 9)
-                Text(
-                    appModel.effects.hasActiveEffects
-                    ? "Effects are active — output is Shared · FX (not Exclusive/DoP)."
-                    : "Empty rack keeps Exclusive / DoP available when you choose them in Settings."
-                )
-                .font(HarborFont.body(13))
-                .foregroundStyle(HarborColor.ivoryDim)
-            }
-        }
-        .padding(.horizontal, 4)
-    }
-
-    private var chainPanel: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            EngravedLabel(text: "Signal chain")
-            if appModel.effects.chain.isEmpty {
-                Text("No inserts. Add an AUv3\(macAUHint) to process the output.")
-                    .font(HarborFont.body(14))
-                    .foregroundStyle(HarborColor.ivoryDim)
-                    .frame(maxWidth: .infinity, minHeight: 120, alignment: .center)
-            } else {
-                List {
-                    ForEach(appModel.effects.chain) { slot in
-                        EffectSlotRow(
-                            slot: slot,
-                            onBypass: { appModel.effects.setBypass(slot.id, bypassed: $0) },
-                            onEdit: {
-                                #if os(macOS)
-                                Task { await appModel.effects.openEditor(for: slot.id) }
-                                #else
-                                editorSlotID = slot.id
-                                #endif
-                            },
-                            onRemove: { appModel.effects.remove(slot.id) }
-                        )
-                        .listRowBackground(HarborColor.faceplate)
-                        .listRowSeparatorTint(HarborColor.aluminumDark.opacity(0.5))
-                    }
-                    .onMove { appModel.effects.move(from: $0, to: $1) }
-                    .onDelete { offsets in
-                        offsets.map { appModel.effects.chain[$0].id }
-                            .forEach(appModel.effects.remove)
-                    }
-                }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                #if os(macOS)
-                .frame(minHeight: 220)
-                #endif
-            }
-        }
-        .faceplate()
     }
 
     private var macAUHint: String {
@@ -253,7 +211,7 @@ private struct EffectSlotRow: View {
                 .foregroundStyle(HarborColor.danger)
                 .font(HarborFont.panel(11))
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 4)
     }
 }
 

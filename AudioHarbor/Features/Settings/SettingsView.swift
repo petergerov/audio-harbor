@@ -42,7 +42,7 @@ struct SettingsView: View {
                             .foregroundStyle(HarborColor.ivoryDim)
                         #endif
 
-                        Text("Plugins in Rack force Shared · FX and disable Exclusive/DoP while inserts are loaded.")
+                        Text("Inserts on the Deck rack force Shared · FX and disable Exclusive/DoP while they are loaded.")
                             .font(HarborFont.body(12))
                             .foregroundStyle(HarborColor.ivoryDim)
                     }
@@ -166,7 +166,7 @@ struct SettingsView: View {
         }
 
         Button {
-            appModel.library.rebuildIndex()
+            appModel.requestIndexRebuild()
         } label: {
             Label("Rebuild Index", systemImage: "arrow.triangle.2.circlepath")
                 .font(HarborFont.title(14))

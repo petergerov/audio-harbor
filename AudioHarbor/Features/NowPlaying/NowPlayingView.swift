@@ -112,6 +112,8 @@ struct NowPlayingView: View {
                         transport(playback)
                     }
                     .faceplate()
+
+                    DeckRackPanel()
                 }
                 .padding(.bottom, 8)
             }
