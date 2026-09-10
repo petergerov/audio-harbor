@@ -1,0 +1,552 @@
+<title>Audio Harbor Icon</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,500;0,600;1,400&family=Nunito+Sans:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --chassis:#12100E; --chassis-lift:#1A1713; --faceplate:#161412; --edge:#2A2520;
+    --brass:#C79447; --amber:#FAB838; --ivory:#F0E8D9; --ivory-dim:#9E9482; --ivory-faint:#6E665A;
+    --serif:"Spectral",Georgia,"Times New Roman",serif;
+    --sans:"Nunito Sans","Avenir Next","Helvetica Neue",Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--chassis); color:var(--ivory);
+    font-family:var(--sans); font-size:16px; line-height:1.6;
+    background-image:radial-gradient(120% 80% at 50% -10%, rgba(199,148,71,.10), transparent 60%);
+  }
+  .wrap { max-width:1060px; margin:0 auto; padding-inline:20px; padding-block:56px 88px; }
+  .eyebrow { font-size:12px; font-weight:700; letter-spacing:.22em; text-transform:uppercase;
+    color:var(--ivory-faint); margin:0 0 14px; }
+  h1 { font-family:var(--serif); font-weight:600; font-size:clamp(38px,6vw,60px); line-height:1.05;
+    margin:0 0 18px; color:var(--ivory); text-wrap:balance; }
+  .lead { max-width:60ch; color:var(--ivory-dim); font-size:17px; margin:0 0 12px; }
+  .lead strong { color:var(--ivory); font-weight:600; }
+  code { font-family:var(--mono); font-size:.88em; color:var(--brass); }
+
+  .brief { margin-top:44px; border-top:1px solid var(--edge); border-bottom:1px solid var(--edge);
+    padding-block:26px; display:grid; grid-template-columns:1fr 1fr; gap:34px; }
+  .brief h3 { font-family:var(--sans); font-size:12px; font-weight:700; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--ivory-faint); margin:0 0 12px; }
+  .brief p { margin:0; color:var(--ivory-dim); font-size:15px; max-width:46ch; }
+  ul.palette { list-style:none; margin:0; padding:0; display:grid; gap:7px; }
+  ul.palette li { display:flex; align-items:center; gap:10px; font-size:13px; }
+  .chip { width:20px; height:20px; border-radius:5px; border:1px solid rgba(240,232,217,.16); flex:none; }
+  ul.palette code { min-width:92px; }
+  ul.palette em { font-style:normal; color:var(--ivory-faint); flex:1; }
+  .hex { font-family:var(--mono); font-size:12px; color:var(--ivory-faint); font-variant-numeric:tabular-nums; }
+
+  .props { display:grid; gap:0; margin-top:8px; }
+  .prop { display:grid; grid-template-columns:288px 1fr; gap:40px; align-items:start;
+    padding-block:46px; border-bottom:1px solid var(--edge); }
+  .hero { display:grid; justify-items:center; gap:14px; }
+  .ic { display:block; }
+  .big { filter:drop-shadow(0 20px 34px rgba(0,0,0,.6)); border-radius:22%; }
+  .file { font-family:var(--mono); font-size:12px; color:var(--ivory-faint); text-decoration:none;
+    border-bottom:1px dotted var(--edge); cursor:default; }
+  .kicker { font-size:11px; font-weight:700; letter-spacing:.2em; text-transform:uppercase;
+    color:var(--brass); margin:0 0 6px; }
+  .prop h2 { font-family:var(--serif); font-size:32px; font-weight:600; margin:0 0 10px; color:var(--ivory); }
+  .lede { margin:0 0 20px; color:var(--ivory-dim); max-width:56ch; }
+
+  .nameline { display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    padding:10px 14px; background:var(--faceplate); border:1px solid var(--edge); border-radius:8px;
+    margin-bottom:22px; }
+  .nameline .lbl { font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--ivory-faint); }
+  .dots { display:inline-flex; gap:5px; }
+  .dots i { width:9px; height:9px; border-radius:50%; background:#2E2822; display:block; }
+  .dots i.on { background:var(--amber); box-shadow:0 0 8px rgba(250,184,56,.55); }
+  .nameline .where { font-size:13px; color:var(--ivory-dim); }
+
+  .ladder { display:flex; gap:18px; flex-wrap:wrap; align-items:flex-end; }
+  .ladder figure { margin:0; display:grid; justify-items:center; gap:8px; }
+  .tile { display:grid; place-items:center; width:120px; height:120px; border-radius:10px;
+    border:1px solid var(--edge); }
+  .tile.dark { background:var(--chassis-lift); }
+  .tile.light { background:linear-gradient(160deg,#E8E3DA,#CFC8BC); border-color:#B9B1A4; }
+  figcaption { font-family:var(--mono); font-size:11px; color:var(--ivory-dim);
+    display:grid; gap:2px; text-align:center; font-variant-numeric:tabular-nums; }
+  figcaption span { color:var(--ivory-faint); font-family:var(--sans); font-size:11px; letter-spacing:.04em; }
+
+  .close { padding-top:44px; display:grid; gap:16px; max-width:62ch; }
+  .close h3 { font-family:var(--serif); font-size:24px; font-weight:600; margin:0; }
+  .close p { margin:0; color:var(--ivory-dim); }
+  .close ol { margin:0; padding-left:20px; color:var(--ivory-dim); }
+  .close li { margin-bottom:6px; }
+
+  @media (max-width:820px) {
+    .brief { grid-template-columns:1fr; gap:24px; }
+    .prop { grid-template-columns:1fr; gap:26px; }
+    .hero { justify-items:start; }
+  }
+  @media (max-width:460px) {
+    .tile { width:104px; height:104px; }
+    .big { width:200px; height:200px; }
+  }
+  @media (prefers-reduced-motion:reduce) { * { animation:none !important; transition:none !important; } }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ic1" viewBox="0 0 1024 1024">
+<defs>
+<linearGradient id="plinth1" x1="0.15" y1="0" x2="0.85" y2="1">
+<stop offset="0" stop-color="#241E17"/><stop offset="0.45" stop-color="#14110E"/>
+<stop offset="1" stop-color="#080706"/></linearGradient>
+<linearGradient id="rim1" x1="0" y1="0" x2="0.9" y2="1">
+<stop offset="0" stop-color="#F7E3B4" stop-opacity="0.95"/>
+<stop offset="0.35" stop-color="#C79447" stop-opacity="0.5"/>
+<stop offset="0.7" stop-color="#7E5522" stop-opacity="0.35"/>
+<stop offset="1" stop-color="#F0C877" stop-opacity="0.6"/></linearGradient>
+<linearGradient id="brass1" x1="0.1" y1="0" x2="0.9" y2="1">
+<stop offset="0" stop-color="#F7E1AC"/><stop offset="0.35" stop-color="#D3A257"/>
+<stop offset="0.62" stop-color="#9C6C2C"/><stop offset="1" stop-color="#E3C489"/></linearGradient>
+<linearGradient id="brassU1" x1="120" y1="90" x2="900" y2="960" gradientUnits="userSpaceOnUse">
+<stop offset="0" stop-color="#F7E1AC"/><stop offset="0.35" stop-color="#D3A257"/>
+<stop offset="0.62" stop-color="#9C6C2C"/><stop offset="1" stop-color="#E3C489"/></linearGradient>
+<linearGradient id="brassEdge1" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#FBEDC6"/><stop offset="1" stop-color="#8A5C24"/></linearGradient>
+<radialGradient id="glow1" cx="0.5" cy="0.5" r="0.5">
+<stop offset="0" stop-color="#FFB23C" stop-opacity="0.55"/>
+<stop offset="1" stop-color="#FFB23C" stop-opacity="0"/></radialGradient>
+<radialGradient id="vign1" cx="0.42" cy="0.34" r="0.78">
+<stop offset="0" stop-color="#FFFFFF" stop-opacity="0.055"/>
+<stop offset="0.62" stop-color="#000000" stop-opacity="0"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0.5"/></radialGradient>
+</defs>
+<path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="url(#plinth1)"/>
+
+<circle cx="462" cy="452" r="330" fill="#0D0B0A"/>
+<circle cx="462" cy="452" r="330" fill="none" stroke="url(#brassEdge1)" stroke-width="3" stroke-opacity="0.65"/>
+<circle cx="462" cy="452" r="296" fill="#0A0908"/>
+<circle cx="462" cy="452" r="120" fill="none" stroke="#241F1A" stroke-width="2" stroke-opacity="0.9"/><circle cx="462" cy="452" r="137" fill="none" stroke="#241F1A" stroke-width="2" stroke-opacity="0.9"/><circle cx="462" cy="452" r="154" fill="none" stroke="#241F1A" stroke-width="2" stroke-opacity="0.9"/><circle cx="462" cy="452" r="171" fill="none" stroke="#241F1A" stroke-width="2" stroke-opacity="0.9"/><circle cx="462" cy="452" r="188" fill="none" stroke="#241F1A" stroke-width="2" stroke-opacity="0.9"/><circle cx="462" cy="452" r="205" fill="none" stroke="#241F1A" stroke-width="2" stroke-opacity="0.9"/><circle cx="462" cy="452" r="222" fill="none" stroke="#241F1A" stroke-width="2" stroke-opacity="0.9"/><circle cx="462" cy="452" r="239" fill="none" stroke="#241F1A" stroke-width="2" stroke-opacity="0.9"/><circle cx="462" cy="452" r="256" fill="none" stroke="#241F1A" stroke-width="2" stroke-opacity="0.9"/><circle cx="462" cy="452" r="273" fill="none" stroke="#241F1A" stroke-width="2" stroke-opacity="0.9"/>
+<path d="M166 452 A296 296 0 0 1 462 156" fill="none" stroke="#F3D9A0" stroke-width="7" stroke-opacity="0.5" stroke-linecap="round"/>
+<path d="M758 452 A296 296 0 0 1 502 740" fill="none" stroke="#C79447" stroke-width="5" stroke-opacity="0.32" stroke-linecap="round"/>
+<circle cx="462" cy="452" r="96" fill="url(#brass1)"/>
+<circle cx="462" cy="452" r="96" fill="none" stroke="#7E5522" stroke-width="2" stroke-opacity="0.6"/>
+<circle cx="462" cy="452" r="15" fill="#0A0908"/>
+<circle cx="462" cy="448" r="7" fill="#F7E1AC" fill-opacity="0.8"/>
+<circle cx="838" cy="252" r="58" fill="url(#brass1)"/>
+<circle cx="838" cy="252" r="19" fill="#161310"/>
+<circle cx="826" cy="240" r="40" fill="#FFFFFF" fill-opacity="0.07"/>
+<path d="M838 252 C838 420 792 520 700 600 L648 646" fill="none" stroke="url(#brassU1)" stroke-width="21" stroke-linecap="round"/>
+<path d="M838 252 C838 420 792 520 700 600 L648 646" fill="none" stroke="#FBEDC6" stroke-width="4" stroke-opacity="0.45" stroke-linecap="round"/>
+<g transform="rotate(41 648 646)">
+<rect x="600" y="616" width="96" height="58" rx="12" fill="#2A241D"/>
+<rect x="600" y="616" width="96" height="58" rx="12" fill="none" stroke="#C79447" stroke-width="3" stroke-opacity="0.7"/>
+<path d="M624 674 L618 706" stroke="#E3C489" stroke-width="6" stroke-linecap="round"/>
+</g>
+<text x="512" y="939" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="56" font-weight="700" letter-spacing="11" fill="#000000" fill-opacity="0.75">AUDIO HARBOR</text><text x="512" y="936" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="56" font-weight="700" letter-spacing="11" fill="#A2977F">AUDIO HARBOR</text>
+<path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="url(#vign1)"/>
+<path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="none" stroke="url(#rim1)" stroke-width="5"/>
+</symbol>
+<symbol id="ic2" viewBox="0 0 1024 1024">
+<defs>
+<linearGradient id="plinth2" x1="0.15" y1="0" x2="0.85" y2="1">
+<stop offset="0" stop-color="#241E17"/><stop offset="0.45" stop-color="#14110E"/>
+<stop offset="1" stop-color="#080706"/></linearGradient>
+<linearGradient id="rim2" x1="0" y1="0" x2="0.9" y2="1">
+<stop offset="0" stop-color="#F7E3B4" stop-opacity="0.95"/>
+<stop offset="0.35" stop-color="#C79447" stop-opacity="0.5"/>
+<stop offset="0.7" stop-color="#7E5522" stop-opacity="0.35"/>
+<stop offset="1" stop-color="#F0C877" stop-opacity="0.6"/></linearGradient>
+<linearGradient id="brass2" x1="0.1" y1="0" x2="0.9" y2="1">
+<stop offset="0" stop-color="#F7E1AC"/><stop offset="0.35" stop-color="#D3A257"/>
+<stop offset="0.62" stop-color="#9C6C2C"/><stop offset="1" stop-color="#E3C489"/></linearGradient>
+<linearGradient id="brassU2" x1="120" y1="90" x2="900" y2="960" gradientUnits="userSpaceOnUse">
+<stop offset="0" stop-color="#F7E1AC"/><stop offset="0.35" stop-color="#D3A257"/>
+<stop offset="0.62" stop-color="#9C6C2C"/><stop offset="1" stop-color="#E3C489"/></linearGradient>
+<linearGradient id="brassEdge2" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#FBEDC6"/><stop offset="1" stop-color="#8A5C24"/></linearGradient>
+<radialGradient id="glow2" cx="0.5" cy="0.5" r="0.5">
+<stop offset="0" stop-color="#FFB23C" stop-opacity="0.55"/>
+<stop offset="1" stop-color="#FFB23C" stop-opacity="0"/></radialGradient>
+<radialGradient id="vign2" cx="0.42" cy="0.34" r="0.78">
+<stop offset="0" stop-color="#FFFFFF" stop-opacity="0.055"/>
+<stop offset="0.62" stop-color="#000000" stop-opacity="0"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0.5"/></radialGradient>
+<linearGradient id="face2" x1="0" y1="0" x2="0.2" y2="1">
+<stop offset="0" stop-color="#F6EBD2"/><stop offset="0.55" stop-color="#E6D6B0"/>
+<stop offset="1" stop-color="#CBB68C"/></linearGradient></defs>
+<path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="url(#plinth2)"/>
+
+<ellipse cx="512" cy="470" rx="470" ry="380" fill="url(#glow2)"/>
+<rect x="96" y="214" width="832" height="520" rx="44" fill="url(#face2)"/>
+<rect x="96" y="214" width="832" height="520" rx="44" fill="none" stroke="url(#brass2)" stroke-width="16"/>
+<rect x="112" y="230" width="800" height="488" rx="30" fill="none" stroke="#8A5C24" stroke-width="2" stroke-opacity="0.35"/>
+<path d="M141 550 A400 400 0 0 1 769 394" fill="none" stroke="#2B2318" stroke-width="6"/>
+<path d="M769 394 A400 400 0 0 1 883 550" fill="none" stroke="#8E2F1E" stroke-width="9"/>
+<path d="M147 552 L184 567" stroke="#2B2318" stroke-width="7" stroke-linecap="round"/><path d="M192 471 L224 494" stroke="#2B2318" stroke-width="4" stroke-linecap="round"/><path d="M255 402 L281 432" stroke="#2B2318" stroke-width="4" stroke-linecap="round"/><path d="M332 350 L350 385" stroke="#2B2318" stroke-width="4" stroke-linecap="round"/><path d="M419 317 L429 356" stroke="#2B2318" stroke-width="4" stroke-linecap="round"/><path d="M512 306 L512 346" stroke="#2B2318" stroke-width="7" stroke-linecap="round"/><path d="M605 317 L595 356" stroke="#2B2318" stroke-width="4" stroke-linecap="round"/><path d="M692 350 L674 385" stroke="#2B2318" stroke-width="4" stroke-linecap="round"/><path d="M769 402 L743 432" stroke="#8E2F1E" stroke-width="4" stroke-linecap="round"/><path d="M832 471 L800 494" stroke="#8E2F1E" stroke-width="4" stroke-linecap="round"/><path d="M877 552 L840 567" stroke="#8E2F1E" stroke-width="7" stroke-linecap="round"/>
+<text x="270" y="392" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="40" font-weight="700" fill="#2B2318">-20</text>
+<text x="512" y="272" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="44" font-weight="700" fill="#2B2318">0</text>
+<text x="762" y="392" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="40" font-weight="700" fill="#8E2F1E">+3</text>
+<path d="M512 700 L787 452" stroke="#1E1913" stroke-width="9" stroke-linecap="round"/>
+<circle cx="512" cy="700" r="26" fill="url(#brass2)"/>
+<circle cx="512" cy="700" r="10" fill="#1E1913"/>
+<text x="512" y="628" text-anchor="middle" font-family="Spectral, Georgia, Times New Roman, serif" font-size="76" font-weight="600" letter-spacing="4" fill="#2B2318">Audio Harbor</text>
+<text x="286" y="694" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="30" font-weight="700" letter-spacing="12" fill="#7A6647">VU</text>
+<text x="512" y="881" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="40" font-weight="700" letter-spacing="14" fill="#000000" fill-opacity="0.75">BIT-PERFECT</text><text x="512" y="878" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="40" font-weight="700" letter-spacing="14" fill="#8C8271">BIT-PERFECT</text>
+<path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="url(#vign2)"/>
+<path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="none" stroke="url(#rim2)" stroke-width="5"/>
+</symbol>
+<symbol id="ic3" viewBox="0 0 1024 1024">
+<defs>
+<linearGradient id="plinth3" x1="0.15" y1="0" x2="0.85" y2="1">
+<stop offset="0" stop-color="#241E17"/><stop offset="0.45" stop-color="#14110E"/>
+<stop offset="1" stop-color="#080706"/></linearGradient>
+<linearGradient id="rim3" x1="0" y1="0" x2="0.9" y2="1">
+<stop offset="0" stop-color="#F7E3B4" stop-opacity="0.95"/>
+<stop offset="0.35" stop-color="#C79447" stop-opacity="0.5"/>
+<stop offset="0.7" stop-color="#7E5522" stop-opacity="0.35"/>
+<stop offset="1" stop-color="#F0C877" stop-opacity="0.6"/></linearGradient>
+<linearGradient id="brass3" x1="0.1" y1="0" x2="0.9" y2="1">
+<stop offset="0" stop-color="#F7E1AC"/><stop offset="0.35" stop-color="#D3A257"/>
+<stop offset="0.62" stop-color="#9C6C2C"/><stop offset="1" stop-color="#E3C489"/></linearGradient>
+<linearGradient id="brassU3" x1="120" y1="90" x2="900" y2="960" gradientUnits="userSpaceOnUse">
+<stop offset="0" stop-color="#F7E1AC"/><stop offset="0.35" stop-color="#D3A257"/>
+<stop offset="0.62" stop-color="#9C6C2C"/><stop offset="1" stop-color="#E3C489"/></linearGradient>
+<linearGradient id="brassEdge3" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#FBEDC6"/><stop offset="1" stop-color="#8A5C24"/></linearGradient>
+<radialGradient id="glow3" cx="0.5" cy="0.5" r="0.5">
+<stop offset="0" stop-color="#FFB23C" stop-opacity="0.55"/>
+<stop offset="1" stop-color="#FFB23C" stop-opacity="0"/></radialGradient>
+<radialGradient id="vign3" cx="0.42" cy="0.34" r="0.78">
+<stop offset="0" stop-color="#FFFFFF" stop-opacity="0.055"/>
+<stop offset="0.62" stop-color="#000000" stop-opacity="0"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0.5"/></radialGradient>
+</defs>
+<path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="url(#plinth3)"/>
+
+<ellipse cx="470" cy="392" rx="450" ry="340" fill="url(#glow3)" opacity="0.5"/>
+<circle cx="340" cy="396" r="208" fill="#100E0C"/>
+<circle cx="340" cy="396" r="208" fill="none" stroke="url(#brassEdge3)" stroke-width="7.4"/>
+<circle cx="340" cy="396" r="178" fill="#3A2E22"/>
+<circle cx="340" cy="396" r="178" fill="none" stroke="#0C0B09" stroke-width="3" stroke-opacity="0.6"/>
+<circle cx="340" cy="396" r="155" fill="#2A211A"/>
+<circle cx="297" cy="278" r="36" fill="#0C0B09"/><circle cx="463" cy="418" r="36" fill="#0C0B09"/><circle cx="260" cy="492" r="36" fill="#0C0B09"/>
+<circle cx="340" cy="396" r="62" fill="url(#brass3)"/>
+<circle cx="340" cy="396" r="21" fill="#0C0B09"/>
+<path d="M191 396 A149 149 0 0 1 340 247" fill="none" stroke="#F3D9A0" stroke-width="5" stroke-opacity="0.28" stroke-linecap="round"/>
+<circle cx="748" cy="474" r="134" fill="#100E0C"/>
+<circle cx="748" cy="474" r="134" fill="none" stroke="url(#brassEdge3)" stroke-width="4.8"/>
+<circle cx="748" cy="474" r="115" fill="#3A2E22"/>
+<circle cx="748" cy="474" r="115" fill="none" stroke="#0C0B09" stroke-width="3" stroke-opacity="0.6"/>
+<circle cx="748" cy="474" r="100" fill="#2A211A"/>
+<circle cx="720" cy="398" r="23" fill="#0C0B09"/><circle cx="827" cy="488" r="23" fill="#0C0B09"/><circle cx="696" cy="536" r="23" fill="#0C0B09"/>
+<circle cx="748" cy="474" r="40" fill="url(#brass3)"/>
+<circle cx="748" cy="474" r="14" fill="#0C0B09"/>
+<path d="M652 474 A96 96 0 0 1 748 378" fill="none" stroke="#F3D9A0" stroke-width="5" stroke-opacity="0.28" stroke-linecap="round"/>
+<path d="M340 604 C400 690 470 706 556 700 L620 694 C688 686 726 654 748 610" fill="none" stroke="#241C15" stroke-width="26" stroke-linecap="round"/>
+<path d="M340 604 C400 690 470 706 556 700 L620 694 C688 686 726 654 748 610" fill="none" stroke="#C79447" stroke-width="3" stroke-opacity="0.28"/>
+<rect x="498" y="642" width="168" height="92" rx="16" fill="url(#brass3)"/>
+<rect x="516" y="660" width="56" height="56" rx="8" fill="#171410"/>
+<rect x="592" y="660" width="56" height="56" rx="8" fill="#171410"/>
+<circle cx="544" cy="688" r="8" fill="#FFB23C" fill-opacity="0.9"/>
+<text x="512" y="933" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="56" font-weight="700" letter-spacing="11" fill="#000000" fill-opacity="0.75">AUDIO HARBOR</text><text x="512" y="930" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="56" font-weight="700" letter-spacing="11" fill="#A2977F">AUDIO HARBOR</text>
+<path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="url(#vign3)"/>
+<path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="none" stroke="url(#rim3)" stroke-width="5"/>
+</symbol>
+<symbol id="ic4" viewBox="0 0 1024 1024">
+<defs>
+<linearGradient id="plinth4" x1="0.15" y1="0" x2="0.85" y2="1">
+<stop offset="0" stop-color="#241E17"/><stop offset="0.45" stop-color="#14110E"/>
+<stop offset="1" stop-color="#080706"/></linearGradient>
+<linearGradient id="rim4" x1="0" y1="0" x2="0.9" y2="1">
+<stop offset="0" stop-color="#F7E3B4" stop-opacity="0.95"/>
+<stop offset="0.35" stop-color="#C79447" stop-opacity="0.5"/>
+<stop offset="0.7" stop-color="#7E5522" stop-opacity="0.35"/>
+<stop offset="1" stop-color="#F0C877" stop-opacity="0.6"/></linearGradient>
+<linearGradient id="brass4" x1="0.1" y1="0" x2="0.9" y2="1">
+<stop offset="0" stop-color="#F7E1AC"/><stop offset="0.35" stop-color="#D3A257"/>
+<stop offset="0.62" stop-color="#9C6C2C"/><stop offset="1" stop-color="#E3C489"/></linearGradient>
+<linearGradient id="brassU4" x1="120" y1="90" x2="900" y2="960" gradientUnits="userSpaceOnUse">
+<stop offset="0" stop-color="#F7E1AC"/><stop offset="0.35" stop-color="#D3A257"/>
+<stop offset="0.62" stop-color="#9C6C2C"/><stop offset="1" stop-color="#E3C489"/></linearGradient>
+<linearGradient id="brassEdge4" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#FBEDC6"/><stop offset="1" stop-color="#8A5C24"/></linearGradient>
+<radialGradient id="glow4" cx="0.5" cy="0.5" r="0.5">
+<stop offset="0" stop-color="#FFB23C" stop-opacity="0.55"/>
+<stop offset="1" stop-color="#FFB23C" stop-opacity="0"/></radialGradient>
+<radialGradient id="vign4" cx="0.42" cy="0.34" r="0.78">
+<stop offset="0" stop-color="#FFFFFF" stop-opacity="0.055"/>
+<stop offset="0.62" stop-color="#000000" stop-opacity="0"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0.5"/></radialGradient>
+</defs>
+<path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="url(#plinth4)"/>
+
+<ellipse cx="512" cy="410" rx="380" ry="330" fill="url(#glow4)" opacity="0.5"/>
+<circle cx="512" cy="236" r="112" fill="#0A0908"/>
+<circle cx="512" cy="236" r="112" fill="none" stroke="url(#brass4)" stroke-width="16"/>
+<circle cx="512" cy="236" r="82" fill="none" stroke="#2B2620" stroke-width="4"/>
+<circle cx="512" cy="236" r="62" fill="none" stroke="#2B2620" stroke-width="4"/>
+<circle cx="512" cy="236" r="34" fill="url(#brass4)"/>
+<circle cx="512" cy="236" r="10" fill="#0A0908"/>
+<path d="M512 348 L512 742" stroke="url(#brassU4)" stroke-width="34" stroke-linecap="round"/>
+<path d="M336 420 L688 420" stroke="url(#brassU4)" stroke-width="30" stroke-linecap="round"/>
+<path d="M336 420 L336 456" stroke="url(#brassU4)" stroke-width="22" stroke-linecap="round"/>
+<path d="M688 420 L688 456" stroke="url(#brassU4)" stroke-width="22" stroke-linecap="round"/>
+<path d="M262 566 C262 720 380 766 512 766 C644 766 762 720 762 566" fill="none" stroke="url(#brassU4)" stroke-width="36" stroke-linecap="round"/>
+<path d="M212 566 L312 566 L262 486 Z" fill="url(#brassU4)"/>
+<path d="M812 566 L712 566 L762 486 Z" fill="url(#brassU4)"/>
+<rect x="216" y="836" width="592" height="112" rx="26" fill="url(#brass4)"/>
+<rect x="216" y="836" width="592" height="112" rx="26" fill="none" stroke="#7E5522" stroke-width="3" stroke-opacity="0.7"/>
+<text x="512" y="914" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="60" font-weight="700" letter-spacing="8" fill="#F6E4BC" fill-opacity="0.55">AUDIO HARBOR</text><text x="512" y="912" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="60" font-weight="700" letter-spacing="8" fill="#33240E">AUDIO HARBOR</text>
+<path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="url(#vign4)"/>
+<path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="none" stroke="url(#rim4)" stroke-width="5"/>
+</symbol>
+<symbol id="ic5" viewBox="0 0 1024 1024">
+<defs>
+<linearGradient id="plinth5" x1="0.15" y1="0" x2="0.85" y2="1">
+<stop offset="0" stop-color="#241E17"/><stop offset="0.45" stop-color="#14110E"/>
+<stop offset="1" stop-color="#080706"/></linearGradient>
+<linearGradient id="rim5" x1="0" y1="0" x2="0.9" y2="1">
+<stop offset="0" stop-color="#F7E3B4" stop-opacity="0.95"/>
+<stop offset="0.35" stop-color="#C79447" stop-opacity="0.5"/>
+<stop offset="0.7" stop-color="#7E5522" stop-opacity="0.35"/>
+<stop offset="1" stop-color="#F0C877" stop-opacity="0.6"/></linearGradient>
+<linearGradient id="brass5" x1="0.1" y1="0" x2="0.9" y2="1">
+<stop offset="0" stop-color="#F7E1AC"/><stop offset="0.35" stop-color="#D3A257"/>
+<stop offset="0.62" stop-color="#9C6C2C"/><stop offset="1" stop-color="#E3C489"/></linearGradient>
+<linearGradient id="brassU5" x1="120" y1="90" x2="900" y2="960" gradientUnits="userSpaceOnUse">
+<stop offset="0" stop-color="#F7E1AC"/><stop offset="0.35" stop-color="#D3A257"/>
+<stop offset="0.62" stop-color="#9C6C2C"/><stop offset="1" stop-color="#E3C489"/></linearGradient>
+<linearGradient id="brassEdge5" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#FBEDC6"/><stop offset="1" stop-color="#8A5C24"/></linearGradient>
+<radialGradient id="glow5" cx="0.5" cy="0.5" r="0.5">
+<stop offset="0" stop-color="#FFB23C" stop-opacity="0.55"/>
+<stop offset="1" stop-color="#FFB23C" stop-opacity="0"/></radialGradient>
+<radialGradient id="vign5" cx="0.42" cy="0.34" r="0.78">
+<stop offset="0" stop-color="#FFFFFF" stop-opacity="0.055"/>
+<stop offset="0.62" stop-color="#000000" stop-opacity="0"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0.5"/></radialGradient>
+<filter id="soft5" x="-25%" y="-25%" width="150%" height="150%"><feGaussianBlur stdDeviation="14"/></filter>
+<linearGradient id="beam5" x1="1" y1="1" x2="0" y2="0">
+<stop offset="0" stop-color="#FFB23C" stop-opacity="0.62"/>
+<stop offset="1" stop-color="#FFB23C" stop-opacity="0"/></linearGradient></defs>
+<path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="url(#plinth5)"/>
+
+<g filter="url(#soft5)">
+<path d="M512 466 L64 150 L64 372 Z" fill="url(#beam5)"/>
+<path d="M512 466 L96 84 L64 214 Z" fill="url(#beam5)" opacity="0.55"/>
+</g>
+<ellipse cx="512" cy="466" rx="330" ry="330" fill="url(#glow5)" opacity="0.6"/>
+<circle cx="306" cy="585" r="6" fill="#8C8271" fill-opacity="0.8"/><circle cx="275" cy="491" r="4" fill="#8C8271" fill-opacity="0.8"/><circle cx="286" cy="392" r="4" fill="#8C8271" fill-opacity="0.8"/><circle cx="335" cy="307" r="4" fill="#8C8271" fill-opacity="0.8"/><circle cx="415" cy="249" r="4" fill="#8C8271" fill-opacity="0.8"/><circle cx="512" cy="228" r="6" fill="#8C8271" fill-opacity="0.8"/><circle cx="609" cy="249" r="4" fill="#8C8271" fill-opacity="0.8"/><circle cx="689" cy="307" r="4" fill="#8C8271" fill-opacity="0.8"/><circle cx="738" cy="392" r="4" fill="#8C8271" fill-opacity="0.8"/><circle cx="749" cy="491" r="4" fill="#8C8271" fill-opacity="0.8"/><circle cx="718" cy="585" r="4" fill="#8C8271" fill-opacity="0.8"/>
+<circle cx="512" cy="466" r="196" fill="url(#brass5)"/>
+<path d="M684 466 L708 466" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M682 493 L706 497" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M676 519 L698 527" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M665 544 L687 555" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M651 567 L671 581" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M634 588 L651 605" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M613 605 L627 625" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M590 619 L601 641" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M565 630 L573 652" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M539 636 L543 660" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M512 638 L512 662" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M485 636 L481 660" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M459 630 L451 652" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M434 619 L423 641" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M411 605 L397 625" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M390 588 L373 605" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M373 567 L353 581" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M359 544 L337 555" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M348 519 L326 527" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M342 493 L318 497" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M340 466 L316 466" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M342 439 L318 435" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M348 413 L326 405" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M359 388 L337 377" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M373 365 L353 351" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M390 344 L373 327" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M411 327 L397 307" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M434 313 L423 291" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M459 302 L451 280" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M485 296 L481 272" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M512 294 L512 270" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M539 296 L543 272" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M565 302 L573 280" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M590 313 L601 291" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M613 327 L627 307" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M634 344 L651 327" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M651 365 L671 351" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M665 388 L687 377" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M676 413 L698 405" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/><path d="M682 439 L706 435" stroke="#6E4A1D" stroke-width="6" stroke-opacity="0.55" stroke-linecap="round"/>
+<circle cx="512" cy="466" r="172" fill="url(#brass5)"/>
+<circle cx="512" cy="466" r="146" fill="#141210"/>
+<circle cx="500" cy="454" r="146" fill="#FFFFFF" fill-opacity="0.04"/>
+<path d="M512 466 L406 360" stroke="#F7E1AC" stroke-width="16" stroke-linecap="round"/>
+<circle cx="398" cy="352" r="20" fill="#FFB23C"/>
+<circle cx="398" cy="352" r="40" fill="url(#glow5)"/>
+<circle cx="512" cy="466" r="16" fill="#F7E1AC" fill-opacity="0.35"/>
+<text x="512" y="815" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="58" font-weight="700" letter-spacing="11" fill="#000000" fill-opacity="0.75">AUDIO HARBOR</text><text x="512" y="812" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="58" font-weight="700" letter-spacing="11" fill="#A2977F">AUDIO HARBOR</text>
+<text x="512" y="893" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="27" font-weight="700" letter-spacing="6" fill="#000000" fill-opacity="0.75">LOCAL · BIT-PERFECT · CALM</text><text x="512" y="890" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="27" font-weight="700" letter-spacing="6" fill="#7C7364">LOCAL · BIT-PERFECT · CALM</text>
+<path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="url(#vign5)"/>
+<path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="none" stroke="url(#rim5)" stroke-width="5"/>
+</symbol>
+<symbol id="ic6" viewBox="0 0 1024 1024">
+<defs>
+<linearGradient id="plinth6" x1="0.15" y1="0" x2="0.85" y2="1">
+<stop offset="0" stop-color="#241E17"/><stop offset="0.45" stop-color="#14110E"/>
+<stop offset="1" stop-color="#080706"/></linearGradient>
+<linearGradient id="rim6" x1="0" y1="0" x2="0.9" y2="1">
+<stop offset="0" stop-color="#F7E3B4" stop-opacity="0.95"/>
+<stop offset="0.35" stop-color="#C79447" stop-opacity="0.5"/>
+<stop offset="0.7" stop-color="#7E5522" stop-opacity="0.35"/>
+<stop offset="1" stop-color="#F0C877" stop-opacity="0.6"/></linearGradient>
+<linearGradient id="brass6" x1="0.1" y1="0" x2="0.9" y2="1">
+<stop offset="0" stop-color="#F7E1AC"/><stop offset="0.35" stop-color="#D3A257"/>
+<stop offset="0.62" stop-color="#9C6C2C"/><stop offset="1" stop-color="#E3C489"/></linearGradient>
+<linearGradient id="brassU6" x1="120" y1="90" x2="900" y2="960" gradientUnits="userSpaceOnUse">
+<stop offset="0" stop-color="#F7E1AC"/><stop offset="0.35" stop-color="#D3A257"/>
+<stop offset="0.62" stop-color="#9C6C2C"/><stop offset="1" stop-color="#E3C489"/></linearGradient>
+<linearGradient id="brassEdge6" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#FBEDC6"/><stop offset="1" stop-color="#8A5C24"/></linearGradient>
+<radialGradient id="glow6" cx="0.5" cy="0.5" r="0.5">
+<stop offset="0" stop-color="#FFB23C" stop-opacity="0.55"/>
+<stop offset="1" stop-color="#FFB23C" stop-opacity="0"/></radialGradient>
+<radialGradient id="vign6" cx="0.42" cy="0.34" r="0.78">
+<stop offset="0" stop-color="#FFFFFF" stop-opacity="0.055"/>
+<stop offset="0.62" stop-color="#000000" stop-opacity="0"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0.5"/></radialGradient>
+</defs>
+<path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="url(#plinth6)"/>
+
+<rect x="112" y="262" width="800" height="500" rx="34" fill="url(#brass6)"/>
+<g clip-path="inset(262px 112px 262px 112px round 34px)"><circle cx="512" cy="512" r="150" fill="none" stroke="#8A5C24" stroke-width="2" stroke-opacity="0.18"/><circle cx="512" cy="512" r="176" fill="none" stroke="#8A5C24" stroke-width="2" stroke-opacity="0.18"/><circle cx="512" cy="512" r="202" fill="none" stroke="#8A5C24" stroke-width="2" stroke-opacity="0.18"/><circle cx="512" cy="512" r="228" fill="none" stroke="#8A5C24" stroke-width="2" stroke-opacity="0.18"/><circle cx="512" cy="512" r="254" fill="none" stroke="#8A5C24" stroke-width="2" stroke-opacity="0.18"/><circle cx="512" cy="512" r="280" fill="none" stroke="#8A5C24" stroke-width="2" stroke-opacity="0.18"/><circle cx="512" cy="512" r="306" fill="none" stroke="#8A5C24" stroke-width="2" stroke-opacity="0.18"/><circle cx="512" cy="512" r="332" fill="none" stroke="#8A5C24" stroke-width="2" stroke-opacity="0.18"/><circle cx="512" cy="512" r="358" fill="none" stroke="#8A5C24" stroke-width="2" stroke-opacity="0.18"/><circle cx="512" cy="512" r="384" fill="none" stroke="#8A5C24" stroke-width="2" stroke-opacity="0.18"/><circle cx="512" cy="512" r="410" fill="none" stroke="#8A5C24" stroke-width="2" stroke-opacity="0.18"/></g>
+<rect x="112" y="262" width="800" height="500" rx="34" fill="none" stroke="#7E5522" stroke-width="4" stroke-opacity="0.8"/>
+<rect x="140" y="290" width="744" height="444" rx="20" fill="none" stroke="#6E4A1D" stroke-width="3" stroke-opacity="0.5"/>
+<circle cx="166" cy="316" r="17" fill="#8A5C24"/><circle cx="166" cy="314" r="14" fill="url(#brass6)"/><path d="M158 316 L174 316" stroke="#6E4A1D" stroke-width="4" stroke-linecap="round"/><circle cx="858" cy="316" r="17" fill="#8A5C24"/><circle cx="858" cy="314" r="14" fill="url(#brass6)"/><path d="M850 316 L866 316" stroke="#6E4A1D" stroke-width="4" stroke-linecap="round"/><circle cx="166" cy="708" r="17" fill="#8A5C24"/><circle cx="166" cy="706" r="14" fill="url(#brass6)"/><path d="M158 708 L174 708" stroke="#6E4A1D" stroke-width="4" stroke-linecap="round"/><circle cx="858" cy="708" r="17" fill="#8A5C24"/><circle cx="858" cy="706" r="14" fill="url(#brass6)"/><path d="M850 708 L866 708" stroke="#6E4A1D" stroke-width="4" stroke-linecap="round"/>
+<text x="512" y="486" text-anchor="middle" font-family="Spectral, Georgia, Times New Roman, serif" font-size="134" font-weight="600" letter-spacing="7" fill="#33240E">AUDIO</text>
+<text x="512" y="616" text-anchor="middle" font-family="Spectral, Georgia, Times New Roman, serif" font-size="134" font-weight="600" letter-spacing="4" fill="#33240E">HARBOR</text>
+<text x="512" y="694" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="28" font-weight="700" letter-spacing="9" fill="#5C441E">LOCAL · BIT-PERFECT · CALM</text>
+<path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="url(#vign6)"/>
+<path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="none" stroke="url(#rim6)" stroke-width="5"/>
+</symbol></svg>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Icon-Studie · 1024 px · SVG</p>
+    <h1>Sechs Wege, den Namen ins Icon zu bekommen</h1>
+    <p class="lead">Alle sechs stehen auf demselben schwarzen Squircle mit Messing und warmem Streiflicht, wie in
+      <code>design/icon_1.png</code>. Sie unterscheiden sich darin, <strong>wie viel Platz der Name bekommt</strong> —
+      und genau daran entscheidet es sich, denn ab 32 px ist Schrift im Icon Textur, keine Schrift mehr.</p>
+    <p class="lead">Jede Reihe zeigt deshalb dieselbe Datei viermal: Dock, Finder-Liste, Menüleiste und einmal auf hellem
+      Schreibtisch, weil ein fast schwarzes Icon dort anders sitzt als auf dunklem Grund.</p>
+  </header>
+
+  <section class="brief">
+    <div>
+      <h3>Woher die Farben kommen</h3>
+      <p>Nicht neu erfunden, sondern aus <code>HarborTheme.swift</code> übernommen — dieselben Werte, mit denen die App
+        ihre Frontplatten zeichnet. Das Icon und die erste Sekunde nach dem Start gehören damit zusammen.</p>
+    </div>
+    <ul class="palette"><li><span class="chip" style="background:#12100E"></span><code>chassis</code><em>Gehäuse</em><span class="hex">#12100E</span></li><li><span class="chip" style="background:#161412"></span><code>faceplate</code><em>Frontplatte</em><span class="hex">#161412</span></li><li><span class="chip" style="background:#C79447"></span><code>brass</code><em>Messing</em><span class="hex">#C79447</span></li><li><span class="chip" style="background:#FAB838"></span><code>amber</code><em>Lampe</em><span class="hex">#FAB838</span></li><li><span class="chip" style="background:#9E9482"></span><code>ivoryDim</code><em>Gravur</em><span class="hex">#9E9482</span></li><li><span class="chip" style="background:#F0E8D9"></span><code>ivory</code><em>Schrift</em><span class="hex">#F0E8D9</span></li></ul>
+  </section>
+
+  <div class="props">
+<article class="prop">
+  <div class="hero">
+    <svg class="ic big" viewBox="0 0 1024 1024" width="232" height="232" aria-hidden="true"><use href="#ic1"/></svg>
+    <a class="file" href="#" onclick="return false;">icon-1-plattenteller.svg</a>
+  </div>
+  <div class="body">
+    <p class="kicker">Entwurf 1 · Deine Vorlage, aufgeräumt</p>
+    <h2>Plattenteller</h2>
+    <p class="lede">Teller, Rille, Messingtonarm — die Richtung aus <code>icon_1.png</code>, auf flache Formen gebracht statt gerendert. Der Name liegt als Gravur auf der Zarge, dort wo bei echten Laufwerken das Typenschild sitzt.</p>
+    <div class="nameline">
+      <span class="lbl">Name im Icon</span>
+      <span class="dots"><i class="on"></i><i class=""></i><i class=""></i></span>
+      <span class="where">Gravur auf der Zarge</span>
+    </div>
+    <div class="ladder">
+      <figure><div class="tile dark"><svg class="ic " viewBox="0 0 1024 1024" width="96" height="96" aria-hidden="true"><use href="#ic1"/></svg></div><figcaption>96 px<span>Dock</span></figcaption></figure>
+      <figure><div class="tile dark"><svg class="ic " viewBox="0 0 1024 1024" width="48" height="48" aria-hidden="true"><use href="#ic1"/></svg></div><figcaption>48 px<span>Finder-Liste</span></figcaption></figure>
+      <figure><div class="tile dark"><svg class="ic " viewBox="0 0 1024 1024" width="32" height="32" aria-hidden="true"><use href="#ic1"/></svg></div><figcaption>32 px<span>Menüleiste</span></figcaption></figure>
+      <figure><div class="tile light"><svg class="ic " viewBox="0 0 1024 1024" width="64" height="64" aria-hidden="true"><use href="#ic1"/></svg></div><figcaption>64 px<span>heller Schreibtisch</span></figcaption></figure>
+    </div>
+  </div>
+</article>
+<article class="prop">
+  <div class="hero">
+    <svg class="ic big" viewBox="0 0 1024 1024" width="232" height="232" aria-hidden="true"><use href="#ic2"/></svg>
+    <a class="file" href="#" onclick="return false;">icon-2-vu-meter.svg</a>
+  </div>
+  <div class="body">
+    <p class="kicker">Entwurf 2 · Das Instrument aus dem Deck</p>
+    <h2>VU-Meter</h2>
+    <p class="lede">Auf echten Pegelmessern steht der Herstellername unter der Skala. Genau dort steht jetzt „Audio Harbor“, in der Serifenschrift, die das Deck ohnehin für Titel benutzt. Der rote Bereich ab 0 VU ist echt, nicht Dekor.</p>
+    <div class="nameline">
+      <span class="lbl">Name im Icon</span>
+      <span class="dots"><i class="on"></i><i class="on"></i><i class="on"></i></span>
+      <span class="where">Auf dem Zifferblatt</span>
+    </div>
+    <div class="ladder">
+      <figure><div class="tile dark"><svg class="ic " viewBox="0 0 1024 1024" width="96" height="96" aria-hidden="true"><use href="#ic2"/></svg></div><figcaption>96 px<span>Dock</span></figcaption></figure>
+      <figure><div class="tile dark"><svg class="ic " viewBox="0 0 1024 1024" width="48" height="48" aria-hidden="true"><use href="#ic2"/></svg></div><figcaption>48 px<span>Finder-Liste</span></figcaption></figure>
+      <figure><div class="tile dark"><svg class="ic " viewBox="0 0 1024 1024" width="32" height="32" aria-hidden="true"><use href="#ic2"/></svg></div><figcaption>32 px<span>Menüleiste</span></figcaption></figure>
+      <figure><div class="tile light"><svg class="ic " viewBox="0 0 1024 1024" width="64" height="64" aria-hidden="true"><use href="#ic2"/></svg></div><figcaption>64 px<span>heller Schreibtisch</span></figcaption></figure>
+    </div>
+  </div>
+</article>
+<article class="prop">
+  <div class="hero">
+    <svg class="ic big" viewBox="0 0 1024 1024" width="232" height="232" aria-hidden="true"><use href="#ic3"/></svg>
+    <a class="file" href="#" onclick="return false;">icon-3-tonband.svg</a>
+  </div>
+  <div class="body">
+    <p class="kicker">Entwurf 3 · Vorwickel- und Aufwickelteller</p>
+    <h2>Tonband</h2>
+    <p class="lede">Zwei ungleiche Teller mit Kopfträger dazwischen. Die Ungleichheit ist Absicht: zwei gleich große Kreise über einer Kurve liest das Auge sofort als Gesicht — der erste Entwurf grinste.</p>
+    <div class="nameline">
+      <span class="lbl">Name im Icon</span>
+      <span class="dots"><i class="on"></i><i class=""></i><i class=""></i></span>
+      <span class="where">Gravur auf der Frontplatte</span>
+    </div>
+    <div class="ladder">
+      <figure><div class="tile dark"><svg class="ic " viewBox="0 0 1024 1024" width="96" height="96" aria-hidden="true"><use href="#ic3"/></svg></div><figcaption>96 px<span>Dock</span></figcaption></figure>
+      <figure><div class="tile dark"><svg class="ic " viewBox="0 0 1024 1024" width="48" height="48" aria-hidden="true"><use href="#ic3"/></svg></div><figcaption>48 px<span>Finder-Liste</span></figcaption></figure>
+      <figure><div class="tile dark"><svg class="ic " viewBox="0 0 1024 1024" width="32" height="32" aria-hidden="true"><use href="#ic3"/></svg></div><figcaption>32 px<span>Menüleiste</span></figcaption></figure>
+      <figure><div class="tile light"><svg class="ic " viewBox="0 0 1024 1024" width="64" height="64" aria-hidden="true"><use href="#ic3"/></svg></div><figcaption>64 px<span>heller Schreibtisch</span></figcaption></figure>
+    </div>
+  </div>
+</article>
+<article class="prop">
+  <div class="hero">
+    <svg class="ic big" viewBox="0 0 1024 1024" width="232" height="232" aria-hidden="true"><use href="#ic4"/></svg>
+    <a class="file" href="#" onclick="return false;">icon-4-anker.svg</a>
+  </div>
+  <div class="body">
+    <p class="kicker">Entwurf 4 · Der Name, nicht das Gerät</p>
+    <h2>Anker</h2>
+    <p class="lede">Der einzige Entwurf, der „Harbor“ aufgreift statt der Hardware: Der Ankerring ist eine Schallplatte. Das Messingschild darunter gibt dem Namen den höchsten Kontrast im ganzen Satz.</p>
+    <div class="nameline">
+      <span class="lbl">Name im Icon</span>
+      <span class="dots"><i class="on"></i><i class="on"></i><i class=""></i></span>
+      <span class="where">Dunkel auf Messingschild</span>
+    </div>
+    <div class="ladder">
+      <figure><div class="tile dark"><svg class="ic " viewBox="0 0 1024 1024" width="96" height="96" aria-hidden="true"><use href="#ic4"/></svg></div><figcaption>96 px<span>Dock</span></figcaption></figure>
+      <figure><div class="tile dark"><svg class="ic " viewBox="0 0 1024 1024" width="48" height="48" aria-hidden="true"><use href="#ic4"/></svg></div><figcaption>48 px<span>Finder-Liste</span></figcaption></figure>
+      <figure><div class="tile dark"><svg class="ic " viewBox="0 0 1024 1024" width="32" height="32" aria-hidden="true"><use href="#ic4"/></svg></div><figcaption>32 px<span>Menüleiste</span></figcaption></figure>
+      <figure><div class="tile light"><svg class="ic " viewBox="0 0 1024 1024" width="64" height="64" aria-hidden="true"><use href="#ic4"/></svg></div><figcaption>64 px<span>heller Schreibtisch</span></figcaption></figure>
+    </div>
+  </div>
+</article>
+<article class="prop">
+  <div class="hero">
+    <svg class="ic big" viewBox="0 0 1024 1024" width="232" height="232" aria-hidden="true"><use href="#ic5"/></svg>
+    <a class="file" href="#" onclick="return false;">icon-5-hafenfeuer.svg</a>
+  </div>
+  <div class="body">
+    <p class="kicker">Entwurf 5 · Regler als Leuchtfeuer</p>
+    <h2>Hafenfeuer</h2>
+    <p class="lede">Ein gerändelter Messingregler, dessen Zeiger wie ein Leuchtfeuer über den Hafen streicht. Am wenigsten Retro-Zitat, am ehesten eigenständig. Darunter die Zeile, die schon im Code steht: Local · Bit-perfect · Calm.</p>
+    <div class="nameline">
+      <span class="lbl">Name im Icon</span>
+      <span class="dots"><i class="on"></i><i class=""></i><i class=""></i></span>
+      <span class="where">Gravur mit Tagline</span>
+    </div>
+    <div class="ladder">
+      <figure><div class="tile dark"><svg class="ic " viewBox="0 0 1024 1024" width="96" height="96" aria-hidden="true"><use href="#ic5"/></svg></div><figcaption>96 px<span>Dock</span></figcaption></figure>
+      <figure><div class="tile dark"><svg class="ic " viewBox="0 0 1024 1024" width="48" height="48" aria-hidden="true"><use href="#ic5"/></svg></div><figcaption>48 px<span>Finder-Liste</span></figcaption></figure>
+      <figure><div class="tile dark"><svg class="ic " viewBox="0 0 1024 1024" width="32" height="32" aria-hidden="true"><use href="#ic5"/></svg></div><figcaption>32 px<span>Menüleiste</span></figcaption></figure>
+      <figure><div class="tile light"><svg class="ic " viewBox="0 0 1024 1024" width="64" height="64" aria-hidden="true"><use href="#ic5"/></svg></div><figcaption>64 px<span>heller Schreibtisch</span></figcaption></figure>
+    </div>
+  </div>
+</article>
+<article class="prop">
+  <div class="hero">
+    <svg class="ic big" viewBox="0 0 1024 1024" width="232" height="232" aria-hidden="true"><use href="#ic6"/></svg>
+    <a class="file" href="#" onclick="return false;">icon-6-typenschild.svg</a>
+  </div>
+  <div class="body">
+    <p class="kicker">Entwurf 6 · Der Name ist das Icon</p>
+    <h2>Typenschild</h2>
+    <p class="lede">Kein Motiv, nur das Schild: gefrästes Messing, vier Schrauben, die Wortmarke in der Serifenschrift des Decks. Der einzige Entwurf, dessen Name auch in der Menüleiste noch trägt.</p>
+    <div class="nameline">
+      <span class="lbl">Name im Icon</span>
+      <span class="dots"><i class="on"></i><i class="on"></i><i class="on"></i></span>
+      <span class="where">Ist das Icon</span>
+    </div>
+    <div class="ladder">
+      <figure><div class="tile dark"><svg class="ic " viewBox="0 0 1024 1024" width="96" height="96" aria-hidden="true"><use href="#ic6"/></svg></div><figcaption>96 px<span>Dock</span></figcaption></figure>
+      <figure><div class="tile dark"><svg class="ic " viewBox="0 0 1024 1024" width="48" height="48" aria-hidden="true"><use href="#ic6"/></svg></div><figcaption>48 px<span>Finder-Liste</span></figcaption></figure>
+      <figure><div class="tile dark"><svg class="ic " viewBox="0 0 1024 1024" width="32" height="32" aria-hidden="true"><use href="#ic6"/></svg></div><figcaption>32 px<span>Menüleiste</span></figcaption></figure>
+      <figure><div class="tile light"><svg class="ic " viewBox="0 0 1024 1024" width="64" height="64" aria-hidden="true"><use href="#ic6"/></svg></div><figcaption>64 px<span>heller Schreibtisch</span></figcaption></figure>
+    </div>
+  </div>
+</article>
+  </div>
+
+  <section class="close">
+    <h3>Wenn einer davon gewinnt</h3>
+    <p>Die Dateien liegen als SVG in <code>design/icons/</code>, 1024 × 1024, ohne Bitmap-Anteil — sie skalieren
+      verlustfrei auf jedes geforderte Maß.</p>
+    <ol>
+      <li>Sag mir welcher, dann fräse ich die Details nach: Strichstärken, Gravurtiefe, Gewichtung der Wortmarke.</li>
+      <li>Danach baue ich das komplette <code>AppIcon.appiconset</code> — macOS 16…1024 px, iOS 20…1024 px — und hänge es ins Projekt.</li>
+      <li>Für die Menüleiste empfehle ich eine zweite, namenlose Variante desselben Motivs. Kein Icon der Welt trägt einen
+        Namen bei 32 px; Entwurf 6 kommt am nächsten heran.</li>
+    </ol>
+  </section>
+</div>
