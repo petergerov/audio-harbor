@@ -18,6 +18,8 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
     private(set) var pathLabel: String = "Shared"
     private(set) var meterLeft: Double = 0
     private(set) var meterRight: Double = 0
+    /// Reports the track that reached its end, so a late signal can be matched against it.
+    private var onTrackEnded: ((Track) -> Void)?
 
     private var sharedEngine = AVAudioEngine()
     private var sharedPlayer = AVAudioPlayerNode()
@@ -56,9 +58,13 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         effectHost.onChainChanged = { [weak self] in
             self?.handleEffectChainChanged()
         }
-        halPlayer.onReachedEnd = { [weak self] in
+        halPlayer.onReachedEnd = { [weak self] generation in
             Task { @MainActor in
-                self?.handleEnded()
+                guard let self else { return }
+                // The signal hops through the main queue — by now the next track may
+                // already be loaded. Ignore anything from an earlier buffer.
+                guard generation == self.halPlayer.currentGeneration else { return }
+                self.handleEnded()
             }
         }
     }
@@ -69,6 +75,10 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
 
     func setDSDStrategy(_ strategy: DSDStrategy) {
         dsdStrategy = strategy
+    }
+
+    func setTrackEndedHandler(_ handler: @escaping (Track) -> Void) {
+        onTrackEnded = handler
     }
 
     func load(_ track: Track) async throws {
@@ -644,6 +654,8 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
     }
 
     private func handleEnded() {
+        guard state == .playing else { return }
+        let endedTrack = loadedTrack
         currentTime = duration
         seekOffset = duration
         clearSharedAnchor()
@@ -651,6 +663,10 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         stopTimer()
         halPlayer.stopIO()
         zeroMeters()
+        // Notify last: the handler may load the next track straight away.
+        if let endedTrack {
+            onTrackEnded?(endedTrack)
+        }
     }
 
     private func startTimer() {

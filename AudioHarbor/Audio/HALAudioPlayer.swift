@@ -24,9 +24,11 @@ final class HALAudioPlayer {
     private var framePosition: Int = 0
     private var isRunning = false
     private var didSignalEnd = false
+    private var generation: UInt64 = 0
     private let lock = NSLock()
 
-    var onReachedEnd: (() -> Void)?
+    /// Carries the load generation so the host can drop end signals from an earlier buffer.
+    var onReachedEnd: ((UInt64) -> Void)?
     var meterProbe: StereoMeterProbe?
     private var dsdSource: DSDStreamSource?
 
@@ -41,6 +43,7 @@ final class HALAudioPlayer {
         self.buffer = buffer
         framePosition = 0
         didSignalEnd = false
+        generation &+= 1
         lock.unlock()
     }
 
@@ -50,7 +53,14 @@ final class HALAudioPlayer {
         buffer = source.makeRenderBuffer()
         framePosition = 0
         didSignalEnd = false
+        generation &+= 1
         lock.unlock()
+    }
+
+    /// Generation of the buffer currently loaded.
+    var currentGeneration: UInt64 {
+        lock.lock(); defer { lock.unlock() }
+        return generation
     }
 
     func seek(frame: Int) {
@@ -271,12 +281,13 @@ final class HALAudioPlayer {
         if shouldSignal {
             didSignalEnd = true
         }
+        let signalGeneration = generation
         lock.unlock()
 
         // Only notify once — otherwise this floods main at audio callback rate (~32Hz+).
         if shouldSignal {
             DispatchQueue.main.async { [weak self] in
-                self?.onReachedEnd?()
+                self?.onReachedEnd?(signalGeneration)
             }
         }
         return noErr

@@ -13,6 +13,8 @@ final class PlaybackService {
     private(set) var queueSourceName: String?
     /// Short label for the context rail header (e.g. "Playlist", "Album").
     private(set) var queueSourceKind: String = "Queue"
+    /// True once the last queue entry has played to its end.
+    private(set) var queueEnded = false
 
     /// Mirrored engine state so SwiftUI Observation actually refreshes the UI.
     private(set) var currentTime: TimeInterval = 0
@@ -43,6 +45,8 @@ final class PlaybackService {
     var isPlaying: Bool { playbackState == .playing }
 
     private var syncTimer: Timer?
+    /// Guards against two loads overlapping — the later one wins.
+    private var loadGeneration: UInt64 = 0
 
     private static let outputModeKey = "audioharbor.outputMode"
     private static let dsdStrategyKey = "audioharbor.dsdStrategy"
@@ -59,6 +63,9 @@ final class PlaybackService {
         }
         engine.setOutputMode(outputMode)
         engine.setDSDStrategy(dsdStrategy)
+        engine.setTrackEndedHandler { [weak self] endedTrack in
+            self?.advanceAfterTrackEnd(after: endedTrack)
+        }
         syncFromEngine()
     }
 
@@ -95,7 +102,12 @@ final class PlaybackService {
             engine.pause()
             stopSyncing()
             syncFromEngine()
-        } else if currentTrack != nil {
+        } else if let track = currentTrack {
+            // After the queue ran out the file sits at its end — start it over.
+            if queueEnded {
+                Task { await loadAndPlay(track) }
+                return
+            }
             engine.play()
             syncFromEngine()
             startSyncing()
@@ -116,6 +128,22 @@ final class PlaybackService {
         }
         queueIndex = (queueIndex - 1 + queue.count) % queue.count
         Task { await loadAndPlay(queue[queueIndex]) }
+    }
+
+    /// End of file: roll on to the next queue entry, or stop on the last one.
+    private func advanceAfterTrackEnd(after endedTrack: Track) {
+        // A late end signal from a track we already left must not skip the current one.
+        guard endedTrack.id == currentTrack?.id else { return }
+        let next = queueIndex + 1
+        guard queue.indices.contains(next) else {
+            queueEnded = true
+            stopSyncing()
+            syncFromEngine()
+            return
+        }
+        queueEnded = false
+        queueIndex = next
+        Task { await loadAndPlay(queue[next]) }
     }
 
     func playQueueItem(at index: Int) {
@@ -139,16 +167,22 @@ final class PlaybackService {
     }
 
     private func loadAndPlay(_ track: Track) async {
+        loadGeneration &+= 1
+        let generation = loadGeneration
         currentTrack = track
+        queueEnded = false
         stopSyncing()
         playbackState = .loading
         do {
             await ICloudItem.ensureDownloaded(track.url)
+            guard generation == loadGeneration else { return }
             try await engine.load(track)
+            guard generation == loadGeneration else { return }
             engine.play()
             syncFromEngine()
             startSyncing()
         } catch {
+            guard generation == loadGeneration else { return }
             syncFromEngine()
             stopSyncing()
         }
