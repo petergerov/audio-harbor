@@ -10,10 +10,11 @@ enum AudioFormat: String, Codable, CaseIterable, Sendable {
     case mp3 = "MP3"
     case dsf = "DSF"
     case dff = "DFF"
+    case sacd = "SACD"
     case unknown = "?"
 
     var isDSD: Bool {
-        self == .dsf || self == .dff
+        self == .dsf || self == .dff || self == .sacd
     }
 
     static func infer(from url: URL) -> AudioFormat {
@@ -26,6 +27,7 @@ enum AudioFormat: String, Codable, CaseIterable, Sendable {
         case "mp3": .mp3
         case "dsf": .dsf
         case "dff": .dff
+        case "iso": .sacd
         default: .unknown
         }
     }
@@ -49,6 +51,9 @@ struct Track: Identifiable, Hashable, Sendable {
     var artworkHash: String?
     /// User-assigned labels (persisted by file path).
     var labels: [String]
+    /// Unique catalogue key. Same as `url.path` for ordinary files;
+    /// `path#sacd/3` / `path#dff/3` when one container holds many tracks.
+    var cataloguePath: String
 
     init(
         id: UUID? = nil,
@@ -65,10 +70,12 @@ struct Track: Identifiable, Hashable, Sendable {
         url: URL,
         artworkData: Data? = nil,
         artworkHash: String? = nil,
-        labels: [String] = []
+        labels: [String] = [],
+        cataloguePath: String? = nil
     ) {
+        let identity = cataloguePath ?? url.standardizedFileURL.path
         // Stable across rescans so playlists (and other ID refs) survive relaunch.
-        self.id = id ?? Self.stableID(for: url)
+        self.id = id ?? Self.stableID(forIdentity: identity)
         self.title = title
         self.artist = artist
         self.album = album
@@ -83,11 +90,22 @@ struct Track: Identifiable, Hashable, Sendable {
         self.artworkData = artworkData
         self.artworkHash = artworkHash
         self.labels = labels
+        self.cataloguePath = identity
+    }
+
+    var folderDisplayName: String {
+        if VirtualTrackPath.isVirtual(cataloguePath), let number = trackNumber {
+            return String(format: "%02d  %@", number, title)
+        }
+        return url.lastPathComponent
     }
 
     /// Deterministic UUID from file path (same idea as path-keyed labels).
     static func stableID(for url: URL) -> UUID {
-        let path = url.standardizedFileURL.path
+        stableID(forIdentity: url.standardizedFileURL.path)
+    }
+
+    static func stableID(forIdentity path: String) -> UUID {
         let digest = SHA256.hash(data: Data(path.utf8))
         var bytes = Array(digest.prefix(16))
         bytes[6] = (bytes[6] & 0x0F) | 0x50
@@ -175,10 +193,17 @@ struct FolderBrowseEntry: Identifiable, Hashable, Sendable {
         case audioFile
     }
 
-    var id: String { url.path }
+    let id: String
     let name: String
     let url: URL
     let kind: Kind
+
+    init(name: String, url: URL, kind: Kind, id: String? = nil) {
+        self.id = id ?? url.path
+        self.name = name
+        self.url = url
+        self.kind = kind
+    }
 }
 
 struct FolderSearchHit: Identifiable, Hashable, Sendable {
@@ -220,7 +245,7 @@ enum OutputMode: String, CaseIterable, Identifiable, Sendable {
         case .exclusive:
             "Audio Harbor takes over a USB DAC so the file plays unchanged — same sample rate, nothing mixed in. Other apps go silent. Skip this for Mac speakers, Bluetooth, or AirPlay; they cannot do exclusive."
         case .dop:
-            "For DSF (DSD) files. Sends DSD to a DAC that understands DoP. If the DAC cannot, Audio Harbor converts to ordinary PCM so the track still plays. Ignore this unless you collect DSD."
+            "For DSF, DFF, and SACD ISO tracks. Sends DSD to a DAC that understands DoP. If the DAC cannot, Audio Harbor converts to ordinary PCM so the track still plays. Ignore this unless you collect DSD."
         }
     }
 

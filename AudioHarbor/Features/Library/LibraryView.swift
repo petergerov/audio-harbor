@@ -228,9 +228,9 @@ struct LibraryView: View {
             )
 
         case .audioFile:
-            let track = appModel.library.trackForPlayback(at: hit.entry.url)
+            let track = appModel.library.trackForPlayback(at: hit.entry.url, identity: hit.entry.id)
             Button {
-                let playback = appModel.library.folderPlaybackQueue(startingAt: hit.entry.url)
+                let playback = appModel.library.folderPlaybackQueue(startingAt: hit.entry.url, identity: hit.entry.id)
                 let folderName = hit.entry.url.deletingLastPathComponent().lastPathComponent
                 appModel.playback.play(
                     track: playback.track,
@@ -453,12 +453,12 @@ struct LibraryView: View {
             }
 
         case .audioFile:
-            let track = appModel.library.trackForPlayback(at: entry.url)
+            let track = appModel.library.trackForPlayback(at: entry.url, identity: entry.id)
             TrackRow(
                 track: track,
                 playlists: appModel.playlists.playlists,
                 onPlay: {
-                    let playback = appModel.library.folderPlaybackQueue(startingAt: entry.url)
+                    let playback = appModel.library.folderPlaybackQueue(startingAt: entry.url, identity: entry.id)
                     let folderName = entry.url.deletingLastPathComponent().lastPathComponent
                     appModel.playback.play(
                         track: playback.track,

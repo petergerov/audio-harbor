@@ -228,14 +228,15 @@ final class DSDStreamSource: @unchecked Sendable {
     private let bytesPerPCM: Int
     private let bitsPerFrame: Int
     private let totalBits: UInt64
+    /// Absolute DSD bit index in the file for clip start (0 for a whole file).
+    private let clipStartBit: Int
     private let lock = NSLock()
     private var filters: [DSDLowpass]
     private var nextBit: Int
 
-    init(url: URL, strategy: DSDStrategy) throws {
+    init(url: URL, strategy: DSDStrategy, startSample: UInt64 = 0, sampleCount: UInt64? = nil) throws {
         let map = try NSData(contentsOf: url, options: [.mappedIfSafe])
         let header = try DSDDecoder.parseHeader(Data(referencing: map))
-        guard header.format == .dsf else { throw DSDError.dffPlaybackNotReady }
         guard map.length > 0 else { throw DSDError.truncated }
 
         let preferDoP: Bool = {
@@ -266,10 +267,14 @@ final class DSDStreamSource: @unchecked Sendable {
         self.byteCount = map.length
         self.bytes = map.bytes.assumingMemoryBound(to: UInt8.self)
         let bitsPerFrame = bytesPerPCM * 8
-        guard bitsPerFrame > 0, header.sampleCountPerChannel > 0 else { throw DSDError.truncated }
+        let available = header.sampleCountPerChannel
+        let clippedStart = min(startSample, available)
+        let clippedCount = min(sampleCount ?? (available - clippedStart), available - clippedStart)
+        guard bitsPerFrame > 0, clippedCount > 0 else { throw DSDError.truncated }
         self.bitsPerFrame = bitsPerFrame
-        self.totalBits = header.sampleCountPerChannel
-        self.frameCount = Int(header.sampleCountPerChannel / UInt64(bitsPerFrame))
+        self.clipStartBit = Int(clippedStart)
+        self.totalBits = clippedCount
+        self.frameCount = Int(clippedCount / UInt64(bitsPerFrame))
         self.sampleRate = Double(header.sampleRate / bitsPerFrame)
         self.nextBit = 0
         if preferDoP {
@@ -312,8 +317,9 @@ final class DSDStreamSource: @unchecked Sendable {
         let out = dest.assumingMemoryBound(to: UInt8.self)
         if isDoP {
             var o = 0
+            let clipBytes = clipStartBit >> 3
             for frame in startFrame..<(startFrame + frames) {
-                let byteIndex = frame * bytesPerPCM
+                let byteIndex = clipBytes + frame * bytesPerPCM
                 for ch in 0..<channels {
                     let payload = read16(src: src, channel: ch, byteIndex: byteIndex)
                     let marker: UInt8 = (frame & 1) == 0 ? 0x05 : 0xFA
@@ -460,16 +466,17 @@ final class DSDStreamSource: @unchecked Sendable {
         cachedByte: inout UInt8
     ) -> Float {
         if bitIndex < 0 || UInt64(bitIndex) >= totalBits { return 0 }
-        let byteIndex = bitIndex >> 3
+        let fileBit = clipStartBit + bitIndex
+        let byteIndex = fileBit >> 3
         if byteIndex != cachedByteIndex {
             cachedByteIndex = byteIndex
             cachedByte = byte(src, channel: channel, index: byteIndex)
         }
         let on: Bool
         if lsbFirst {
-            on = ((cachedByte >> (bitIndex & 7)) & 1) != 0
+            on = ((cachedByte >> (fileBit & 7)) & 1) != 0
         } else {
-            on = ((cachedByte >> (7 - (bitIndex & 7))) & 1) != 0
+            on = ((cachedByte >> (7 - (fileBit & 7))) & 1) != 0
         }
         return on ? 1 : -1
     }
@@ -568,7 +575,6 @@ enum DSDError: LocalizedError {
     case badDataChunk
     case truncated
     case channelMismatch
-    case dffPlaybackNotReady
     case tooLarge
 
     var errorDescription: String? {
@@ -578,7 +584,6 @@ enum DSDError: LocalizedError {
         case .badDataChunk: "Invalid DSD data chunk"
         case .truncated: "Truncated DSD file"
         case .channelMismatch: "DSD channel data mismatch"
-        case .dffPlaybackNotReady: "DFF probe works; full DFF playback lands next. Use DSF for DoP now."
         case .tooLarge: "This DSD file is too large to decode in memory on this device."
         }
     }

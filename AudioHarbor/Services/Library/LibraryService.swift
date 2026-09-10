@@ -96,13 +96,13 @@ final class LibraryService {
     var filteredAlbums: [Album] {
         guard let paths = searchHitPaths else { return albums }
         return albums.filter { album in
-            album.tracks.contains { paths.contains($0.url.path) }
+            album.tracks.contains { paths.contains($0.cataloguePath) }
         }
     }
 
     func visibleTracks(in album: Album) -> [Track] {
         guard let paths = searchHitPaths else { return album.tracks }
-        return album.tracks.filter { paths.contains($0.url.path) }
+        return album.tracks.filter { paths.contains($0.cataloguePath) }
     }
 
     func tracks(forArtist name: String) -> [Track] {
@@ -245,9 +245,16 @@ final class LibraryService {
     }
 
     /// Prefer indexed metadata; fall back to a lightweight file-based track.
-    func trackForPlayback(at url: URL) -> Track {
+    func trackForPlayback(at url: URL, identity: String? = nil) -> Track {
+        if let identity, let existing = tracksByPath[identity] {
+            return existing
+        }
         if let existing = tracksByPath[url.path] {
             return existing
+        }
+        let siblings = tracksInContainer(at: url)
+        if let first = siblings.first {
+            return first
         }
         let format = AudioFormat.infer(from: url)
         return labeled(
@@ -263,22 +270,34 @@ final class LibraryService {
     }
 
     /// Queue = audio files in the same folder, in listing order.
-    func folderPlaybackQueue(startingAt url: URL) -> (track: Track, queue: [Track]) {
+    func folderPlaybackQueue(startingAt url: URL, identity: String? = nil) -> (track: Track, queue: [Track]) {
+        let container = tracksInContainer(at: url)
+        if container.count > 1 || container.first.map({ VirtualTrackPath.isVirtual($0.cataloguePath) }) == true {
+            let track = identity.flatMap { id in container.first { $0.cataloguePath == id } }
+                ?? container.first
+                ?? trackForPlayback(at: url, identity: identity)
+            return (track, container)
+        }
         let directory = url.deletingLastPathComponent()
         let files = listFolderContents(at: directory)
             .filter { $0.kind == .audioFile }
-            .map(\.url)
-        let queue = files.map { trackForPlayback(at: $0) }
-        let track = queue.first(where: { $0.url.path == url.path }) ?? trackForPlayback(at: url)
+        let queue = files.map { trackForPlayback(at: $0.url, identity: $0.id) }
+        let track = identity.flatMap { id in queue.first { $0.cataloguePath == id } }
+            ?? queue.first(where: { $0.url.path == url.path })
+            ?? trackForPlayback(at: url, identity: identity)
         return (track, queue.isEmpty ? [track] : queue)
+    }
+
+    private func tracksInContainer(at url: URL) -> [Track] {
+        tracks
+            .filter { $0.url.path == url.path }
+            .sorted { ($0.trackNumber ?? 9999) < ($1.trackNumber ?? 9999) }
     }
 
     /// Immediate files in `url`, or every indexed track under it if the folder only has albums.
     func directoryPlaybackQueue(at url: URL) -> (track: Track, queue: [Track])? {
         let parentPath = normalizedPath(url.path)
-        let immediate = (tracksByParent[parentPath] ?? []).sorted {
-            $0.url.lastPathComponent.localizedStandardCompare($1.url.lastPathComponent) == .orderedAscending
-        }
+        let immediate = (tracksByParent[parentPath] ?? []).sorted(by: Self.sortFolderTracks)
         if let first = immediate.first {
             return (first, immediate)
         }
@@ -294,41 +313,41 @@ final class LibraryService {
     func addLabel(_ label: String, to track: Track) {
         let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        var current = labelsByPath[track.url.path] ?? track.labels
+        var current = labelsByPath[track.cataloguePath] ?? track.labels
         guard !current.contains(where: { $0.caseInsensitiveCompare(trimmed) == .orderedSame }) else { return }
         current.append(trimmed)
-        labelsByPath[track.url.path] = current.sorted {
+        labelsByPath[track.cataloguePath] = current.sorted {
             $0.localizedCaseInsensitiveCompare($1) == .orderedAscending
         }
         saveLabels()
         applyStoredLabelsToTracks()
-        persistLabels(for: track.url.path)
+        persistLabels(for: track.cataloguePath)
     }
 
     func removeLabel(_ label: String, from track: Track) {
-        var current = labelsByPath[track.url.path] ?? track.labels
+        var current = labelsByPath[track.cataloguePath] ?? track.labels
         current.removeAll { $0.caseInsensitiveCompare(label) == .orderedSame }
         if current.isEmpty {
-            labelsByPath.removeValue(forKey: track.url.path)
+            labelsByPath.removeValue(forKey: track.cataloguePath)
         } else {
-            labelsByPath[track.url.path] = current
+            labelsByPath[track.cataloguePath] = current
         }
         saveLabels()
         applyStoredLabelsToTracks()
-        persistLabels(for: track.url.path)
+        persistLabels(for: track.cataloguePath)
     }
 
     func setLabels(_ labels: [String], for track: Track) {
         let cleaned = Array(Set(labels.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }))
             .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
         if cleaned.isEmpty {
-            labelsByPath.removeValue(forKey: track.url.path)
+            labelsByPath.removeValue(forKey: track.cataloguePath)
         } else {
-            labelsByPath[track.url.path] = cleaned
+            labelsByPath[track.cataloguePath] = cleaned
         }
         saveLabels()
         applyStoredLabelsToTracks()
-        persistLabels(for: track.url.path)
+        persistLabels(for: track.cataloguePath)
     }
 
     private func persistLabels(for path: String) {
@@ -339,7 +358,7 @@ final class LibraryService {
     private func applyStoredLabelsToTracks() {
         tracks = tracks.map { track in
             var copy = track
-            copy.labels = labelsByPath[track.url.path] ?? []
+            copy.labels = labelsByPath[track.cataloguePath] ?? []
             return copy
         }
         reindexLookups()
@@ -350,7 +369,7 @@ final class LibraryService {
 
     private func labeled(_ track: Track) -> Track {
         var copy = track
-        copy.labels = labelsByPath[track.url.path] ?? []
+        copy.labels = labelsByPath[track.cataloguePath] ?? []
         return copy
     }
 
@@ -443,9 +462,14 @@ final class LibraryService {
                 )
             }
             let files = indexedFiles
-                .sorted { $0.url.lastPathComponent.localizedStandardCompare($1.url.lastPathComponent) == .orderedAscending }
+                .sorted(by: Self.sortFolderTracks)
                 .map { track in
-                    FolderBrowseEntry(name: track.url.lastPathComponent, url: track.url, kind: .audioFile)
+                    FolderBrowseEntry(
+                        name: track.folderDisplayName,
+                        url: track.url,
+                        kind: .audioFile,
+                        id: track.cataloguePath
+                    )
                 }
             return directories + files
         }
@@ -582,6 +606,10 @@ final class LibraryService {
         let existing = await CatalogueIndexStore.shared.fingerprints()
         let plan = CatalogueIndexer.plan(files: files, existing: existing, force: force)
 
+        if !plan.staleVirtual.isEmpty {
+            await CatalogueIndexStore.shared.delete(paths: plan.staleVirtual)
+        }
+
         if !plan.toRead.isEmpty {
             let verb = force ? "Indexing" : "Updating"
             scanProgressText = "\(verb) 0/\(plan.toRead.count)…"
@@ -592,6 +620,14 @@ final class LibraryService {
                 await MainActor.run { [weak self] in
                     self?.scanProgressText = "\(verb) \(done)/\(total)…"
                 }
+            }
+            let leftoverContainers = Set(
+                records
+                    .filter { VirtualTrackPath.isVirtual($0.path) }
+                    .map { VirtualTrackPath.filePath(from: $0.path) }
+            )
+            if !leftoverContainers.isEmpty {
+                await CatalogueIndexStore.shared.delete(paths: Array(leftoverContainers))
             }
             await CatalogueIndexStore.shared.upsert(records)
         }
@@ -624,7 +660,7 @@ final class LibraryService {
     }
 
     private func reindexLookups() {
-        tracksByPath = Dictionary(uniqueKeysWithValues: tracks.map { ($0.url.path, $0) })
+        tracksByPath = Dictionary(tracks.map { ($0.cataloguePath, $0) }, uniquingKeysWith: { _, last in last })
         tracksByParent = Dictionary(grouping: tracks) { $0.url.deletingLastPathComponent().path }
         searchIndex.rebuild(from: tracks)
         indexedTrackCount = showsDemoLibrary ? 0 : tracks.count
@@ -649,6 +685,16 @@ final class LibraryService {
                 )
             }
             .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+    }
+
+    nonisolated private static func sortFolderTracks(_ lhs: Track, _ rhs: Track) -> Bool {
+        if lhs.url.path == rhs.url.path {
+            let left = lhs.trackNumber ?? 9999
+            let right = rhs.trackNumber ?? 9999
+            if left != right { return left < right }
+            return lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
+        }
+        return lhs.url.lastPathComponent.localizedStandardCompare(rhs.url.lastPathComponent) == .orderedAscending
     }
 
     private func rebuildFacets() {
@@ -718,7 +764,7 @@ final class LibraryService {
             return
         }
         if let indices = searchIndex.matchingIndices(query: q, trackCount: tracks.count) {
-            searchHitPaths = Set(indices.compactMap { tracks.indices.contains($0) ? tracks[$0].url.path : nil })
+            searchHitPaths = Set(indices.compactMap { tracks.indices.contains($0) ? tracks[$0].cataloguePath : nil })
         } else {
             searchHitPaths = []
         }
@@ -748,10 +794,15 @@ final class LibraryService {
         for (root, base) in scopes {
             let prefix = normalizedPrefix(base.path)
             for track in matchingTracks where track.url.path.hasPrefix(prefix) {
-                guard seen.insert(track.url.path).inserted else { continue }
+                guard seen.insert(track.cataloguePath).inserted else { continue }
                 hits.append(
                     FolderSearchHit(
-                        entry: FolderBrowseEntry(name: track.url.lastPathComponent, url: track.url, kind: .audioFile),
+                        entry: FolderBrowseEntry(
+                            name: track.folderDisplayName,
+                            url: track.url,
+                            kind: .audioFile,
+                            id: track.cataloguePath
+                        ),
                         relativePath: relativePath(for: track.url, under: root)
                     )
                 )
@@ -894,7 +945,8 @@ struct IndexedTrackRecord: Sendable {
     var labels: [String]
 
     func asTrack(labelsByPath: [String: [String]]) -> Track {
-        Track(
+        let filePath = VirtualTrackPath.filePath(from: path)
+        return Track(
             title: title,
             artist: artist,
             album: album,
@@ -905,9 +957,10 @@ struct IndexedTrackRecord: Sendable {
             sampleRateHz: sampleRateHz,
             bitDepth: bitDepth,
             channelCount: channelCount,
-            url: URL(fileURLWithPath: path),
+            url: URL(fileURLWithPath: filePath),
             artworkHash: artworkHash,
-            labels: labelsByPath[path] ?? labels
+            labels: labelsByPath[path] ?? labels,
+            cataloguePath: path
         )
     }
 }
@@ -1418,7 +1471,7 @@ struct CatalogueSearchIndex: Sendable {
 }
 
 enum CatalogueIndexer {
-    static let audioExtensions = Set(["flac", "m4a", "alac", "wav", "aiff", "aif", "aac", "mp3", "dsf", "dff"])
+    static let audioExtensions = Set(["flac", "m4a", "alac", "wav", "aiff", "aif", "aac", "mp3", "dsf", "dff", "iso"])
 
     static func enumerateAudioFiles(in roots: [URL]) -> [FileFingerprint] {
         let fm = FileManager.default
@@ -1469,29 +1522,59 @@ enum CatalogueIndexer {
         files: [FileFingerprint],
         existing: [String: StoredFingerprint],
         force: Bool
-    ) -> (toRead: [FileFingerprint], toDelete: [String], unchanged: Int) {
+    ) -> (toRead: [FileFingerprint], toDelete: [String], staleVirtual: [String], unchanged: Int) {
         var toRead: [FileFingerprint] = []
         toRead.reserveCapacity(force ? files.count : 64)
         var live = Set<String>(minimumCapacity: files.count)
+        var staleVirtual: [String] = []
         var unchanged = 0
 
+        var childrenByParent: [String: [String]] = [:]
+        for path in existing.keys {
+            childrenByParent[VirtualTrackPath.filePath(from: path), default: []].append(path)
+        }
+
+        func fingerprintMatches(_ path: String, file: FileFingerprint) -> Bool {
+            guard let stored = existing[path] else { return false }
+            return stored.fileSize == file.fileSize && abs(stored.mtime - file.mtime) < 0.6
+        }
+
         for file in files {
-            live.insert(file.path)
-            if force {
-                toRead.append(file)
-                continue
-            }
-            if let stored = existing[file.path],
-               stored.fileSize == file.fileSize,
-               abs(stored.mtime - file.mtime) < 0.6 {
-                unchanged += 1
+            let children = childrenByParent[file.path] ?? []
+            let virtual = children.filter { VirtualTrackPath.isVirtual($0) }
+            let ext = file.url.pathExtension.lowercased()
+            let treatAsContainer = ext == "iso" || !virtual.isEmpty
+
+            if treatAsContainer {
+                let allMatch = !virtual.isEmpty && virtual.allSatisfy { fingerprintMatches($0, file: file) }
+                if !force, allMatch {
+                    virtual.forEach { live.insert($0) }
+                    unchanged += virtual.count
+                } else {
+                    toRead.append(file)
+                    staleVirtual.append(contentsOf: virtual)
+                    if existing[file.path] != nil {
+                        staleVirtual.append(file.path)
+                    }
+                }
             } else {
-                toRead.append(file)
+                live.insert(file.path)
+                if force {
+                    toRead.append(file)
+                } else if fingerprintMatches(file.path, file: file) {
+                    unchanged += 1
+                } else {
+                    toRead.append(file)
+                }
             }
         }
 
-        let toDelete = existing.keys.filter { !live.contains($0) }
-        return (toRead, toDelete, unchanged)
+        let liveFiles = Set(files.map(\.path))
+        let toDelete = existing.keys.filter { key in
+            let parent = VirtualTrackPath.filePath(from: key)
+            return !live.contains(key) && !liveFiles.contains(parent)
+        }
+        return (toRead, toDelete, staleVirtual, unchanged)
     }
 
     static func readMetadata(
@@ -1506,7 +1589,7 @@ enum CatalogueIndexer {
 
         var processed = 0
         for chunk in files.chunked(into: chunkSize) {
-            let batch = await withTaskGroup(of: IndexedTrackRecord.self, returning: [IndexedTrackRecord].self) { group in
+            let batch = await withTaskGroup(of: [IndexedTrackRecord].self, returning: [IndexedTrackRecord].self) { group in
                 for file in chunk {
                     group.addTask {
                         await readOne(file: file, labelsByPath: labelsByPath)
@@ -1514,8 +1597,8 @@ enum CatalogueIndexer {
                 }
                 var out: [IndexedTrackRecord] = []
                 out.reserveCapacity(chunk.count)
-                for await record in group {
-                    out.append(record)
+                for await records in group {
+                    out.append(contentsOf: records)
                 }
                 return out
             }
@@ -1526,8 +1609,77 @@ enum CatalogueIndexer {
         return records
     }
 
-    private static func readOne(file: FileFingerprint, labelsByPath: [String: [String]]) async -> IndexedTrackRecord {
+    private static func readOne(file: FileFingerprint, labelsByPath: [String: [String]]) async -> [IndexedTrackRecord] {
         await ICloudItem.ensureDownloaded(file.url)
+        let ext = file.url.pathExtension.lowercased()
+        if ext == "iso" {
+            return indexSACD(file: file, labelsByPath: labelsByPath)
+        }
+        if ext == "dff" {
+            let chapters = indexDFFChapters(file: file, labelsByPath: labelsByPath)
+            if chapters.count > 1 {
+                return chapters
+            }
+        }
+        return [await indexSingle(file: file, labelsByPath: labelsByPath)]
+    }
+
+    private static func indexSACD(file: FileFingerprint, labelsByPath: [String: [String]]) -> [IndexedTrackRecord] {
+        guard let tracks = try? SACDISO.listTracks(url: file.url), !tracks.isEmpty else {
+            return []
+        }
+        return tracks.map { track in
+            let identity = VirtualTrackPath.sacd(file.path, track: track.number)
+            return IndexedTrackRecord(
+                path: identity,
+                title: track.title,
+                artist: track.artist,
+                album: track.album,
+                trackNumber: track.number,
+                year: track.year,
+                duration: track.duration,
+                format: .sacd,
+                sampleRateHz: track.sampleRateHz,
+                bitDepth: 1,
+                channelCount: track.channelCount,
+                fileSize: file.fileSize,
+                mtime: file.mtime,
+                artworkHash: nil,
+                filename: file.url.lastPathComponent,
+                labels: labelsByPath[identity] ?? []
+            )
+        }
+    }
+
+    private static func indexDFFChapters(file: FileFingerprint, labelsByPath: [String: [String]]) -> [IndexedTrackRecord] {
+        guard let header = try? DSDDecoder.probe(url: file.url) else { return [] }
+        let chapters = DFFChapters.list(url: file.url, header: header)
+        guard chapters.count > 1 else { return [] }
+        let album = file.url.deletingLastPathComponent().lastPathComponent
+        return chapters.map { chapter in
+            let identity = VirtualTrackPath.dff(file.path, track: chapter.number)
+            return IndexedTrackRecord(
+                path: identity,
+                title: chapter.title,
+                artist: "Unknown Artist",
+                album: album,
+                trackNumber: chapter.number,
+                year: nil,
+                duration: chapter.duration,
+                format: .dff,
+                sampleRateHz: header.sampleRate,
+                bitDepth: 1,
+                channelCount: header.channelCount,
+                fileSize: file.fileSize,
+                mtime: file.mtime,
+                artworkHash: nil,
+                filename: file.url.lastPathComponent,
+                labels: labelsByPath[identity] ?? []
+            )
+        }
+    }
+
+    private static func indexSingle(file: FileFingerprint, labelsByPath: [String: [String]]) async -> IndexedTrackRecord {
         let meta = await MetadataReader.read(url: file.url)
         let artworkHash = meta.artworkData.flatMap { ArtworkCache.shared.store($0) }
         return IndexedTrackRecord(

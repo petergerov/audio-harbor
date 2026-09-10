@@ -253,6 +253,9 @@ private struct PluginEditorSheet: View {
                 }
             }
         }
+        .onDisappear {
+            appModel.effects.saveSettings()
+        }
     }
 }
 

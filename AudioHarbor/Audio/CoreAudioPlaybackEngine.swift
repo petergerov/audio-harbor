@@ -334,7 +334,7 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         if wantHAL {
             do {
                 let source = try await Task.detached(priority: .userInitiated) {
-                    try DSDStreamSource(url: track.url, strategy: .preferDoP)
+                    try DSDPlayback.stream(for: track, strategy: .preferDoP)
                 }.value
                 let device = try deviceController.defaultOutputDeviceID()
                 if deviceController.supportsNominalRate(source.sampleRate, device: device) {
@@ -358,13 +358,13 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         #endif
 
         let source = try await Task.detached(priority: .userInitiated) {
-            try DSDStreamSource(url: track.url, strategy: .convertToPCM)
+            try DSDPlayback.stream(for: track, strategy: .convertToPCM)
         }.value
         try installDSDShared(source, track: track)
     }
 
     private func loadDSDSharedPCM(_ track: Track) throws {
-        let source = try DSDStreamSource(url: track.url, strategy: .convertToPCM)
+        let source = try DSDPlayback.stream(for: track, strategy: .convertToPCM)
         try installDSDShared(source, track: track)
     }
 

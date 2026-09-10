@@ -10,6 +10,7 @@ import AppKit
 @MainActor
 final class PluginEditorPresenter {
     private var controllers: [UUID: PluginEditorWindowController] = [:]
+    var onEditorWillHide: (() -> Void)?
 
     func present(slotID: UUID, title: String, viewController: NSViewController) {
         if let existing = controllers[slotID] {
@@ -20,7 +21,8 @@ final class PluginEditorPresenter {
         let controller = PluginEditorWindowController(
             slotID: slotID,
             title: title,
-            pluginViewController: viewController
+            pluginViewController: viewController,
+            onWillHide: { [weak self] in self?.onEditorWillHide?() }
         )
         controllers[slotID] = controller
         controller.showWindow(nil)
@@ -52,13 +54,16 @@ final class PluginEditorPresenter {
 private final class PluginEditorWindowController: NSWindowController, NSWindowDelegate {
     let slotID: UUID
     private var sizeObservation: NSKeyValueObservation?
+    private let onWillHide: () -> Void
 
     init(
         slotID: UUID,
         title: String,
-        pluginViewController: NSViewController
+        pluginViewController: NSViewController,
+        onWillHide: @escaping () -> Void
     ) {
         self.slotID = slotID
+        self.onWillHide = onWillHide
 
         // Ensure the AU view is loaded before measuring.
         _ = pluginViewController.view
@@ -111,6 +116,7 @@ private final class PluginEditorWindowController: NSWindowController, NSWindowDe
 
     /// Hide on close-button — keep the AU view controller alive for re-open.
     func windowShouldClose(_ sender: NSWindow) -> Bool {
+        onWillHide()
         sender.orderOut(nil)
         return false
     }

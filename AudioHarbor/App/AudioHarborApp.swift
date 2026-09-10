@@ -3,12 +3,18 @@ import SwiftUI
 @main
 struct AudioHarborApp: App {
     @State private var appModel = AppModel()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environment(appModel)
                 .preferredColorScheme(.dark)
+                .onChange(of: scenePhase) { _, phase in
+                    if phase == .inactive || phase == .background {
+                        appModel.effects.saveSettings()
+                    }
+                }
         }
         #if os(macOS)
         .defaultSize(width: 1180, height: 760)

@@ -31,6 +31,15 @@ final class EffectHost {
     #endif
 
     private let defaultsKey = "audioharbor.effectChain"
+    private var parameterTokens: [UUID: AUParameterObserverToken] = [:]
+    private var persistTask: Task<Void, Never>?
+
+    private var chainFileURL: URL {
+        let folder = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("AudioHarbor", isDirectory: true)
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        return folder.appendingPathComponent("effect-chain.json")
+    }
 
     /// True when any insert is present and not bypassed — forces Shared output.
     var hasActiveEffects: Bool {
@@ -43,6 +52,11 @@ final class EffectHost {
 
     init() {
         loadPersistedChain()
+        #if os(macOS)
+        pluginEditors.onEditorWillHide = { [weak self] in
+            self?.saveSettings()
+        }
+        #endif
         registrationsObserver = NotificationCenter.default.addObserver(
             forName: AVAudioUnitComponentManager.registrationsChangedNotification,
             object: AVAudioUnitComponentManager.shared(),
@@ -86,7 +100,7 @@ final class EffectHost {
             }
         }
         if restored {
-            onChainChanged?()
+            notifyChainChanged()
         }
     }
 
@@ -106,7 +120,7 @@ final class EffectHost {
             try await loadUnit(for: slot)
             statusMessage = "Loaded \(descriptor.name)"
             persist()
-            onChainChanged?()
+            notifyChainChanged()
         } catch {
             chain.removeAll { $0.id == slot.id }
             statusMessage = error.localizedDescription
@@ -136,11 +150,12 @@ final class EffectHost {
         #if os(macOS)
         pluginEditors.close(slotID: id)
         #endif
+        stopObserving(id)
         loadedUnits.removeValue(forKey: id)
         chain.removeAll { $0.id == id }
         persist()
         if notify {
-            onChainChanged?()
+            notifyChainChanged()
         }
     }
 
@@ -162,7 +177,7 @@ final class EffectHost {
     func move(from source: IndexSet, to destination: Int) {
         chain.move(fromOffsets: source, toOffset: destination)
         persist()
-        onChainChanged?()
+        notifyChainChanged()
     }
 
     func setBypass(_ id: UUID, bypassed: Bool) {
@@ -172,7 +187,12 @@ final class EffectHost {
             unit.auAudioUnit.shouldBypassEffect = bypassed
         }
         persist()
-        onChainChanged?()
+        notifyChainChanged()
+    }
+
+    /// Snapshot live AU parameters to disk (quit, background, editor close).
+    func saveSettings() {
+        persist()
     }
 
     /// Ordered engine nodes for active (loaded) inserts, skipping fully missing loads.
@@ -284,19 +304,97 @@ final class EffectHost {
             }
         }
         unit.auAudioUnit.shouldBypassEffect = slot.bypassed
+        if let data = slot.parameterState {
+            Self.applyAUState(data, to: unit.auAudioUnit)
+        }
         loadedUnits[slot.id] = unit
+        observeParameters(slot.id, unit: unit)
+    }
+
+    private func notifyChainChanged() {
+        snapshotParameterStates()
+        onChainChanged?()
+        applyStoredParameterStates()
     }
 
     private func persist() {
-        if let data = try? JSONEncoder().encode(chain) {
-            UserDefaults.standard.set(data, forKey: defaultsKey)
-        }
+        snapshotParameterStates()
+        guard let data = try? JSONEncoder().encode(chain) else { return }
+        try? data.write(to: chainFileURL, options: [.atomic])
+        UserDefaults.standard.set(data, forKey: defaultsKey)
     }
 
     private func loadPersistedChain() {
-        guard let data = UserDefaults.standard.data(forKey: defaultsKey),
+        let data = (try? Data(contentsOf: chainFileURL))
+            ?? UserDefaults.standard.data(forKey: defaultsKey)
+        guard let data,
               let decoded = try? JSONDecoder().decode([EffectSlotState].self, from: data)
         else { return }
         chain = decoded
+    }
+
+    private func snapshotParameterStates() {
+        for i in chain.indices {
+            guard let unit = loadedUnits[chain[i].id] else { continue }
+            if let data = Self.encodeAUState(unit.auAudioUnit) {
+                chain[i].parameterState = data
+            }
+        }
+    }
+
+    private func applyStoredParameterStates() {
+        for slot in chain {
+            guard let data = slot.parameterState, let unit = loadedUnits[slot.id] else { continue }
+            Self.applyAUState(data, to: unit.auAudioUnit)
+        }
+    }
+
+    private func observeParameters(_ id: UUID, unit: AVAudioUnit) {
+        stopObserving(id)
+        guard let tree = unit.auAudioUnit.parameterTree else { return }
+        let token = tree.token(byAddingParameterObserver: { [weak self] _, _ in
+            Task { @MainActor in
+                self?.schedulePersist()
+            }
+        })
+        parameterTokens[id] = token
+    }
+
+    private func stopObserving(_ id: UUID) {
+        guard let token = parameterTokens.removeValue(forKey: id) else { return }
+        if let unit = loadedUnits[id], let tree = unit.auAudioUnit.parameterTree {
+            tree.removeParameterObserver(token)
+        }
+    }
+
+    private func schedulePersist() {
+        persistTask?.cancel()
+        persistTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else { return }
+            persist()
+        }
+    }
+
+    private static func encodeAUState(_ au: AUAudioUnit) -> Data? {
+        let dict = au.fullStateForDocument ?? au.fullState
+        guard let dict else { return nil }
+        return try? PropertyListSerialization.data(fromPropertyList: dict, format: .binary, options: 0)
+    }
+
+    private static func applyAUState(_ data: Data, to au: AUAudioUnit) {
+        let dict: [String: Any]?
+        if let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any] {
+            dict = plist
+        } else {
+            dict = nil
+        }
+        guard let dict else { return }
+        var nsError: NSError?
+        _ = AHPerformWithExceptionHandling({
+            au.fullStateForDocument = dict
+            au.fullState = dict
+        }, &nsError)
+        _ = nsError
     }
 }
