@@ -24,7 +24,7 @@
 <stop offset="0.62" stop-color="#000000" stop-opacity="0"/>
 <stop offset="1" stop-color="#000000" stop-opacity="0.5"/></radialGradient>
 </defs>
-<path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="url(#plinth6)"/>
+<rect width="1024" height="1024" fill="url(#plinth6)"/>
 
 <rect x="112" y="262" width="800" height="500" rx="34" fill="url(#brass6)"/>
 <clipPath id="plate6"><rect x="112" y="262" width="800" height="500" rx="34"/></clipPath><g clip-path="url(#plate6)"><circle cx="512" cy="512" r="150" fill="none" stroke="#8A5C24" stroke-width="2" stroke-opacity="0.18"/><circle cx="512" cy="512" r="176" fill="none" stroke="#8A5C24" stroke-width="2" stroke-opacity="0.18"/><circle cx="512" cy="512" r="202" fill="none" stroke="#8A5C24" stroke-width="2" stroke-opacity="0.18"/><circle cx="512" cy="512" r="228" fill="none" stroke="#8A5C24" stroke-width="2" stroke-opacity="0.18"/><circle cx="512" cy="512" r="254" fill="none" stroke="#8A5C24" stroke-width="2" stroke-opacity="0.18"/><circle cx="512" cy="512" r="280" fill="none" stroke="#8A5C24" stroke-width="2" stroke-opacity="0.18"/><circle cx="512" cy="512" r="306" fill="none" stroke="#8A5C24" stroke-width="2" stroke-opacity="0.18"/><circle cx="512" cy="512" r="332" fill="none" stroke="#8A5C24" stroke-width="2" stroke-opacity="0.18"/><circle cx="512" cy="512" r="358" fill="none" stroke="#8A5C24" stroke-width="2" stroke-opacity="0.18"/><circle cx="512" cy="512" r="384" fill="none" stroke="#8A5C24" stroke-width="2" stroke-opacity="0.18"/><circle cx="512" cy="512" r="410" fill="none" stroke="#8A5C24" stroke-width="2" stroke-opacity="0.18"/></g>
@@ -34,6 +34,6 @@
 <text x="512" y="498" text-anchor="middle" font-family="Spectral, Georgia, Times New Roman, serif" font-size="142" font-weight="600" letter-spacing="8" fill="#33240E">AUDIO</text>
 <text x="512" y="640" text-anchor="middle" font-family="Spectral, Georgia, Times New Roman, serif" font-size="142" font-weight="600" letter-spacing="4" fill="#33240E">HARBOR</text>
 
-<path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="url(#vign6)"/>
+<rect width="1024" height="1024" fill="url(#vign6)"/>
 <path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="none" stroke="url(#rim6)" stroke-width="5"/>
 </svg>

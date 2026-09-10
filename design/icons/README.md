@@ -1,14 +1,17 @@
 # App-Icon
 
-Gewählt: **Entwurf 1 — Plattenteller**. Die Übersicht aller sechs Entwürfe liegt in `uebersicht.html`.
+Gewählt: **Entwurf 6 — Typenschild**. Die Übersicht aller sechs Entwürfe liegt in `uebersicht.html`.
 
 ## Quellen
 
 | Datei | Zweck |
 | --- | --- |
-| `icon-1-plattenteller.svg` | Vollversion mit Gravur „AUDIO HARBOR“ — ab 128 px |
-| `icon-1-plattenteller-klein.svg` | ohne Gravur, Motiv 5 % größer — bis 64 px |
-| `icon-1-plattenteller-ios.svg` | randlos quadratisch, ohne Squircle — iOS maskiert selbst |
+| `icon-6-typenschild.svg` | Vollversion mit Wortmarke — ab 64 px |
+| `icon-6-typenschild-klein.svg` | Monogramm „AH“ — bis 32 px, dort verschmelzen zwei Zeilen Versalien |
+| `icon-6-typenschild-ios.svg` | randlos quadratisch, ohne Squircle — iOS maskiert selbst |
+
+Die Entwürfe 1 bis 5 bleiben als SVG liegen; Entwurf 1 hat noch seine drei Master
+(`icon-1-plattenteller*.svg`), falls die Richtung doch wieder gewechselt wird.
 
 Farben stammen aus `HarborTheme.swift`, nicht aus einer eigenen Palette.
 
@@ -24,4 +27,7 @@ vektor-scharf in jeder Zielgröße:
 - **mac** — auf Apples Raster eingerückt (824 von 1024), mit Schlagschatten, transparenter Rand
 - **bleed** — deckend ohne Alphakanal, den lehnt der App Store bei iOS-Icons ab
 
-`qlmanage` taugt dafür nicht: es legt die Grafik auf einen deckenden Grund.
+Zwei Fallstricke, die hier schon zugeschlagen haben: `qlmanage` taugt nicht als
+Renderer, es legt die Grafik auf einen deckenden Grund. Und AppKit versteht
+`clip-path="inset(…)"` nicht — Zuschnitte brauchen ein echtes `<clipPath>`,
+sonst laufen sie im Icon aus, während der Browser sie korrekt zeigt.
