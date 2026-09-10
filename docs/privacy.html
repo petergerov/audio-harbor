@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Audio Harbor</title>
+  <meta name="description" content="Privacy policy for Audio Harbor. Local files, no accounts, no analytics, no tracking of your library." />
+  <link rel="icon" href="AppIcon.png" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #ffffff; --text: #1c1916; --secondary: #6a6358;
+      --border: #e4ddd3; --accent: #8a5a1a; --accent2: #5c3a14;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+      background: var(--bg); color: var(--text); line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 40px; height: 52px;
+      background: rgba(255,255,255,0.82);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.95rem; font-weight: 600; color: var(--text); text-decoration: none;
+    }
+    .nav-logo img { width: 28px; height: 28px; border-radius: 6px; }
+    .nav-cta { font-size: 0.82rem; font-weight: 500; color: var(--accent); text-decoration: none; }
+    .nav-cta:hover { color: var(--accent2); }
+    main { max-width: 680px; margin: 0 auto; padding: 100px 24px 80px; }
+    h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 8px; }
+    .updated { font-size: 0.85rem; color: var(--secondary); margin-bottom: 36px; }
+    h2 { font-size: 1.05rem; font-weight: 600; margin: 28px 0 8px; }
+    p { font-size: 0.95rem; color: var(--secondary); margin-bottom: 14px; }
+    ul { margin: 0 0 14px 18px; color: var(--secondary); font-size: 0.95rem; }
+    a { color: var(--accent); }
+    footer {
+      padding: 32px 24px; text-align: center;
+      font-size: 0.75rem; color: var(--secondary);
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="index.html">
+    <img src="AppIcon.png" alt="Audio Harbor" />
+    Audio Harbor
+  </a>
+  <a class="nav-cta" href="index.html">Back to the app</a>
+</nav>
+<main>
+  <h1>Privacy Policy</h1>
+  <p class="updated">Last updated: 10 September 2026</p>
+
+  <p>Audio Harbor is a local music player. It is built to play files you already have, on devices you already own.</p>
+
+  <h2>What we do not collect</h2>
+  <ul>
+    <li>No account, email, or sign-in</li>
+    <li>No analytics, advertising, or crash telemetry of your listening</li>
+    <li>No streaming services and no upload of your music to our servers</li>
+    <li>We do not sell data; there is no listening profile to sell</li>
+  </ul>
+
+  <h2>What stays on your device</h2>
+  <p>Folder bookmarks, the catalogue index, playlists, output settings, and plugin state are stored on the Mac, iPad, or iPhone you use. The audio files remain in the folders you connect. We do not host them.</p>
+
+  <h2>Permissions</h2>
+  <p>The app asks for access to folders you choose, and for audio playback. On iPhone it may download iCloud Drive placeholders you explicitly open. That traffic is between you and Apple, not a Gerov server.</p>
+
+  <h2>Contact</h2>
+  <p>Questions: open an issue on <a href="https://github.com/petergerov/audio-harbor">GitHub</a>.</p>
+</main>
+<footer>© 2026 Gerov</footer>
+</body>
+</html>

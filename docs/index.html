@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Audio Harbor — Local audiophile player for Mac, iPad &amp; iPhone</title>
+  <meta name="description" content="A calm local player for your folders. Bit-perfect Exclusive and DoP on Mac. AU and AUv3 plugins on the Deck. The same catalogue on iPad and iPhone." />
+  <meta name="keywords" content="audiophile, bit-perfect, DSD, FLAC, exclusive mode, DoP, AUv3, Audio Unit, AU plugin, macOS, iPad, iPhone, local music player" />
+  <link rel="icon" href="AppIcon.png" />
+  <link rel="apple-touch-icon" href="AppIcon.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Audio Harbor — Local. Bit-perfect. Calm." />
+  <meta property="og:description" content="Open a folder. Hear the file. Load AU and AUv3 plugins on the Deck. Exclusive when your DAC is ready." />
+  <meta property="og:image" content="AppIcon.png" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Audio Harbor — Local audiophile player" />
+  <meta name="twitter:description" content="Your folders. Your files. AU and AUv3 on the Deck. Bit-perfect Exclusive on Mac." />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Audio Harbor",
+    "applicationCategory": "MusicApplication",
+    "operatingSystem": "macOS, iPadOS, iOS",
+    "description": "Local audiophile player. Bit-perfect Exclusive and DoP on Mac. AU and AUv3 inserts on the Deck. Shared catalogue on iPad and iPhone.",
+    "featureList": [
+      "Local folders only — no streaming, no account",
+      "FLAC, ALAC, WAV, AIFF, AAC, MP3, DSF",
+      "Shared output as the everyday default",
+      "Exclusive hog mode and sample-rate match on Mac",
+      "DoP for DSD on capable Mac DACs, PCM fallback otherwise",
+      "Catalogue by album, artist, folder, with search and playlists",
+      "AUv3 effect inserts on Mac, iPad, and iPhone",
+      "Classic AU plugins on Mac",
+      "Optional plugin rack on Shared · FX; Exclusive stays bit-perfect with an empty rack",
+      "Same product language on Mac, iPad, and iPhone"
+    ]
+  }
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #ffffff;
+      --bg2:       #f6f3ee;
+      --bg3:       #faf8f4;
+      --text:      #1c1916;
+      --secondary: #6a6358;
+      --border:    #e4ddd3;
+      --accent:    #8a5a1a;
+      --accent2:   #5c3a14;
+      --amber:     #c4841e;
+      --muted:     #8a8276;
+      --radius:    12px;
+      --radius-lg: 20px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 40px;
+      height: 52px;
+      background: rgba(255,255,255,0.82);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.95rem; font-weight: 600; color: var(--text);
+      text-decoration: none;
+    }
+    .nav-logo img { width: 28px; height: 28px; border-radius: 6px; }
+    .nav-links { display: flex; gap: 32px; }
+    .nav-link {
+      color: var(--secondary); text-decoration: none;
+      font-size: 0.82rem; font-weight: 500; letter-spacing: 0.01em;
+      transition: color .15s;
+    }
+    .nav-link:hover { color: var(--text); }
+    .nav-cta {
+      font-size: 0.82rem; font-weight: 500;
+      color: var(--accent); text-decoration: none;
+      transition: color .15s;
+    }
+    .nav-cta:hover { color: var(--accent2); }
+
+    .container { max-width: 980px; margin: 0 auto; padding: 0 24px; }
+
+    .hero {
+      padding: 120px 24px 80px;
+      text-align: center;
+    }
+    .hero-eyebrow {
+      display: inline-block;
+      font-size: 0.75rem; font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+    .hero h1 {
+      font-size: clamp(2.4rem, 5vw, 4rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.08;
+      color: var(--text);
+      max-width: 780px;
+      margin: 0 auto 20px;
+    }
+    .hero h1 em { font-style: normal; color: var(--amber); }
+    .hero p {
+      font-size: 1.1rem;
+      color: var(--secondary);
+      max-width: 560px;
+      margin: 20px auto 20px;
+      line-height: 1.6;
+    }
+    .hero-actions { display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap; }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--text); color: #fff;
+      font-size: 0.88rem; font-weight: 600;
+      padding: 12px 22px;
+      border-radius: 980px;
+      text-decoration: none;
+      transition: opacity .15s;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--accent);
+      font-size: 0.88rem; font-weight: 500;
+      text-decoration: none;
+      transition: color .15s;
+    }
+    .btn-secondary:hover { color: var(--accent2); }
+    .btn-secondary::after { content: " →"; }
+    .hero-img {
+      margin-top: 40px;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.12), 0 4px 16px rgba(0,0,0,0.06);
+      max-width: 420px;
+      margin-left: auto;
+      margin-right: auto;
+      border: 1px solid var(--border);
+      background: #0a0908;
+    }
+    .hero-img img { width: 100%; display: block; }
+    .hero-trust {
+      font-size: 0.78rem; color: var(--muted);
+      margin: 32px auto 0; text-align: center;
+      letter-spacing: 0.02em;
+    }
+
+    .section-eyebrow {
+      font-size: 0.72rem; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: clamp(1.6rem, 3vw, 2.4rem);
+      font-weight: 700; letter-spacing: -0.025em;
+      color: var(--text); margin-bottom: 14px;
+    }
+    .section-sub {
+      font-size: 1rem; color: var(--secondary);
+      max-width: 540px; line-height: 1.6;
+    }
+    .sound-note {
+      font-size: 0.78rem; color: var(--muted);
+      margin-top: 28px; max-width: 560px; line-height: 1.55;
+    }
+    .sound-section { padding: 80px 0; }
+
+    hr.divider {
+      border: none; border-top: 1px solid var(--border);
+      margin: 0;
+    }
+
+    .steps-section { background: var(--bg2); padding: 80px 0; }
+    .steps-inner { max-width: 980px; margin: 0 auto; padding: 0 24px; }
+    .steps-header { margin-bottom: 52px; }
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      background: var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .step {
+      background: var(--bg);
+      padding: 36px 32px;
+    }
+    .step-num {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em;
+      color: var(--secondary); margin-bottom: 16px;
+    }
+    .step-icon { font-size: 1.6rem; margin-bottom: 12px; display: block; }
+    .step h3 { font-size: 1rem; font-weight: 600; margin-bottom: 8px; }
+    .step p { font-size: 0.88rem; color: var(--secondary); line-height: 1.6; }
+
+    .shots-section { padding: 80px 0; }
+    .shots-header { max-width: 980px; margin: 0 auto 40px; padding: 0 24px; }
+    .shots-scroll {
+      display: flex; gap: 16px;
+      overflow-x: auto;
+      padding: 0 24px 20px;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none;
+      max-width: 1200px;
+      margin: 0 auto;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    .shots-scroll::-webkit-scrollbar { display: none; }
+    .shot {
+      flex: 0 0 280px;
+      scroll-snap-align: start;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--bg2);
+    }
+    .shot.wide { flex: 0 0 420px; }
+    .shot img { width: 100%; display: block; background: #0a0908; }
+    .shot-label {
+      padding: 10px 14px;
+      font-size: 0.78rem; font-weight: 500; color: var(--secondary);
+      border-top: 1px solid var(--border);
+    }
+
+    .features-section { background: var(--bg2); padding: 80px 0; }
+    .features-header { margin-bottom: 52px; }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      background: var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .feature {
+      background: var(--bg);
+      padding: 32px 28px;
+    }
+    .feature-icon { font-size: 1.4rem; margin-bottom: 14px; display: block; }
+    .feature h3 {
+      font-size: 0.95rem; font-weight: 600;
+      margin-bottom: 8px; color: var(--text);
+    }
+    .feature p { font-size: 0.85rem; color: var(--secondary); line-height: 1.65; }
+    .feature ul {
+      margin-top: 12px;
+      padding-left: 18px;
+      font-size: 0.82rem; color: var(--secondary);
+      line-height: 1.7;
+    }
+
+    .presets-section { padding: 80px 0; }
+    .preset-list {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2px;
+      background: var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      margin-top: 40px;
+    }
+    .preset {
+      background: var(--bg);
+      padding: 24px 28px;
+    }
+    .preset h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 6px; }
+    .preset p { font-size: 0.85rem; color: var(--secondary); line-height: 1.6; }
+
+    .hosts-section { background: var(--bg2); padding: 80px 0; }
+    .hosts-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      background: var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      margin-top: 40px;
+    }
+    .host-card {
+      background: var(--bg);
+      padding: 32px 28px;
+    }
+    .host-card h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 8px; }
+    .host-card p { font-size: 0.85rem; color: var(--secondary); line-height: 1.65; }
+    .host-card .lead {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--amber); margin-bottom: 10px;
+    }
+
+    .quote-section {
+      padding: 80px 24px;
+      text-align: center;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .quote {
+      font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--secondary);
+      max-width: 640px;
+      margin: 0 auto;
+      line-height: 1.4;
+    }
+    .quote em { font-style: normal; color: var(--text); }
+
+    .cta-section {
+      background: var(--text);
+      color: #fff;
+      padding: 80px 24px;
+      text-align: center;
+    }
+    .cta-section h2 {
+      font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+      font-weight: 700; letter-spacing: -0.03em;
+      margin-bottom: 14px;
+    }
+    .cta-section p { font-size: 1rem; opacity: 0.6; margin-bottom: 36px; max-width: 520px; margin-left: auto; margin-right: auto; }
+    .btn-cta {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: #fff; color: var(--text);
+      font-size: 0.88rem; font-weight: 600;
+      padding: 13px 24px; border-radius: 980px;
+      text-decoration: none;
+      transition: opacity .15s;
+    }
+    .btn-cta:hover { opacity: 0.88; }
+
+    footer {
+      padding: 40px 24px;
+      border-top: 1px solid var(--border);
+      display: flex; flex-direction: column; align-items: center;
+      gap: 16px; text-align: center;
+    }
+    .footer-logo {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.9rem; font-weight: 600; color: var(--text);
+      text-decoration: none;
+    }
+    .footer-logo img { width: 22px; height: 22px; border-radius: 5px; }
+    .footer-links { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; }
+    .footer-links a {
+      font-size: 0.78rem; color: var(--secondary);
+      text-decoration: none; transition: color .15s;
+    }
+    .footer-links a:hover { color: var(--text); }
+    footer p { font-size: 0.75rem; color: var(--secondary); }
+
+    @media (max-width: 700px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      .steps-grid, .features-grid, .hosts-grid, .preset-list { grid-template-columns: 1fr; }
+      .shot.wide { flex: 0 0 280px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="#">
+    <img src="AppIcon.png" alt="Audio Harbor" />
+    Audio Harbor
+  </a>
+  <div class="nav-links">
+    <a href="#listening" class="nav-link">Listening</a>
+    <a href="#plugins" class="nav-link">AU &amp; AUv3</a>
+    <a href="#how-it-works" class="nav-link">How it works</a>
+    <a href="#what-it-does" class="nav-link">What it does</a>
+    <a href="#platforms" class="nav-link">Mac, iPad, iPhone</a>
+  </div>
+  <a href="#get" class="nav-cta">Get the app</a>
+</nav>
+
+<section class="hero">
+  <span class="hero-eyebrow">Mac first · iPad · iPhone · AU &amp; AUv3 · Local files</span>
+  <h1>Open a folder.<br>Hear the <em>file</em>.</h1>
+  <p>A quiet audiophile player for music you already own. Bit-perfect Exclusive and DoP on Mac. Load the <strong>AU</strong> and <strong>AUv3</strong> plugins you already have — on the Deck, not in another host.</p>
+  <div class="hero-actions">
+    <a href="https://github.com/petergerov/audio-harbor" class="btn-primary">
+      View on GitHub
+    </a>
+    <a href="#plugins" class="btn-secondary">AU &amp; AUv3</a>
+  </div>
+  <div class="hero-img">
+    <img src="images/mark.png" alt="Audio Harbor mark: a brass beacon on ink, Local · Bit-perfect · Calm" />
+  </div>
+  <p class="hero-trust">No streaming · No account &nbsp;·&nbsp; AU + AUv3 on the Deck &nbsp;·&nbsp; Shared by default · Exclusive when the DAC is ready</p>
+</section>
+
+<hr class="divider" />
+
+<section class="sound-section" id="listening">
+  <div class="steps-inner">
+    <div class="steps-header">
+      <div class="section-eyebrow">The path to the DAC</div>
+      <h2 class="section-title">Three ways out. Start with Shared.</h2>
+      <p class="section-sub">Audiophile software loves jargon. We don’t. If you are unsure, leave Shared on — that is the daily driver, on every device.</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step">
+        <div class="step-num">Shared</div>
+        <span class="step-icon">◇</span>
+        <h3>Everyday listening — recommended</h3>
+        <p>Plays like any other app. Calls, YouTube, speakers, Bluetooth, AirPlay still work. This is the default on Mac, and the only path on iPad and iPhone.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">Exclusive</div>
+        <span class="step-icon">◎</span>
+        <h3>Bit-perfect into a USB DAC</h3>
+        <p>Mac only. Audio Harbor takes over the DAC so the file’s sample rate stays as-is. Other apps go silent. Skip this for laptop speakers and Bluetooth.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">DoP</div>
+        <span class="step-icon">☾</span>
+        <h3>DSD files on a DSD DAC</h3>
+        <p>Mac only, for DSF. Sends DSD as DoP when the DAC understands it. If it cannot, Audio Harbor converts to ordinary PCM so the track still plays.</p>
+      </div>
+    </div>
+    <p class="sound-note">Effects on the Deck rack switch you back to Shared until you clear them. Exclusive stays the empty-rack, bit-perfect path — we will not pretend otherwise.</p>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<section class="steps-section" id="how-it-works">
+  <div class="steps-inner">
+    <div class="steps-header">
+      <div class="section-eyebrow">Simple by design</div>
+      <h2 class="section-title">Music in under a minute</h2>
+      <p class="section-sub">No server. No login. Point at the folders you already keep, and play.</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step">
+        <div class="step-num">01</div>
+        <span class="step-icon">⌘</span>
+        <h3>Add a directory</h3>
+        <p>Connect the discs, NAS mounts, or iCloud folders that hold your library. Audio Harbor indexes them locally — titles, artwork, search — and stays out of the cloud.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <span class="step-icon">▶</span>
+        <h3>Play from the catalogue</h3>
+        <p>Browse by album, artist, or folder. Queue an album onto the Deck. Gapless PCM. The format badge tells you what is actually leaving the app.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <span class="step-icon">◎</span>
+        <h3>Exclusive when the DAC is ready</h3>
+        <p>On Mac, with a USB DAC you trust, switch Output to Exclusive. Sample rate follows the file. Built-in speakers stay on Shared — as they should.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<section class="shots-section" id="mark">
+  <div class="shots-header">
+    <div class="section-eyebrow">The room, not a dashboard</div>
+    <h2 class="section-title">Ink chassis. Walnut. Filament amber.</h2>
+    <p class="section-sub">The player is a listening room, not a mixer. Catalogue, Deck, Settings. Large artwork. Analog VU when the music is moving. Nothing competing for the downbeat.</p>
+  </div>
+  <div class="shots-scroll">
+    <div class="shot wide">
+      <img src="images/mark.png" alt="Audio Harbor beacon mark on ink" />
+      <div class="shot-label">The Harbor mark — Local · Bit-perfect · Calm</div>
+    </div>
+    <div class="shot">
+      <img src="images/vu.png" alt="Audio Harbor analog VU meters" />
+      <div class="shot-label">VU on the Deck, not a peak toy</div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<section class="features-section" id="what-it-does">
+  <div class="container">
+    <div class="features-header">
+      <div class="section-eyebrow">One job</div>
+      <h2 class="section-title">Play local high-res audio correctly</h2>
+      <p class="section-sub">Features earn their place. If it does not help you hear the file, it does not sit on the Deck.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature">
+        <span class="feature-icon">▤</span>
+        <h3>Your folders</h3>
+        <p>Security-scoped bookmarks so the library survives a restart. Incremental index, search, rebuild when you ask — not a background circus.</p>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">◎</span>
+        <h3>Bit-perfect on Mac</h3>
+        <p>Hog mode, sample-rate match, 24-bit HAL path. Exclusive is for a known DAC. We will not silently resample on that path.</p>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">1</span>
+        <h3>DSD without the drama</h3>
+        <p>DSF via DoP when the Mac DAC can take it. Otherwise a clean PCM conversion, labelled in the UI. No fake 1-bit into laptop speakers.</p>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">🎛</span>
+        <h3>AU &amp; AUv3 on the Deck</h3>
+        <p><strong>AUv3</strong> on Mac, iPad, and iPhone. <strong>Classic AU</strong> on Mac. The plugins you already own — EQ, room correction, headphone correction — insert on the player. See <a href="#plugins" style="color: var(--accent);">the rack</a>.</p>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">≡</span>
+        <h3>Catalogue, not a feed</h3>
+        <p>Album, artist, folder, playlists, queue. Lock screen and media keys. The music is yours; we do not recommend a lifestyle.</p>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">○</span>
+        <h3>No account</h3>
+        <p>No streaming services. No DRM Apple Music library. No telemetry of what you play. Privacy is the default, not a setting.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<section class="hosts-section" id="plugins">
+  <div class="container">
+    <div class="features-header">
+      <div class="section-eyebrow">Audio Units</div>
+      <h2 class="section-title">AU and AUv3 plugins. In the player.</h2>
+      <p class="section-sub">Audio Harbor is a host. Load the Audio Units you already use in Logic, GarageBand, or AUM — as inserts on the Deck, while the record plays.</p>
+    </div>
+    <div class="hosts-grid">
+      <div class="host-card">
+        <div class="lead">Mac · iPad · iPhone</div>
+        <h3>AUv3</h3>
+        <p>Any stereo Audio Unit v3 effect. The same extensions other Apple hosts see. Add from the rack, open the plugin’s own editor, keep the settings after quit.</p>
+      </div>
+      <div class="host-card">
+        <div class="lead">Mac</div>
+        <h3>Classic AU</h3>
+        <p>The Audio Units already on the Mac — Apple’s, third-party, the ones Logic and AU Lab list. Same insert path as AUv3. Mac-only, because that is where classic AU lives.</p>
+      </div>
+      <div class="host-card">
+        <div class="lead">Honest path</div>
+        <h3>Shared · FX</h3>
+        <p>A loaded rack uses the system mixer so plugins can run. Exclusive and DoP stay bit-perfect with an <em>empty</em> rack. Clear the inserts when you want the DAC raw.</p>
+      </div>
+    </div>
+    <div class="features-grid" style="margin-top: 2px; border-radius: 0 0 var(--radius-lg) var(--radius-lg);">
+      <div class="feature">
+        <span class="feature-icon">＋</span>
+        <h3>Add from the Deck</h3>
+        <p>The rack sits under Now Playing. Search the installed units, drop one in, reorder, bypass. No separate “FX app.”</p>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">◻</span>
+        <h3>The plugin’s own UI</h3>
+        <p>Edit opens the AU view — knobs, graphs, whatever the vendor shipped. Not a generic parameter list unless that is all the unit has.</p>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">◎</span>
+        <h3>Settings stay</h3>
+        <p>Chain, bypass, and plugin state are stored with the app. Quit and reopen: the same EQ, the same room correction.</p>
+      </div>
+    </div>
+    <p class="sound-note">Stereo inserts only. Some vendor AUs expect a DAW host and will refuse a player graph — we drop those rather than crash. Waves-class units are the usual example.</p>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<section class="presets-section" id="formats">
+  <div class="container">
+    <div class="section-eyebrow">Formats</div>
+    <h2 class="section-title">What it will play</h2>
+    <p class="section-sub">The files on your disks — not a converter suite in the main path.</p>
+    <div class="preset-list">
+      <div class="preset">
+        <h3>PCM, as written</h3>
+        <p>FLAC · ALAC · WAV · AIFF · AAC/M4A · MP3. Gapless where the format allows. Exclusive keeps 24-bit PCM bit-perfect on Mac.</p>
+      </div>
+      <div class="preset">
+        <h3>DSD, with a label</h3>
+        <p>DSF through DoP or DSD→PCM. If the DAC cannot do DoP, you still hear music — and the path says so. DFF probe first; full DFF next.</p>
+      </div>
+      <div class="preset">
+        <h3>Not in the main path</h3>
+        <p>No SACD ISO, no 768 kHz upsampling theatre, no Qobuz/Tidal. Those dilute the local-first promise.</p>
+      </div>
+      <div class="preset">
+        <h3>What the badge is for</h3>
+        <p>The Deck shows the format and the path — Shared, Exclusive, DoP, or Shared · FX — so you are never guessing what left the app.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<section class="hosts-section" id="platforms">
+  <div class="container">
+    <div class="section-eyebrow">One product</div>
+    <h2 class="section-title">Mac leads. The pocket follows.</h2>
+    <p class="section-sub">Same catalogue language everywhere. Exclusive and DoP are Mac strengths — we say that on the box, not in a footnote.</p>
+    <div class="hosts-grid">
+      <div class="host-card">
+        <div class="lead">Lead platform</div>
+        <h3>Mac</h3>
+        <p>Daily driver. Folder watch, Exclusive hog + rate match, DoP into a USB DAC, <strong>AUv3 and classic AU</strong> on the Deck, keyboard, media keys.</p>
+      </div>
+      <div class="host-card">
+        <div class="lead">Companion</div>
+        <h3>iPad</h3>
+        <p>The same Deck and library, laid out for a larger canvas. Shared playback. <strong>AUv3</strong> inserts on the rack — headphones, speakers, AirPlay.</p>
+      </div>
+      <div class="host-card">
+        <div class="lead">Companion</div>
+        <h3>iPhone</h3>
+        <p>Open the folder, find the album, listen. Shared session. <strong>AUv3</strong> on the rack if you want it. Exclusive is not faked on a phone DAC.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="quote-section">
+  <p class="quote">Your folders. Your files. <em>No cloud required.</em></p>
+</div>
+
+<section class="cta-section" id="get">
+  <h2>Put the library in harbor.</h2>
+  <p>macOS first · iPad and iPhone with the same soul. Local files, AU and AUv3 on the Deck, no account. Source is on GitHub while we finish the Mac App Store listing.</p>
+  <a href="https://github.com/petergerov/audio-harbor" class="btn-cta">View on GitHub</a>
+</section>
+
+<footer>
+  <a class="footer-logo" href="#">
+    <img src="AppIcon.png" alt="Audio Harbor" />
+    Audio Harbor
+  </a>
+  <div class="footer-links">
+    <a href="https://github.com/petergerov/audio-harbor">GitHub</a>
+    <a href="privacy.html">Privacy Policy</a>
+    <a href="https://github.com/petergerov/audio-harbor/issues">Support</a>
+    <a href="MARKETING.md">Marketing concept</a>
+    <a href="https://gigsongbook.com">Gig Songbook</a>
+  </div>
+  <p>© 2026 Gerov. Local audiophile player — not affiliated with any DAC, label, or streaming service.</p>
+</footer>
+
+</body>
+</html>
