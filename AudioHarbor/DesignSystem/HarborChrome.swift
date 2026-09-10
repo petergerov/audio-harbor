@@ -97,7 +97,19 @@ struct HardwareButton: View {
     let systemName: String
     var isPrimary: Bool = false
     var isLit: Bool = false
+    /// Smaller satellite key for secondary transport (shuffle, repeat).
+    var isSatellite: Bool = false
     let action: () -> Void
+
+    private var diameter: CGFloat {
+        if isPrimary { return 76 }
+        return isSatellite ? 40 : 52
+    }
+
+    private var glyphSize: CGFloat {
+        if isPrimary { return 22 }
+        return isSatellite ? 13 : 16
+    }
 
     var body: some View {
         Button(action: action) {
@@ -121,11 +133,11 @@ struct HardwareButton: View {
                     .stroke(Color.white.opacity(0.12), lineWidth: 1)
                     .padding(3)
                 Image(systemName: systemName)
-                    .font(.system(size: isPrimary ? 22 : 16, weight: .bold))
+                    .font(.system(size: glyphSize, weight: .bold))
                     .foregroundStyle(isLit ? HarborColor.amber : HarborColor.faceplate)
                     .shadow(color: isLit ? HarborColor.amber.opacity(0.7) : .clear, radius: 6)
             }
-            .frame(width: isPrimary ? 76 : 52, height: isPrimary ? 76 : 52)
+            .frame(width: diameter, height: diameter)
             .shadow(color: .black.opacity(0.45), radius: 8, y: 5)
         }
         .buttonStyle(HardwarePressStyle())

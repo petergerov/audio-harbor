@@ -255,6 +255,38 @@ enum DSDStrategy: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+enum RepeatMode: String, CaseIterable, Identifiable, Sendable {
+    case off
+    case all
+    case one
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .off: "Repeat off"
+        case .all: "Repeat queue"
+        case .one: "Repeat track"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .off, .all: "repeat"
+        case .one: "repeat.1"
+        }
+    }
+
+    /// Cycle order for the deck button: off → queue → track → off.
+    var cycled: RepeatMode {
+        switch self {
+        case .off: .all
+        case .all: .one
+        case .one: .off
+        }
+    }
+}
+
 enum PlaybackState: Equatable, Sendable {
     case idle
     case loading

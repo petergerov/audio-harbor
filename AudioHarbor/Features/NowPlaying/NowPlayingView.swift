@@ -273,7 +273,18 @@ struct NowPlayingView: View {
     }
 
     private func transport(_ playback: PlaybackService, compact: Bool) -> some View {
-        HStack(spacing: compact ? 22 : 28) {
+        HStack(spacing: compact ? 14 : 20) {
+            HardwareButton(
+                systemName: "shuffle",
+                isLit: playback.isShuffled,
+                isSatellite: true
+            ) {
+                playback.toggleShuffle()
+            }
+            .help(playback.isShuffled ? "Shuffle on" : "Shuffle off")
+            .accessibilityLabel("Shuffle")
+            .accessibilityValue(playback.isShuffled ? "On" : "Off")
+
             HardwareButton(systemName: "backward.fill") {
                 playback.playPrevious()
             }
@@ -287,6 +298,17 @@ struct NowPlayingView: View {
             HardwareButton(systemName: "forward.fill") {
                 playback.playNext()
             }
+
+            HardwareButton(
+                systemName: playback.repeatMode.systemImage,
+                isLit: playback.repeatMode != .off,
+                isSatellite: true
+            ) {
+                playback.cycleRepeatMode()
+            }
+            .help(playback.repeatMode.title)
+            .accessibilityLabel("Repeat")
+            .accessibilityValue(playback.repeatMode.title)
         }
         .padding(.top, compact ? 0 : 4)
         .padding(.bottom, compact ? 2 : 8)

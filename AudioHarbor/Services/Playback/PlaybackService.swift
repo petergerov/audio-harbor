@@ -41,15 +41,36 @@ final class PlaybackService {
         }
     }
 
+    var repeatMode: RepeatMode = .off {
+        didSet {
+            guard repeatMode != oldValue else { return }
+            UserDefaults.standard.set(repeatMode.rawValue, forKey: Self.repeatModeKey)
+        }
+    }
+
+    var isShuffled: Bool = false {
+        didSet {
+            guard isShuffled != oldValue else { return }
+            UserDefaults.standard.set(isShuffled, forKey: Self.shuffleKey)
+            // Keep the current track on the deck, redraw everything after it.
+            rebuildPlayOrder(anchoredTo: queueIndex)
+        }
+    }
+
     var state: PlaybackState { playbackState }
     var isPlaying: Bool { playbackState == .playing }
 
     private var syncTimer: Timer?
     /// Guards against two loads overlapping — the later one wins.
     private var loadGeneration: UInt64 = 0
+    /// Indices into `queue`, in the order they play — the natural order, or a shuffled draw.
+    private var playOrder: [Int] = []
+    private var orderPosition: Int = 0
 
     private static let outputModeKey = "audioharbor.outputMode"
     private static let dsdStrategyKey = "audioharbor.dsdStrategy"
+    private static let repeatModeKey = "audioharbor.repeatMode"
+    private static let shuffleKey = "audioharbor.shuffle"
 
     init(engine: any PlaybackEngine) {
         self.engine = engine
@@ -61,6 +82,11 @@ final class PlaybackService {
            let strategy = DSDStrategy(rawValue: raw) {
             dsdStrategy = strategy
         }
+        if let raw = UserDefaults.standard.string(forKey: Self.repeatModeKey),
+           let mode = RepeatMode(rawValue: raw) {
+            repeatMode = mode
+        }
+        isShuffled = UserDefaults.standard.bool(forKey: Self.shuffleKey)
         engine.setOutputMode(outputMode)
         engine.setDSDStrategy(dsdStrategy)
         engine.setTrackEndedHandler { [weak self] endedTrack in
@@ -82,6 +108,7 @@ final class PlaybackService {
             queue = [track]
             queueIndex = 0
         }
+        rebuildPlayOrder(anchoredTo: queueIndex)
 
         if let sourceName, !sourceName.isEmpty {
             queueSourceName = sourceName
@@ -115,35 +142,101 @@ final class PlaybackService {
     }
 
     func playNext() {
-        guard !queue.isEmpty else { return }
-        queueIndex = (queueIndex + 1) % queue.count
-        Task { await loadAndPlay(queue[queueIndex]) }
+        // Pressing skip always moves on, whatever the repeat mode says.
+        guard let index = stepForward(wrapping: true) else { return }
+        queueIndex = index
+        Task { await loadAndPlay(queue[index]) }
     }
 
     func playPrevious() {
-        guard !queue.isEmpty else { return }
+        guard !queue.isEmpty, !playOrder.isEmpty else { return }
         if currentTime > 3 {
             seek(to: 0)
             return
         }
-        queueIndex = (queueIndex - 1 + queue.count) % queue.count
+        orderPosition = (orderPosition - 1 + playOrder.count) % playOrder.count
+        queueIndex = playOrder[orderPosition]
         Task { await loadAndPlay(queue[queueIndex]) }
     }
 
-    /// End of file: roll on to the next queue entry, or stop on the last one.
+    func cycleRepeatMode() {
+        repeatMode = repeatMode.cycled
+    }
+
+    func toggleShuffle() {
+        isShuffled.toggle()
+    }
+
+    /// End of file: roll on to the next entry in play order, or stop on the last one.
     private func advanceAfterTrackEnd(after endedTrack: Track) {
         // A late end signal from a track we already left must not skip the current one.
         guard endedTrack.id == currentTrack?.id else { return }
-        let next = queueIndex + 1
-        guard queue.indices.contains(next) else {
+
+        if repeatMode == .one, let track = currentTrack {
+            queueEnded = false
+            Task { await loadAndPlay(track) }
+            return
+        }
+
+        guard let index = stepForward(wrapping: repeatMode == .all) else {
             queueEnded = true
             stopSyncing()
             syncFromEngine()
             return
         }
         queueEnded = false
-        queueIndex = next
-        Task { await loadAndPlay(queue[next]) }
+        queueIndex = index
+        Task { await loadAndPlay(queue[index]) }
+    }
+
+    /// Next queue index in play order. `nil` when the order ran out and we do not wrap.
+    private func stepForward(wrapping: Bool) -> Int? {
+        guard !queue.isEmpty else { return nil }
+        if playOrder.count != queue.count {
+            rebuildPlayOrder(anchoredTo: queueIndex)
+        }
+        guard !playOrder.isEmpty else { return nil }
+
+        let next = orderPosition + 1
+        if next < playOrder.count {
+            orderPosition = next
+        } else if wrapping {
+            // A fresh pass gets a fresh draw, so a shuffled queue does not repeat itself.
+            if isShuffled { reshuffleForNewPass() }
+            orderPosition = 0
+        } else {
+            return nil
+        }
+        return playOrder[orderPosition]
+    }
+
+    private func rebuildPlayOrder(anchoredTo index: Int) {
+        guard !queue.isEmpty else {
+            playOrder = []
+            orderPosition = 0
+            return
+        }
+        let anchor = queue.indices.contains(index) ? index : 0
+        if isShuffled {
+            var rest = Array(queue.indices)
+            rest.removeAll { $0 == anchor }
+            rest.shuffle()
+            playOrder = [anchor] + rest
+            orderPosition = 0
+        } else {
+            playOrder = Array(queue.indices)
+            orderPosition = anchor
+        }
+    }
+
+    private func reshuffleForNewPass() {
+        var order = Array(queue.indices)
+        order.shuffle()
+        // Do not open the new pass with the track that just finished.
+        if order.count > 1, order.first == queueIndex {
+            order.swapAt(0, order.count - 1)
+        }
+        playOrder = order
     }
 
     func playQueueItem(at index: Int) {
@@ -155,6 +248,11 @@ final class PlaybackService {
             return
         }
         queueIndex = index
+        if let position = playOrder.firstIndex(of: index) {
+            orderPosition = position
+        } else {
+            rebuildPlayOrder(anchoredTo: index)
+        }
         Task { await loadAndPlay(queue[index]) }
     }
 
