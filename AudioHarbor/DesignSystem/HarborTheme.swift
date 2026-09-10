@@ -288,17 +288,24 @@ struct FormatBadge: View {
     let format: AudioFormat
     let sampleRateHz: Int?
     let bitDepth: Int?
+    /// Active output path ("Shared", "Exclusive · DoP", …). Deck only — the
+    /// catalogue lists files, which have no path until they play.
+    var path: String?
 
     var body: some View {
         HStack(spacing: 5) {
             Text(format.rawValue)
-                .font(HarborFont.mono(10))
-            if let bitDepth, let sampleRateHz {
+            if let rateDetail {
                 Text("·")
-                Text("\(bitDepth)/\(Self.formatRate(sampleRateHz))")
-                    .font(HarborFont.mono(10))
+                Text(rateDetail)
+            }
+            if let path, !path.isEmpty {
+                Text("·")
+                Text(path)
             }
         }
+        .font(HarborFont.mono(10))
+        .lineLimit(1)
         .padding(.horizontal, 9)
         .padding(.vertical, 5)
         .foregroundStyle(HarborColor.amber)
@@ -308,6 +315,15 @@ struct FormatBadge: View {
                 .stroke(HarborColor.brass.opacity(0.45), lineWidth: 1)
         )
         .clipShape(Capsule(style: .continuous))
+    }
+
+    /// "16/44.1k" when the depth is known, plain "44.1k" otherwise — lossy files
+    /// (MP3, AAC) carry no bit depth, and dropping the rate with it left just the format.
+    private var rateDetail: String? {
+        guard let sampleRateHz else { return nil }
+        let rate = Self.formatRate(sampleRateHz)
+        guard let bitDepth else { return rate }
+        return "\(bitDepth)/\(rate)"
     }
 
     private static func formatRate(_ hz: Int) -> String {

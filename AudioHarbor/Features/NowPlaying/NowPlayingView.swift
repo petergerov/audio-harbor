@@ -124,7 +124,13 @@ struct NowPlayingView: View {
                                 compact: compact
                             )
                         }
-                        meter(playback, progress: progress, display: display, duration: duration)
+                        meter(
+                            playback,
+                            track: track,
+                            progress: progress,
+                            display: display,
+                            duration: duration
+                        )
                         transport(playback, compact: compact)
                     }
                     .faceplate(compact: compact)
@@ -196,23 +202,6 @@ struct NowPlayingView: View {
                 .foregroundStyle(HarborColor.ivoryDim)
                 .multilineTextAlignment(.center)
                 .lineLimit(1)
-            if let track {
-                FormatBadge(
-                    format: track.format,
-                    sampleRateHz: track.sampleRateHz,
-                    bitDepth: track.bitDepth
-                )
-            }
-            HStack(spacing: 8) {
-                if let label = appModel.playback.activeFormatLabel {
-                    Text(label)
-                }
-                Text("·")
-                Text(appModel.playback.pathLabel)
-            }
-            .font(HarborFont.mono(11))
-            .foregroundStyle(HarborColor.ivoryDim)
-
             if case .failed(let message) = appModel.playback.state {
                 Text(message)
                     .font(HarborFont.body(13))
@@ -246,12 +235,12 @@ struct NowPlayingView: View {
 
     private func meter(
         _ playback: PlaybackService,
+        track: Track?,
         progress: Double,
         display: TimeInterval,
         duration: TimeInterval
     ) -> some View {
         VStack(spacing: 6) {
-            EngravedLabel(text: "Position")
             SeekBar(
                 progress: progress,
                 onSeeking: { ratio in
@@ -262,10 +251,23 @@ struct NowPlayingView: View {
                     scrubRatio = nil
                 }
             )
-            HStack {
-                Text(timeString(display))
-                Spacer()
-                Text(timeString(playback.duration))
+            ZStack {
+                HStack {
+                    Text(timeString(display))
+                    Spacer()
+                    Text(timeString(playback.duration))
+                }
+                // Centred on the full width, so it stays put as the times change.
+                if let track {
+                    FormatBadge(
+                        format: track.format,
+                        sampleRateHz: track.sampleRateHz,
+                        bitDepth: track.bitDepth,
+                        path: playback.pathLabel
+                    )
+                    .minimumScaleFactor(0.8)
+                    .padding(.horizontal, 52)
+                }
             }
             .font(HarborFont.mono(12))
             .foregroundStyle(HarborColor.ivoryDim)
