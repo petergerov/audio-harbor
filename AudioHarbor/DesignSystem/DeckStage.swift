@@ -3,7 +3,6 @@ import SwiftUI
 enum DeckStyle: String, CaseIterable, Identifiable {
     case turntable
     case reelToReel
-    case cassette
     case receiver
 
     var id: String { rawValue }
@@ -12,7 +11,6 @@ enum DeckStyle: String, CaseIterable, Identifiable {
         switch self {
         case .turntable: "Turntable"
         case .reelToReel: "Reel-to-Reel"
-        case .cassette: "Cassette"
         case .receiver: "Receiver"
         }
     }
@@ -21,7 +19,6 @@ enum DeckStyle: String, CaseIterable, Identifiable {
         switch self {
         case .turntable: "Listening Desk"
         case .reelToReel: "Tape Transport"
-        case .cassette: "Compact Cassette"
         case .receiver: "Stereo Receiver"
         }
     }
@@ -32,34 +29,31 @@ struct DeckStage: View {
     let artwork: Image?
     let isPlaying: Bool
     let progress: Double
-    let currentTime: TimeInterval
     var heroHeight: CGFloat? = nil
     var meterLeft: Double = 0
     var meterRight: Double = 0
 
     var body: some View {
-        VStack(spacing: heroHeight == nil ? 14 : 8) {
+        VStack(spacing: heroHeight == nil ? 12 : 6) {
             stylePicker
 
             Group {
                 switch style {
                 case .turntable:
-                    ListeningRig(
-                        artwork: artwork,
-                        isPlaying: isPlaying,
-                        progress: progress,
-                        stageHeight: heroHeight
-                    )
+                    VStack(spacing: heroHeight == nil ? 10 : 6) {
+                        ListeningRig(
+                            artwork: artwork,
+                            isPlaying: isPlaying,
+                            progress: progress,
+                            stageHeight: heroHeight
+                        )
+                        DeckStripMeters(left: meterLeft, right: meterRight, compact: heroHeight != nil)
+                    }
                 case .reelToReel:
-                    ReelToReelRig(isPlaying: isPlaying, progress: progress, stageHeight: heroHeight)
-                case .cassette:
-                    CassetteDeckRig(
-                        artwork: artwork,
-                        isPlaying: isPlaying,
-                        progress: progress,
-                        currentTime: currentTime,
-                        compact: heroHeight != nil
-                    )
+                    VStack(spacing: heroHeight == nil ? 10 : 6) {
+                        ReelToReelRig(isPlaying: isPlaying, progress: progress, stageHeight: heroHeight)
+                        DeckStripMeters(left: meterLeft, right: meterRight, compact: heroHeight != nil)
+                    }
                 case .receiver:
                     ReceiverVURig(
                         isPlaying: isPlaying,

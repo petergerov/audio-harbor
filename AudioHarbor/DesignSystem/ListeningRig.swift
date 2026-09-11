@@ -56,8 +56,8 @@ private enum TurntableHeroLayout {
 
     var stageHeight: CGFloat {
         switch self {
-        case .wide: 340
-        case .portrait: 460
+        case .wide: 400
+        case .portrait: 520
         }
     }
 

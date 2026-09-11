@@ -23,7 +23,6 @@
 		4E77DAD93A74C594DC36FDAE /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBA8EC8CD38B2C8BDB195995 /* NowPlayingView.swift */; };
 		59C959CD2CD6F92F99C9BDDA /* LibraryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D98ADE5F74A9FFD2F60000B /* LibraryService.swift */; };
 		5FC40BA03A1E8DC0E96BEC95 /* CoreAudioPlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2DCF3754E5DF184BE6DDD50 /* CoreAudioPlaybackEngine.swift */; };
-		691EA766B90873B6014E4270 /* CassetteDeckRig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F113F862C9E69D188CC9DE3 /* CassetteDeckRig.swift */; };
 		6E8F1A2B3C4D5E6F708192A3 /* PluginEditorPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F9A2B3C4D5E6F708192A3B4 /* PluginEditorPresenter.swift */; };
 		72AC3D43010A0065825644E4 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB48620484188A3E79D0E5E8 /* AppModel.swift */; };
 		73A1610AE13FE6B475EA9F6A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 40A45E5B8213AE05D262F470 /* Assets.xcassets */; };
@@ -60,7 +59,6 @@
 		71D38A709EFA1D65294A9CD7 /* EffectsRackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EffectsRackView.swift; sourceTree = "<group>"; };
 		7791DBBE83A46FD67D0FF7AF /* EffectHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EffectHost.swift; sourceTree = "<group>"; };
 		798CED25B49983F451051372 /* HALAudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HALAudioPlayer.swift; sourceTree = "<group>"; };
-		7F113F862C9E69D188CC9DE3 /* CassetteDeckRig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CassetteDeckRig.swift; sourceTree = "<group>"; };
 		7F9A2B3C4D5E6F708192A3B4 /* PluginEditorPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginEditorPresenter.swift; sourceTree = "<group>"; };
 		86014A84599DFFC94B7542AD /* ReceiverVURig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiverVURig.swift; sourceTree = "<group>"; };
 		8FA726BDA6ACC238C61BCBAA /* BookmarkStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkStore.swift; sourceTree = "<group>"; };
@@ -138,7 +136,6 @@
 		47BC47AB5A2185E22B1B2710 /* DesignSystem */ = {
 			isa = PBXGroup;
 			children = (
-				7F113F862C9E69D188CC9DE3 /* CassetteDeckRig.swift */,
 				9FD9C674B1601479DDAB0618 /* DeckStage.swift */,
 				68579D8D9972759EF8D48E1A /* HarborChrome.swift */,
 				BA07B3758CAB9B2E18996EDE /* HarborTheme.swift */,
@@ -341,7 +338,6 @@
 				72AC3D43010A0065825644E4 /* AppModel.swift in Sources */,
 				45123F24370F36D3534914B2 /* AudioHarborApp.swift in Sources */,
 				FE99BD8D8179E02001401C60 /* BookmarkStore.swift in Sources */,
-				691EA766B90873B6014E4270 /* CassetteDeckRig.swift in Sources */,
 				5FC40BA03A1E8DC0E96BEC95 /* CoreAudioPlaybackEngine.swift in Sources */,
 				C8A1E5C001ABCDE101 /* AHExceptionCatcher.m in Sources */,
 				421C5622F95862C6D870443C /* DSDDecoder.swift in Sources */,

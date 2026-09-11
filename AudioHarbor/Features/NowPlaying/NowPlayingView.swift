@@ -18,7 +18,11 @@ struct NowPlayingView: View {
 
     private var deckStyle: Binding<DeckStyle> {
         Binding(
-            get: { DeckStyle(rawValue: deckStyleRaw) ?? .turntable },
+            get: {
+                let raw = deckStyleRaw
+                if raw == "cassette" { return .turntable }
+                return DeckStyle(rawValue: raw) ?? .turntable
+            },
             set: { deckStyleRaw = $0.rawValue }
         )
     }
@@ -100,30 +104,24 @@ struct NowPlayingView: View {
                         EngravedLabel(text: style.engraved)
                         Spacer()
                         contextToggle
-                        PowerLamp(isOn: playback.isPlaying)
                     }
                     .padding(.horizontal, 4)
 
                     VStack(spacing: compact ? 12 : 22) {
-                        DeckStage(
-                            style: deckStyle,
-                            artwork: artworkImage(track),
-                            isPlaying: playback.isPlaying,
-                            progress: progress,
-                            currentTime: display,
-                            heroHeight: heroHeight,
-                            meterLeft: playback.meterLeft,
-                            meterRight: playback.meterRight
-                        )
+                        VStack(spacing: compact ? 8 : 10) {
+                            DeckStage(
+                                style: deckStyle,
+                                artwork: artworkImage(track),
+                                isPlaying: playback.isPlaying,
+                                progress: progress,
+                                heroHeight: heroHeight,
+                                meterLeft: playback.meterLeft,
+                                meterRight: playback.meterRight
+                            )
+                            PowerLamp(isOn: playback.isPlaying)
+                        }
 
                         metadata(track, style: style, compact: compact)
-                        if style != .receiver {
-                            AnalogVUPair(
-                                left: playback.meterLeft,
-                                right: playback.meterRight,
-                                compact: compact
-                            )
-                        }
                         meter(
                             playback,
                             track: track,
@@ -153,8 +151,8 @@ struct NowPlayingView: View {
     #if os(iOS)
     private func compactHeroHeight(in viewport: CGFloat, hasRack: Bool) -> CGFloat? {
         guard horizontalSizeClass == .compact else { return nil }
-        let reserved: CGFloat = hasRack ? 470 : 390
-        return min(200, max(112, viewport - reserved))
+        let reserved: CGFloat = hasRack ? 400 : 320
+        return min(228, max(128, viewport - reserved))
     }
     #endif
 
@@ -219,7 +217,6 @@ struct NowPlayingView: View {
         switch style {
         case .turntable: "Nothing on the platter"
         case .reelToReel: "No tape threaded"
-        case .cassette: "No cassette loaded"
         case .receiver: "No source selected"
         }
     }
@@ -228,7 +225,6 @@ struct NowPlayingView: View {
         switch style {
         case .turntable: "Drop the needle from Catalogue or Playlists"
         case .reelToReel: "Load a track from Catalogue or Playlists"
-        case .cassette: "Press play from Catalogue or Playlists"
         case .receiver: "Choose a track from Catalogue or Playlists"
         }
     }
