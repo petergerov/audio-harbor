@@ -89,41 +89,19 @@ struct ReceiverVURig: View {
     }
 }
 
-/// Slim stereo VU under Turntable / Reel — analog faces, little chrome, more room for the photo.
-struct DeckStripMeters: View {
-    let left: Double
-    let right: Double
-    var compact: Bool = false
-
-    var body: some View {
-        HStack(alignment: .center, spacing: compact ? 8 : 10) {
-            AnalogVUMeter(label: "L", level: left, compact: compact, slim: true)
-            AnalogVUMeter(label: "R", level: right, compact: compact, slim: true)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("VU meters")
-        .accessibilityValue("Left \(Int(left * 100)) percent, right \(Int(right * 100)) percent")
-    }
-}
-
 struct AnalogVUMeter: View {
     let label: String
     let level: Double
     var compact: Bool = false
-    /// Short analog window for Turntable / Reel. Receiver keeps the full face.
-    var slim: Bool = false
 
     private var clamped: Double { min(max(level, 0), 1) }
     private var over: Bool { clamped >= 20.0 / 23.0 }
-    private var meterHeight: CGFloat {
-        if slim { return compact ? 40 : 48 }
-        return compact ? 64 : 88
-    }
+    private var meterHeight: CGFloat { compact ? 64 : 88 }
 
     var body: some View {
-        VStack(spacing: slim ? 3 : 5) {
+        VStack(spacing: 5) {
             HStack {
-                EngravedLabel(text: label, size: slim ? 8 : 9)
+                EngravedLabel(text: label, size: 9)
                 Spacer()
                 Circle()
                     .fill(over ? HarborColor.danger : HarborColor.aluminumDark)
@@ -150,9 +128,9 @@ struct AnalogVUMeter: View {
                     scale(width: w, height: h)
 
                     Text("VU")
-                        .font(HarborFont.panel(slim ? 7 : (compact ? 8 : 9)))
+                        .font(HarborFont.panel(compact ? 8 : 9))
                         .foregroundStyle(Color.black.opacity(0.32))
-                        .position(x: w * 0.5, y: h * (slim ? 0.26 : 0.30))
+                        .position(x: w * 0.5, y: h * 0.30)
 
                     needle(width: w, height: h)
 
@@ -165,8 +143,8 @@ struct AnalogVUMeter: View {
                                 endRadius: 8
                             )
                         )
-                        .frame(width: slim ? 7 : (compact ? 8 : 10), height: slim ? 7 : (compact ? 8 : 10))
-                        .position(x: w * 0.5, y: h * (slim ? 0.94 : 0.92))
+                        .frame(width: compact ? 8 : 10, height: compact ? 8 : 10)
+                        .position(x: w * 0.5, y: h * 0.92)
 
                     LinearGradient(
                         colors: [Color.white.opacity(0.28), .clear, Color.black.opacity(0.12)],
@@ -202,26 +180,26 @@ struct AnalogVUMeter: View {
                 let x = w * (0.12 + 0.76 * p)
                 let major = i == 0 || i == 5 || i == 6
                 Path { path in
-                    path.move(to: CGPoint(x: x, y: h * (slim ? 0.78 : 0.72)))
-                    path.addLine(to: CGPoint(x: x, y: h * (major ? (slim ? 0.50 : 0.46) : (slim ? 0.62 : 0.56))))
+                    path.move(to: CGPoint(x: x, y: h * 0.72))
+                    path.addLine(to: CGPoint(x: x, y: h * (major ? 0.46 : 0.56)))
                 }
                 .stroke(i >= 5 ? HarborColor.danger.opacity(0.75) : Color.black.opacity(0.4), lineWidth: major ? 1.2 : 0.8)
 
                 if major {
                     Text(labels[i])
-                        .font(.system(size: slim ? 6 : (compact ? 6 : 7), weight: .semibold, design: .rounded))
+                        .font(.system(size: compact ? 6 : 7, weight: .semibold, design: .rounded))
                         .foregroundStyle(i >= 5 ? HarborColor.danger : Color.black.opacity(0.5))
-                        .position(x: x, y: h * (slim ? 0.34 : 0.38))
+                        .position(x: x, y: h * 0.38)
                 }
             }
         }
     }
 
     private func needle(width w: CGFloat, height h: CGFloat) -> some View {
-        let pivot = CGPoint(x: w * 0.5, y: h * (slim ? 0.94 : 0.92))
+        let pivot = CGPoint(x: w * 0.5, y: h * 0.92)
         let degrees = -52.0 + 104.0 * clamped
         let rad = degrees * .pi / 180
-        let len = w * (slim ? 0.40 : 0.44)
+        let len = w * 0.44
         return Path { path in
             path.move(to: pivot)
             path.addLine(to: CGPoint(

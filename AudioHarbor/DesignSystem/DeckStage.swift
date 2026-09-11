@@ -24,7 +24,7 @@ enum DeckStyle: String, CaseIterable, Identifiable {
     }
 }
 
-struct DeckStage: View {
+struct DeckStage<Trailing: View>: View {
     @Binding var style: DeckStyle
     let artwork: Image?
     let isPlaying: Bool
@@ -32,28 +32,23 @@ struct DeckStage: View {
     var heroHeight: CGFloat? = nil
     var meterLeft: Double = 0
     var meterRight: Double = 0
+    @ViewBuilder var trailing: () -> Trailing
 
     var body: some View {
         VStack(spacing: heroHeight == nil ? 12 : 6) {
-            stylePicker
+            toolbarRow
 
             Group {
                 switch style {
                 case .turntable:
-                    VStack(spacing: heroHeight == nil ? 10 : 6) {
-                        ListeningRig(
-                            artwork: artwork,
-                            isPlaying: isPlaying,
-                            progress: progress,
-                            stageHeight: heroHeight
-                        )
-                        DeckStripMeters(left: meterLeft, right: meterRight, compact: heroHeight != nil)
-                    }
+                    ListeningRig(
+                        artwork: artwork,
+                        isPlaying: isPlaying,
+                        progress: progress,
+                        stageHeight: heroHeight
+                    )
                 case .reelToReel:
-                    VStack(spacing: heroHeight == nil ? 10 : 6) {
-                        ReelToReelRig(isPlaying: isPlaying, progress: progress, stageHeight: heroHeight)
-                        DeckStripMeters(left: meterLeft, right: meterRight, compact: heroHeight != nil)
-                    }
+                    ReelToReelRig(isPlaying: isPlaying, progress: progress, stageHeight: heroHeight)
                 case .receiver:
                     ReceiverVURig(
                         isPlaying: isPlaying,
@@ -65,6 +60,14 @@ struct DeckStage: View {
             }
             .frame(maxWidth: .infinity)
             .animation(.easeInOut(duration: 0.25), value: style)
+        }
+    }
+
+    private var toolbarRow: some View {
+        HStack(alignment: .center, spacing: 12) {
+            stylePicker
+            trailing()
+                .fixedSize(horizontal: true, vertical: false)
         }
     }
 
@@ -94,5 +97,7 @@ struct DeckStage: View {
                 }
             }
         }
+        .scrollClipDisabled()
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

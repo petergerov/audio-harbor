@@ -100,25 +100,20 @@ struct NowPlayingView: View {
         return ReceiverChassis {
             ScrollView {
                 VStack(spacing: compact ? 10 : 16) {
-                    HStack {
-                        EngravedLabel(text: style.engraved)
-                        Spacer()
-                        contextToggle
-                    }
-                    .padding(.horizontal, 4)
-
                     VStack(spacing: compact ? 12 : 22) {
-                        VStack(spacing: compact ? 8 : 10) {
-                            DeckStage(
-                                style: deckStyle,
-                                artwork: artworkImage(track),
-                                isPlaying: playback.isPlaying,
-                                progress: progress,
-                                heroHeight: heroHeight,
-                                meterLeft: playback.meterLeft,
-                                meterRight: playback.meterRight
-                            )
-                            PowerLamp(isOn: playback.isPlaying)
+                        DeckStage(
+                            style: deckStyle,
+                            artwork: artworkImage(track),
+                            isPlaying: playback.isPlaying,
+                            progress: progress,
+                            heroHeight: heroHeight,
+                            meterLeft: playback.meterLeft,
+                            meterRight: playback.meterRight
+                        ) {
+                            HStack(spacing: 12) {
+                                PowerLamp(isOn: playback.isPlaying)
+                                contextToggle
+                            }
                         }
 
                         metadata(track, style: style, compact: compact)
@@ -167,9 +162,18 @@ struct NowPlayingView: View {
             #endif
         } label: {
             Image(systemName: "list.bullet.rectangle.portrait")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(contextToggleTint)
-                .frame(width: 28, height: 28)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(contextToggleForeground)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .fill(contextToggleFill)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                .stroke(HarborColor.aluminumDark, lineWidth: 1)
+                        )
+                )
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -179,11 +183,19 @@ struct NowPlayingView: View {
         #endif
     }
 
-    private var contextToggleTint: Color {
+    private var contextToggleForeground: Color {
         #if os(macOS)
-        contextRailVisible ? HarborColor.amber : HarborColor.ivoryDim
+        contextRailVisible ? HarborColor.faceplate : HarborColor.ivoryDim
         #else
         HarborColor.ivoryDim
+        #endif
+    }
+
+    private var contextToggleFill: Color {
+        #if os(macOS)
+        contextRailVisible ? HarborColor.amber : HarborColor.faceplate.opacity(0.5)
+        #else
+        HarborColor.faceplate.opacity(0.5)
         #endif
     }
 
