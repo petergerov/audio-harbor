@@ -8,6 +8,7 @@ final class AppModel {
     let playback: PlaybackService
     let playlists: PlaylistService
     let effects: EffectHost
+    let license: LicenseService
 
     var selectedTab: AppTab = .library
     var isRebuildWarningPresented = false
@@ -20,9 +21,11 @@ final class AppModel {
     init() {
         let effects = EffectHost()
         let engine = CoreAudioPlaybackEngine(effectHost: effects)
+        let license = LicenseService()
         self.effects = effects
         self.library = LibraryService()
-        self.playback = PlaybackService(engine: engine)
+        self.license = license
+        self.playback = PlaybackService(engine: engine, license: license)
         self.playlists = PlaylistService()
     }
 }

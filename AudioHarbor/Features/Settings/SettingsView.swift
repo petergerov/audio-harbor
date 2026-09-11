@@ -15,7 +15,7 @@ struct SettingsView: View {
                         ScreenHeader(
                             kicker: "House",
                             title: "Settings",
-                            subtitle: "How music plays, plus your music folders."
+                            subtitle: "How music plays, your folders, and the 7-day trial."
                         )
                     }
 
@@ -60,6 +60,10 @@ struct SettingsView: View {
                         Text(playback.dsdStrategy.detail)
                             .font(HarborFont.body(13))
                             .foregroundStyle(HarborColor.ivoryDim)
+                    }
+
+                    panel(title: "License") {
+                        UnlockPanel()
                     }
 
                     panel(title: "Directories") {

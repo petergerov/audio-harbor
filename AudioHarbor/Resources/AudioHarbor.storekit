@@ -1,0 +1,35 @@
+{
+  "identifier" : "A1HARBOR-STOREKIT-UNLOCK-990",
+  "nonRenewingSubscriptions" : [],
+  "products" : [
+    {
+      "displayPrice" : "9.90",
+      "familyShareable" : false,
+      "internalID" : "A1UNLOCK990EUR0001",
+      "localizations" : [
+        {
+          "description" : "One-time unlock after the 7-day trial. Play your local library — Exclusive, DoP, and the plugin rack included.",
+          "displayName" : "Unlock Audio Harbor",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "Einmaliger Kauf nach 7 Tagen Probe. Lokale Bibliothek spielen — inklusive Exclusive, DoP und Plugin-Rack.",
+          "displayName" : "Audio Harbor freischalten",
+          "locale" : "de_DE"
+        }
+      ],
+      "productID" : "app.audioharbor.player.unlock",
+      "referenceName" : "Audio Harbor Unlock",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_askToBuyEnabled" : false,
+    "_locale" : "de_DE"
+  },
+  "subscriptionGroups" : [],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

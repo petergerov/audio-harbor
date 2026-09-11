@@ -5,6 +5,7 @@ import Observation
 @MainActor
 final class PlaybackService {
     private let engine: any PlaybackEngine
+    private let license: LicenseService
 
     private(set) var currentTrack: Track?
     private(set) var queue: [Track] = []
@@ -72,8 +73,9 @@ final class PlaybackService {
     private static let repeatModeKey = "audioharbor.repeatMode"
     private static let shuffleKey = "audioharbor.shuffle"
 
-    init(engine: any PlaybackEngine) {
+    init(engine: any PlaybackEngine, license: LicenseService) {
         self.engine = engine
+        self.license = license
         if let raw = UserDefaults.standard.string(forKey: Self.outputModeKey),
            let mode = OutputMode(rawValue: raw) {
             outputMode = mode
@@ -101,6 +103,8 @@ final class PlaybackService {
         sourceName: String? = nil,
         sourceKind: String? = nil
     ) {
+        guard allowPlayback() else { return }
+
         if let queueTracks {
             queue = queueTracks
             queueIndex = queueTracks.firstIndex(of: track) ?? 0
@@ -130,6 +134,7 @@ final class PlaybackService {
             stopSyncing()
             syncFromEngine()
         } else if let track = currentTrack {
+            guard allowPlayback() else { return }
             // After the queue ran out the file sits at its end — start it over.
             if queueEnded {
                 Task { await loadAndPlay(track) }
@@ -265,6 +270,7 @@ final class PlaybackService {
     }
 
     private func loadAndPlay(_ track: Track) async {
+        guard allowPlayback() else { return }
         loadGeneration &+= 1
         let generation = loadGeneration
         currentTrack = track
@@ -325,5 +331,17 @@ final class PlaybackService {
         if newState != .playing {
             stopSyncing()
         }
+    }
+
+    @discardableResult
+    private func allowPlayback() -> Bool {
+        if license.canPlay { return true }
+        if isPlaying {
+            engine.pause()
+            stopSyncing()
+            syncFromEngine()
+        }
+        license.requestUnlock()
+        return false
     }
 }

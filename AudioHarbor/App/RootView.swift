@@ -5,6 +5,7 @@ struct RootView: View {
 
     var body: some View {
         @Bindable var appModel = appModel
+        @Bindable var license = appModel.license
 
         Group {
             #if os(macOS)
@@ -37,6 +38,10 @@ struct RootView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Every connected file will be re-read from disk. On a large library this can take a long time.")
+        }
+        .sheet(isPresented: $license.isUnlockPresented) {
+            UnlockSheet()
+                .environment(appModel)
         }
     }
 

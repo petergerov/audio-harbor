@@ -17,6 +17,8 @@
 		3A6F62480B2FB5FA4768A615 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2FB99AAF30D0FD2BC810C67 /* LibraryView.swift */; };
 		421C5622F95862C6D870443C /* DSDDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE0277F8E124960C06139C61 /* DSDDecoder.swift */; };
 		A1SACD150000000000000002 /* SACDISO.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1SACD150000000000000001 /* SACDISO.swift */; };
+		B1LIC150000000000000002 /* LicenseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1LIC150000000000000001 /* LicenseService.swift */; };
+		B1LIC150000000000000004 /* UnlockPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1LIC150000000000000003 /* UnlockPanel.swift */; };
 		45123F24370F36D3534914B2 /* AudioHarborApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 089AF7698AE7FC5C84762FE5 /* AudioHarborApp.swift */; };
 		4E77DAD93A74C594DC36FDAE /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBA8EC8CD38B2C8BDB195995 /* NowPlayingView.swift */; };
 		59C959CD2CD6F92F99C9BDDA /* LibraryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D98ADE5F74A9FFD2F60000B /* LibraryService.swift */; };
@@ -73,6 +75,9 @@
 		C8A1E5C001ABCDE104 /* AudioHarbor-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "AudioHarbor-Bridging-Header.h"; sourceTree = "<group>"; };
 		C98A719353878C893B9C45EC /* MetadataReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataReader.swift; sourceTree = "<group>"; };
 		A1SACD150000000000000001 /* SACDISO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SACDISO.swift; sourceTree = "<group>"; };
+		B1LIC150000000000000001 /* LicenseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseService.swift; sourceTree = "<group>"; };
+		B1LIC150000000000000003 /* UnlockPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnlockPanel.swift; sourceTree = "<group>"; };
+		B1LIC150000000000000005 /* AudioHarbor.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = AudioHarbor.storekit; sourceTree = "<group>"; };
 		CE0277F8E124960C06139C61 /* DSDDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSDDecoder.swift; sourceTree = "<group>"; };
 		D2DCF3754E5DF184BE6DDD50 /* CoreAudioPlaybackEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreAudioPlaybackEngine.swift; sourceTree = "<group>"; };
 		DBA8EC8CD38B2C8BDB195995 /* NowPlayingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingView.swift; sourceTree = "<group>"; };
@@ -87,6 +92,7 @@
 			children = (
 				40A45E5B8213AE05D262F470 /* Assets.xcassets */,
 				C8A1E5C001ABCDE104 /* AudioHarbor-Bridging-Header.h */,
+				B1LIC150000000000000005 /* AudioHarbor.storekit */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -202,6 +208,7 @@
 			isa = PBXGroup;
 			children = (
 				200F2AA72FB1C84DADBDB384 /* SettingsView.swift */,
+				B1LIC150000000000000003 /* UnlockPanel.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -246,6 +253,7 @@
 			isa = PBXGroup;
 			children = (
 				594FBEA5AC9E0B4C87D22424 /* PlaybackService.swift */,
+				B1LIC150000000000000001 /* LicenseService.swift */,
 			);
 			path = Playback;
 			sourceTree = "<group>";
@@ -338,6 +346,8 @@
 				C8A1E5C001ABCDE101 /* AHExceptionCatcher.m in Sources */,
 				421C5622F95862C6D870443C /* DSDDecoder.swift in Sources */,
 				A1SACD150000000000000002 /* SACDISO.swift in Sources */,
+				B1LIC150000000000000002 /* LicenseService.swift in Sources */,
+				B1LIC150000000000000004 /* UnlockPanel.swift in Sources */,
 				DC90E70F88326A380D4E5DAB /* DeckStage.swift in Sources */,
 				D25979B7C11D28CF35877269 /* EffectHost.swift in Sources */,
 				6E8F1A2B3C4D5E6F708192A3 /* PluginEditorPresenter.swift in Sources */,
