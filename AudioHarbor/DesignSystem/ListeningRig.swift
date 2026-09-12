@@ -26,14 +26,15 @@ struct ListeningRig: View {
                     artwork: artwork,
                     layout: .wide
                 )
-                .frame(minWidth: 480, maxWidth: 720)
+                .frame(minWidth: 480)
+                .frame(maxWidth: .infinity)
                 TurntableMacroView(
                     isPlaying: isPlaying,
                     progress: progress,
                     artwork: artwork,
                     layout: .portrait
                 )
-                .frame(maxWidth: 720)
+                .frame(maxWidth: .infinity)
             }
         }
     }

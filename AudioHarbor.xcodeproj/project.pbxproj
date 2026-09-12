@@ -16,9 +16,6 @@
 		2FC801E8754C2241E956439F /* HarborChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68579D8D9972759EF8D48E1A /* HarborChrome.swift */; };
 		3A6F62480B2FB5FA4768A615 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2FB99AAF30D0FD2BC810C67 /* LibraryView.swift */; };
 		421C5622F95862C6D870443C /* DSDDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE0277F8E124960C06139C61 /* DSDDecoder.swift */; };
-		A1SACD150000000000000002 /* SACDISO.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1SACD150000000000000001 /* SACDISO.swift */; };
-		B1LIC150000000000000002 /* LicenseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1LIC150000000000000001 /* LicenseService.swift */; };
-		B1LIC150000000000000004 /* UnlockPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1LIC150000000000000003 /* UnlockPanel.swift */; };
 		45123F24370F36D3534914B2 /* AudioHarborApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 089AF7698AE7FC5C84762FE5 /* AudioHarborApp.swift */; };
 		4E77DAD93A74C594DC36FDAE /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBA8EC8CD38B2C8BDB195995 /* NowPlayingView.swift */; };
 		59C959CD2CD6F92F99C9BDDA /* LibraryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D98ADE5F74A9FFD2F60000B /* LibraryService.swift */; };
@@ -29,9 +26,12 @@
 		84FB1B82B04EC42053D29986 /* PluginModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 995ED09285F2DF7B44DADBB3 /* PluginModels.swift */; };
 		8924E3092AEAEC3714A2AC9F /* MacAudioDeviceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5AC60844417CA335B0CDA96 /* MacAudioDeviceController.swift */; };
 		99450450F3D9268044E4C720 /* PlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53FFE55BC32CF1A7706C1FB8 /* PlaybackEngine.swift */; };
+		A1SACD150000000000000002 /* SACDISO.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1SACD150000000000000001 /* SACDISO.swift */; };
 		A692674AF7B4415B48E15E8B /* PlaylistsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BD0C6F97FBE4AFC33CFC218 /* PlaylistsView.swift */; };
 		A9C101DEC401000000000001 /* DeckContextRail.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9C101DEC401000000000002 /* DeckContextRail.swift */; };
 		B1ABBE0CD9CC54DC22612982 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39783E66128487305A0C7D56 /* RootView.swift */; };
+		B1LIC150000000000000002 /* LicenseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1LIC150000000000000001 /* LicenseService.swift */; };
+		B1LIC150000000000000004 /* UnlockPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1LIC150000000000000003 /* UnlockPanel.swift */; };
 		C8A1E5C001ABCDE101 /* AHExceptionCatcher.m in Sources */ = {isa = PBXBuildFile; fileRef = C8A1E5C001ABCDE102 /* AHExceptionCatcher.m */; };
 		D25979B7C11D28CF35877269 /* EffectHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7791DBBE83A46FD67D0FF7AF /* EffectHost.swift */; };
 		DC90E70F88326A380D4E5DAB /* DeckStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FD9C674B1601479DDAB0618 /* DeckStage.swift */; };
@@ -64,18 +64,18 @@
 		8FA726BDA6ACC238C61BCBAA /* BookmarkStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkStore.swift; sourceTree = "<group>"; };
 		995ED09285F2DF7B44DADBB3 /* PluginModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PluginModels.swift; sourceTree = "<group>"; };
 		9FD9C674B1601479DDAB0618 /* DeckStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckStage.swift; sourceTree = "<group>"; };
+		A1SACD150000000000000001 /* SACDISO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SACDISO.swift; sourceTree = "<group>"; };
 		A2F79E705295934168D2B714 /* PlaylistService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistService.swift; sourceTree = "<group>"; };
 		A9C101DEC401000000000002 /* DeckContextRail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckContextRail.swift; sourceTree = "<group>"; };
+		B1LIC150000000000000001 /* LicenseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseService.swift; sourceTree = "<group>"; };
+		B1LIC150000000000000003 /* UnlockPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnlockPanel.swift; sourceTree = "<group>"; };
+		B1LIC150000000000000005 /* AudioHarbor.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = AudioHarbor.storekit; sourceTree = "<group>"; };
 		B46479C25FC8808DAFFF49F9 /* ListeningRig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListeningRig.swift; sourceTree = "<group>"; };
 		BA07B3758CAB9B2E18996EDE /* HarborTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HarborTheme.swift; sourceTree = "<group>"; };
 		C8A1E5C001ABCDE102 /* AHExceptionCatcher.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AHExceptionCatcher.m; sourceTree = "<group>"; };
 		C8A1E5C001ABCDE103 /* AHExceptionCatcher.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AHExceptionCatcher.h; sourceTree = "<group>"; };
 		C8A1E5C001ABCDE104 /* AudioHarbor-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "AudioHarbor-Bridging-Header.h"; sourceTree = "<group>"; };
 		C98A719353878C893B9C45EC /* MetadataReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataReader.swift; sourceTree = "<group>"; };
-		A1SACD150000000000000001 /* SACDISO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SACDISO.swift; sourceTree = "<group>"; };
-		B1LIC150000000000000001 /* LicenseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseService.swift; sourceTree = "<group>"; };
-		B1LIC150000000000000003 /* UnlockPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnlockPanel.swift; sourceTree = "<group>"; };
-		B1LIC150000000000000005 /* AudioHarbor.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = AudioHarbor.storekit; sourceTree = "<group>"; };
 		CE0277F8E124960C06139C61 /* DSDDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSDDecoder.swift; sourceTree = "<group>"; };
 		D2DCF3754E5DF184BE6DDD50 /* CoreAudioPlaybackEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreAudioPlaybackEngine.swift; sourceTree = "<group>"; };
 		DBA8EC8CD38B2C8BDB195995 /* NowPlayingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingView.swift; sourceTree = "<group>"; };
@@ -455,12 +455,13 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = app.audioharbor.player;
 				PRODUCT_NAME = AudioHarbor;
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OBJC_BRIDGING_HEADER = "AudioHarbor/Resources/AudioHarbor-Bridging-Header.h";
@@ -556,12 +557,13 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = app.audioharbor.player;
 				PRODUCT_NAME = AudioHarbor;
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OBJC_BRIDGING_HEADER = "AudioHarbor/Resources/AudioHarbor-Bridging-Header.h";

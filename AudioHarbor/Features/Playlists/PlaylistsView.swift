@@ -36,6 +36,9 @@ private enum PlaylistBrowserItem: Hashable, Identifiable {
 
 struct PlaylistsView: View {
     @Environment(AppModel.self) private var appModel
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    #endif
     @State private var newName = ""
     @State private var isCreating = false
     @State private var renameDraft = ""
@@ -56,7 +59,15 @@ struct PlaylistsView: View {
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                     #else
-                    if selection != nil {
+                    if horizontalSizeClass == .regular {
+                        HStack(spacing: 0) {
+                            browserSidebar
+                                .frame(width: 280)
+                            Divider().overlay(HarborColor.aluminumDark.opacity(0.55))
+                            detailPane
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
+                    } else if selection != nil {
                         detailPane
                     } else {
                         browserSidebar
@@ -69,7 +80,7 @@ struct PlaylistsView: View {
         #if os(iOS)
         .navigationTitle(selection.map(navigationTitle(for:)) ?? "Playlists")
         .toolbar {
-            if selection != nil {
+            if selection != nil, horizontalSizeClass == .compact {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Back") { selection = nil }
                 }

@@ -14,6 +14,9 @@ struct NowPlayingView: View {
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showContextSheet = false
+    /// A little more than 2/3, or almost the full iPad screen.
+    @State private var queueExtent: CGFloat = IPadQueuePanel.almostFull
+    @State private var queueDrag: CGFloat = 0
     #endif
 
     private var deckStyle: Binding<DeckStyle> {
@@ -61,28 +64,52 @@ struct NowPlayingView: View {
         .animation(.easeInOut(duration: 0.2), value: contextRailVisible)
         #else
         GeometryReader { geo in
-            deckChrome(
-                playback: playback,
-                track: track,
-                style: style,
-                progress: progress,
-                display: display,
-                duration: duration,
-                heroHeight: compactHeroHeight(in: geo.size.height, hasRack: track != nil)
-            )
-        }
-        .sheet(isPresented: $showContextSheet) {
-            NavigationStack {
-                DeckContextRail()
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Done") { showContextSheet = false }
+            ZStack(alignment: .bottom) {
+                deckChrome(
+                    playback: playback,
+                    track: track,
+                    style: style,
+                    progress: progress,
+                    display: display,
+                    duration: duration,
+                    heroHeight: compactHeroHeight(in: geo.size.height, hasRack: track != nil)
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                if isPad && showContextSheet {
+                    Color.black.opacity(0.4)
+                        .ignoresSafeArea()
+                        .onTapGesture { dismissQueuePanel() }
+                        .transition(.opacity)
+
+                    IPadQueuePanel(
+                        onClose: dismissQueuePanel,
+                        onToggleExtent: {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                queueExtent = queueExtent > 0.85
+                                    ? IPadQueuePanel.twoThirds
+                                    : IPadQueuePanel.almostFull
+                            }
                         }
+                    ) { value in
+                        queueDrag = value.translation.height
+                    } onGrabEnd: { value in
+                        snapQueuePanel(translation: value.translation.height, in: geo.size.height)
                     }
-                    .navigationTitle("Queue")
-                    .navigationBarTitleDisplayMode(.inline)
+                    .frame(height: queuePanelHeight(in: geo.size.height))
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 6)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
             }
-            .presentationDetents([.medium, .large])
+            .animation(.easeInOut(duration: 0.25), value: showContextSheet)
+            .animation(.easeInOut(duration: 0.2), value: queueExtent)
+        }
+        .sheet(isPresented: compactQueuePresented) {
+            contextQueuePage
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
         #endif
     }
@@ -144,6 +171,69 @@ struct NowPlayingView: View {
     }
 
     #if os(iOS)
+    private var isPad: Bool {
+        UIDevice.current.userInterfaceIdiom == .pad
+    }
+
+    private var compactQueuePresented: Binding<Bool> {
+        Binding(
+            get: { showContextSheet && !isPad },
+            set: { if !$0 { showContextSheet = false } }
+        )
+    }
+
+    private func queuePanelHeight(in viewport: CGFloat) -> CGFloat {
+        let live = queueExtent - (queueDrag / max(viewport, 1))
+        return viewport * min(IPadQueuePanel.almostFull, max(0.45, live))
+    }
+
+    private func snapQueuePanel(translation: CGFloat, in viewport: CGFloat) {
+        let live = queueExtent - (translation / max(viewport, 1))
+        queueDrag = 0
+        if live < 0.52 {
+            dismissQueuePanel()
+            return
+        }
+        let two = IPadQueuePanel.twoThirds
+        let full = IPadQueuePanel.almostFull
+        withAnimation(.easeInOut(duration: 0.2)) {
+            queueExtent = abs(live - two) < abs(live - full) ? two : full
+        }
+    }
+
+    private func presentQueuePanel() {
+        queueExtent = IPadQueuePanel.almostFull
+        queueDrag = 0
+        withAnimation(.easeInOut(duration: 0.25)) {
+            showContextSheet = true
+        }
+    }
+
+    private func dismissQueuePanel() {
+        queueDrag = 0
+        withAnimation(.easeInOut(duration: 0.25)) {
+            showContextSheet = false
+        }
+    }
+
+    private var contextQueuePage: some View {
+        NavigationStack {
+            DeckContextRail {
+                showContextSheet = false
+            }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { showContextSheet = false }
+                }
+            }
+            .navigationTitle("Queue")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(HarborColor.faceplate, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+        }
+        .background(HarborColor.faceplate.ignoresSafeArea())
+    }
+
     private func compactHeroHeight(in viewport: CGFloat, hasRack: Bool) -> CGFloat? {
         guard horizontalSizeClass == .compact else { return nil }
         let reserved: CGFloat = hasRack ? 400 : 320
@@ -158,7 +248,11 @@ struct NowPlayingView: View {
                 contextRailVisible.toggle()
             }
             #else
-            showContextSheet = true
+            if showContextSheet {
+                dismissQueuePanel()
+            } else {
+                presentQueuePanel()
+            }
             #endif
         } label: {
             Image(systemName: "list.bullet.rectangle.portrait")
@@ -187,7 +281,7 @@ struct NowPlayingView: View {
         #if os(macOS)
         contextRailVisible ? HarborColor.faceplate : HarborColor.ivoryDim
         #else
-        HarborColor.ivoryDim
+        showContextSheet ? HarborColor.faceplate : HarborColor.ivoryDim
         #endif
     }
 
@@ -195,7 +289,7 @@ struct NowPlayingView: View {
         #if os(macOS)
         contextRailVisible ? HarborColor.amber : HarborColor.faceplate.opacity(0.5)
         #else
-        HarborColor.faceplate.opacity(0.5)
+        showContextSheet ? HarborColor.amber : HarborColor.faceplate.opacity(0.5)
         #endif
     }
 
@@ -342,3 +436,44 @@ struct NowPlayingView: View {
         return String(format: "%d:%02d", total / 60, total % 60)
     }
 }
+
+#if os(iOS)
+/// Almost-fullscreen queue on iPad, with a grabber that snaps to ~2/3 or ~94%.
+private struct IPadQueuePanel: View {
+    static let twoThirds: CGFloat = 0.72
+    static let almostFull: CGFloat = 0.94
+
+    var onClose: () -> Void
+    var onToggleExtent: () -> Void
+    var onGrab: (DragGesture.Value) -> Void
+    var onGrabEnd: (DragGesture.Value) -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Capsule()
+                .fill(HarborColor.aluminum.opacity(0.55))
+                .frame(width: 48, height: 5)
+                .padding(.top, 10)
+                .padding(.bottom, 8)
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 4)
+                        .onChanged(onGrab)
+                        .onEnded(onGrabEnd)
+                )
+                .onTapGesture(perform: onToggleExtent)
+                .accessibilityLabel("Resize queue")
+                .accessibilityHint("Two thirds or almost full screen")
+
+            DeckContextRail(onClose: onClose)
+        }
+        .background(HarborColor.faceplate)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(HarborColor.aluminumDark.opacity(0.55), lineWidth: 1)
+        )
+    }
+}
+#endif

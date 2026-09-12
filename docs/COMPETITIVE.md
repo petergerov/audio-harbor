@@ -100,7 +100,21 @@ Audirvāna sells processing as an add-on. Harbor: use the plugins you already ow
 - Convolution / headphone correction via AU, not a second HQPlayer.
 - Loaded rack = Shared · FX. Empty rack = bit-perfect Exclusive / DoP.
 
-Do not build a proprietary EQ suite to look “pro.”
+Do not build a proprietary EQ suite to look “pro.” There is no bit-perfect EQ — see below.
+
+### There is no bit-perfect EQ
+
+**Bit-perfect** means the samples that leave the Mac are the same bits as the file (or DoP: the same DSD bits, packed). Any EQ that actually equalizes multiplies the signal by a filter. After that the numbers are different. That is not a bug. That *is* EQ.
+
+What other players sometimes call a “bit-perfect EQ” is something else:
+
+- **Exclusive + EQ, no resampling.** The DAC gets the *processed* rate; the system mixer stays out. The transport is clean. The payload is no longer the file.
+- **EQ at zero / bypass.** The path can stay bit-perfect. That is a switched-off EQ, not an EQ.
+- **EQ after the DAC** (analog, or hardware on the device). Digital stays bit-perfect; correction happens in analog.
+
+What *does* exist is an **honest, high-quality EQ**: native sample rate, 64-bit float, linear-phase FIR or a well-set IIR, dither when returning to 24/32-bit. It can sound invisible. It is still not bit-perfect to the file.
+
+Harbor’s model stays: empty rack = Exclusive / DoP = the file. Loaded AU = **Shared · FX**, and the path says so. A “Bit-Perfect EQ” switch would be Pine-style marketing. Correction without touching the file: AU on the rack (Sonarworks, headphone FIR) or analog after the DAC — not an EQ that pretends the bits are untouched.
 
 ### 4. Leave the collection as collectors have it
 
@@ -133,6 +147,7 @@ These dilute *Local. Bit-perfect. Calm.* and drag Harbor into someone else’s c
 - Multi-room / AirPlay-as-product
 - Roon-style metadata cloud
 - Integer Mode as a marketing badge
+- A “bit-perfect EQ” (impossible if the EQ changes the signal)
 - Upsampling to 768 kHz as theatre
 - A second DSP product SKU next to Unlock
 

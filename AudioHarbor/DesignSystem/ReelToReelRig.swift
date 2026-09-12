@@ -18,9 +18,10 @@ struct ReelToReelRig: View {
         } else {
             ViewThatFits(in: .horizontal) {
                 ReelHeroView(isPlaying: isPlaying, progress: progress, layout: .wide)
-                    .frame(minWidth: 480, maxWidth: 720)
+                    .frame(minWidth: 480)
+                    .frame(maxWidth: .infinity)
                 ReelHeroView(isPlaying: isPlaying, progress: progress, layout: .portrait)
-                    .frame(maxWidth: 720)
+                    .frame(maxWidth: .infinity)
             }
         }
     }
