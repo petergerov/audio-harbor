@@ -23,6 +23,7 @@ struct RootView: View {
                         .tag(tab)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             #endif
         }
         .tint(HarborColor.amber)

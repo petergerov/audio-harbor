@@ -72,7 +72,7 @@ struct NowPlayingView: View {
                     progress: progress,
                     display: display,
                     duration: duration,
-                    heroHeight: compactHeroHeight(in: geo.size.height, hasRack: track != nil)
+                    heroHeight: adaptiveHeroHeight(in: geo.size, hasRack: track != nil)
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -123,7 +123,11 @@ struct NowPlayingView: View {
         duration: TimeInterval,
         heroHeight: CGFloat? = nil
     ) -> some View {
-        let compact = heroHeight != nil
+        #if os(iOS)
+        let compact = horizontalSizeClass == .compact
+        #else
+        let compact = false
+        #endif
         return ReceiverChassis {
             ScrollView {
                 VStack(spacing: compact ? 10 : 16) {
@@ -234,10 +238,15 @@ struct NowPlayingView: View {
         .background(HarborColor.faceplate.ignoresSafeArea())
     }
 
-    private func compactHeroHeight(in viewport: CGFloat, hasRack: Bool) -> CGFloat? {
-        guard horizontalSizeClass == .compact else { return nil }
-        let reserved: CGFloat = hasRack ? 400 : 320
-        return min(228, max(128, viewport - reserved))
+    private func adaptiveHeroHeight(in size: CGSize, hasRack: Bool) -> CGFloat? {
+        if horizontalSizeClass == .compact {
+            let reserved: CGFloat = hasRack ? 400 : 320
+            return min(228, max(128, size.height - reserved))
+        }
+        // iPad landscape: keep the photo short so title, seek, and transport stay on screen.
+        guard isPad, size.width > size.height + 20 else { return nil }
+        let reserved: CGFloat = 360
+        return min(200, max(128, size.height - reserved))
     }
     #endif
 
