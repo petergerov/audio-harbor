@@ -78,10 +78,11 @@ Ordnerzugriff läuft über `NSOpenPanel` / `fileImporter` + security-scoped Book
 
 ### 1.3 Version, Signing, Privacy-URL
 
-- [ ] Marketing-Version auf **1.0.0** (Build `1` oder höher, jeder Upload +1)
+- [x] Marketing-Version **1.0.0** — in `project.yml` gesetzt, landet über XcodeGen im Projekt. Build `1`, jeder Upload +1
 - [ ] Team: Apple Developer Program, Signing **Apple Distribution** / Mac App Store (nicht Developer ID)
-- [ ] Privacy Policy **öffentlich per HTTPS** — Entwurf: [`docs/privacy.html`](docs/privacy.html). GitHub Pages oder gerov-Domain. App Store Connect braucht eine URL, kein `file://`
-- [ ] In der Policy einen Satz zum Kauf ergänzen: Receipt bleibt bei Apple; wir speichern keinen Account
+- [x] Privacy Policy **live per HTTPS**: <https://petergerov.github.io/audio-harbor/privacy.html>
+      (GitHub Pages, Quelle `main` + `/docs`). Geprüft: 200, HTTP wird auf HTTPS umgeleitet, Inhalt identisch mit `main`.
+- [x] Kauf-Absatz steht in der Policy: Apple wickelt die Zahlung ab, Receipt bleibt bei Apple, kein Account, Trial-Datum im Keychain
 
 ### 1.4 App Store Connect (Verträge)
 
@@ -181,7 +182,7 @@ audiophile,FLAC,DSD,DoP,bit-perfect,DAC,local,player,AUv3,ALAC,SACD,hi-res
 
 **Support URL:** `https://github.com/petergerov/audio-harbor/issues` (oder eine Support-Seite auf der Marketing-Domain)  
 **Marketing URL:** Homepage (`docs/index.html` muss live HTTPS sein)  
-**Privacy Policy URL:** live `privacy.html`
+**Privacy Policy URL:** `https://petergerov.github.io/audio-harbor/privacy.html`
 
 **Age rating:** 4+ — keine user-generated chats, keine Werbung, keine unrestricted web.
 
@@ -279,7 +280,8 @@ Data Used to Track You: **No**.
 ## 10. Nach dem Live-Gang
 
 - [ ] Homepage-CTA von GitHub auf Mac App Store umbiegen (`docs/index.html`, `docs/MARKETING.md`)
-- [ ] Privacy-URL und Support-URL final
+- [x] Privacy-URL final — <https://petergerov.github.io/audio-harbor/privacy.html>
+- [ ] Support-URL final
 - [ ] Phased Release optional
 - [ ] iOS/iPadOS: eigene Screenshots + dieselbe IAP-ID, wenn die Plattform ergänzt wird. Trial-Uhr **pro Gerät** (erste Installation); Unlock folgt der Apple-ID via Restore
 
