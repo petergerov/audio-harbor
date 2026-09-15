@@ -7,7 +7,7 @@ import StoreKit
 @Observable
 @MainActor
 final class LicenseService {
-    static let productID = "app.audioharbor.player.unlock"
+    static let productID = "com.gerov.audioharbor.player.unlock"
     static let trialDuration: TimeInterval = 7 * 24 * 60 * 60
 
     enum Status: Equatable {
@@ -204,7 +204,7 @@ final class LicenseService {
 
 /// First-open timestamp in the keychain so deleting the app does not reset the trial on the same Mac.
 private enum TrialClock {
-    private static let service = "app.audioharbor.player.trial"
+    private static let service = "com.gerov.audioharbor.player.trial"
     private static let account = "firstInstall"
 
     static func recordFirstInstallIfNeeded() -> Date {

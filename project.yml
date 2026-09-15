@@ -1,6 +1,6 @@
 name: AudioHarbor
 options:
-  bundleIdPrefix: app.audioharbor
+  bundleIdPrefix: com.gerov.audioharbor
   deploymentTarget:
     iOS: "17.0"
     macOS: "14.0"
@@ -21,7 +21,7 @@ targets:
           - Resources/AudioHarbor.entitlements
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.audioharbor.player
+        PRODUCT_BUNDLE_IDENTIFIER: com.gerov.audioharbor.player
         PRODUCT_NAME: AudioHarbor
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_FILE: AudioHarbor/Resources/Info.plist

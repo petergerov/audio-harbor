@@ -2,7 +2,7 @@
 
 Erste Veröffentlichung: **Mac App Store only**. iPhone/iPad bleiben im Xcode-Projekt, gehen aber noch nicht live.
 
-Stand der App im Repo (vor Store-Arbeit): Bundle `app.audioharbor.player`, Marketing-Version `0.1.0`, Entitlements leer, **kein StoreKit**. Unten steht, was vor dem Upload noch gebaut werden muss.
+Stand der App im Repo (vor Store-Arbeit): Bundle `com.gerov.audioharbor.player`, Marketing-Version `0.1.0`, Entitlements leer, **kein StoreKit**. Unten steht, was vor dem Upload noch gebaut werden muss.
 
 ---
 
@@ -35,7 +35,7 @@ Ohne diese Punkte Review oder Sandbox-Start nicht überstehen.
 ### 1.1 StoreKit (noch nicht im Code)
 
 - [ ] StoreKit 2: Product laden, kaufen, `Transaction.currentEntitlements`, Finish, **Restore**
-- [ ] Product ID: `app.audioharbor.player.unlock` (an ASC angleichen)
+- [ ] Product ID: `com.gerov.audioharbor.player.unlock` (an ASC angleichen)
 - [ ] Trial: Zeitstempel **erste Installation** im **Keychain** (überlebt Löschen der App auf demselben Mac besser als UserDefaults)
 - [ ] Nach Tag 7 ohne Receipt: kein Playback; Catalogue / Settings / Restore bleiben erreichbar
 - [ ] Paywall-Copy ehrlich: „7 days free. Then €9.90 once.“ inkl. Preis aus StoreKit (`displayPrice`), nicht hardcodiert
@@ -97,8 +97,8 @@ Ordnerzugriff läuft über `NSOpenPanel` / `fileImporter` + security-scoped Book
 2. Platforms: **nur macOS** (iOS nicht ankreuzen)
 3. Name: **Audio Harbor**
 4. Primary language: **English (U.S.)**
-5. Bundle ID: `app.audioharbor.player` (in Developer Portal anlegen, falls fehlend)
-6. SKU: `audio-harbor-mac`
+5. Bundle ID: `com.gerov.audioharbor.player` (in Developer Portal anlegen, falls fehlend)
+6. SKU: `gerov-audio-harbor-mac`
 7. User Access: Full Access
 8. **Pricing and Availability:** Price = **Free**. Availability = die Länder, in denen ihr listen wollt. Nicht versehentlich 9,90 € als App-Preis setzen.
 
@@ -113,7 +113,7 @@ App → Monetization → In-App Purchases → **Non-Consumable**
 | Feld | Wert |
 |---|---|
 | Reference Name | Audio Harbor Unlock |
-| Product ID | `app.audioharbor.player.unlock` |
+| Product ID | `com.gerov.audioharbor.player.unlock` |
 | Price | 9,90 € (DE); übrige Storefronts von Apple ableiten lassen |
 | Availability | Alle Länder, in denen wir listen |
 
@@ -290,10 +290,10 @@ Data Used to Track You: **No**.
 | | |
 |---|---|
 | Display name | Audio Harbor |
-| Bundle ID | `app.audioharbor.player` |
+| Bundle ID | `com.gerov.audioharbor.player` |
 | Category (Info.plist) | `public.app-category.music` |
 | macOS deployment | 14.0 |
 | App-Preis | Free — jeder darf installieren |
-| IAP product (geplant) | `app.audioharbor.player.unlock` |
+| IAP product (geplant) | `com.gerov.audioharbor.player.unlock` |
 | Trial | 7 Tage ab erster Installation |
 | Unlock | 9,90 € einmalig |
