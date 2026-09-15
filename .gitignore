@@ -8,3 +8,6 @@ xcuserdata/
 *.xcscmblueprint
 .idea/
 .swiftpm/
+
+# Generated from docs/images by design/tools/appstore-sizes.sh
+design/screenshots/
