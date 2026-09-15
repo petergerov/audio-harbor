@@ -253,10 +253,10 @@ Stand: 2026-09-06. Web-/USPTO-Spotcheck only. **Kein Ersatz für Markenanwalt.**
 - [ ] **Drop Aural** and **Audio Reality** as product names
 - [ ] Full USPTO / EUIPO / DPMA search for **Audio Harbor** (Class 9 + 42) via counsel
 - [ ] Domain + App Store availability for Audio Harbor
-- [ ] Choose Bundle ID (e.g. `app.audioharbor.player`)
+- [ ] Choose Bundle ID (e.g. `com.gerov.audioharbor.player`)
 - [ ] Lock brand mark typography + accent in design system
 - [x] Replace scaffold branding in UI with **Audio Harbor** + subtitle *Local audiophile player*
 - [ ] Full USPTO / EUIPO / DPMA search for **Audio Harbor** (Class 9 + 42) via counsel
 - [ ] Domain + App Store availability for Audio Harbor
-- [ ] Choose Bundle ID (e.g. `app.audioharbor.player`) — already set in project
+- [ ] Choose Bundle ID (e.g. `com.gerov.audioharbor.player`) — already set in project
 - [ ] Lock brand mark typography + accent in design system

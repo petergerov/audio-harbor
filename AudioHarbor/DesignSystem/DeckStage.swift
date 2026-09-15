@@ -3,7 +3,6 @@ import SwiftUI
 enum DeckStyle: String, CaseIterable, Identifiable {
     case turntable
     case reelToReel
-    case cassette
     case receiver
 
     var id: String { rawValue }
@@ -12,7 +11,6 @@ enum DeckStyle: String, CaseIterable, Identifiable {
         switch self {
         case .turntable: "Turntable"
         case .reelToReel: "Reel-to-Reel"
-        case .cassette: "Cassette"
         case .receiver: "Receiver"
         }
     }
@@ -21,42 +19,55 @@ enum DeckStyle: String, CaseIterable, Identifiable {
         switch self {
         case .turntable: "Listening Desk"
         case .reelToReel: "Tape Transport"
-        case .cassette: "Compact Cassette"
         case .receiver: "Stereo Receiver"
         }
     }
 }
 
-struct DeckStage: View {
+struct DeckStage<Trailing: View>: View {
     @Binding var style: DeckStyle
     let artwork: Image?
     let isPlaying: Bool
     let progress: Double
-    let currentTime: TimeInterval
+    var heroHeight: CGFloat? = nil
+    var meterLeft: Double = 0
+    var meterRight: Double = 0
+    @ViewBuilder var trailing: () -> Trailing
 
     var body: some View {
-        VStack(spacing: 14) {
-            stylePicker
+        VStack(spacing: heroHeight == nil ? 12 : 6) {
+            toolbarRow
 
             Group {
                 switch style {
                 case .turntable:
-                    ListeningRig(artwork: artwork, isPlaying: isPlaying, progress: progress)
-                case .reelToReel:
-                    ReelToReelRig(isPlaying: isPlaying, progress: progress)
-                case .cassette:
-                    CassetteDeckRig(
+                    ListeningRig(
                         artwork: artwork,
                         isPlaying: isPlaying,
                         progress: progress,
-                        currentTime: currentTime
+                        stageHeight: heroHeight
                     )
+                case .reelToReel:
+                    ReelToReelRig(isPlaying: isPlaying, progress: progress, stageHeight: heroHeight)
                 case .receiver:
-                    ReceiverVURig(isPlaying: isPlaying, progress: progress)
+                    ReceiverVURig(
+                        isPlaying: isPlaying,
+                        progress: progress,
+                        leftLevel: meterLeft,
+                        rightLevel: meterRight
+                    )
                 }
             }
             .frame(maxWidth: .infinity)
             .animation(.easeInOut(duration: 0.25), value: style)
+        }
+    }
+
+    private var toolbarRow: some View {
+        HStack(alignment: .center, spacing: 12) {
+            stylePicker
+            trailing()
+                .fixedSize(horizontal: true, vertical: false)
         }
     }
 
@@ -86,5 +97,7 @@ struct DeckStage: View {
                 }
             }
         }
+        .scrollClipDisabled()
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

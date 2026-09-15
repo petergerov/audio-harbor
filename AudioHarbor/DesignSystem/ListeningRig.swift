@@ -1,125 +1,49 @@
 import SwiftUI
 
-/// Listening desk: photoreal macro turntable + tube amp.
+/// Listening desk: photoreal macro turntable.
 /// Wide layout → `NicePlayer1`; portrait / tight width → `NicePlayer3`.
 struct ListeningRig: View {
     let artwork: Image?
     let isPlaying: Bool
     let progress: Double
-
-    @State private var tubePulse: CGFloat = 0.3
+    var stageHeight: CGFloat? = nil
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .center, spacing: 16) {
+        if let stageHeight {
+            TurntableMacroView(
+                isPlaying: isPlaying,
+                progress: progress,
+                artwork: artwork,
+                layout: .wide,
+                stageHeightOverride: stageHeight
+            )
+            .frame(maxWidth: .infinity)
+        } else {
+            ViewThatFits(in: .horizontal) {
                 TurntableMacroView(
                     isPlaying: isPlaying,
                     progress: progress,
                     artwork: artwork,
                     layout: .wide
                 )
-                .frame(minWidth: 480, maxWidth: 720)
-                tubeAmp
-                    .frame(width: 148)
-            }
-            VStack(spacing: 14) {
+                .frame(minWidth: 480)
+                .frame(maxWidth: .infinity)
                 TurntableMacroView(
                     isPlaying: isPlaying,
                     progress: progress,
                     artwork: artwork,
                     layout: .portrait
                 )
-                .frame(maxWidth: 720)
-                tubeAmp
-                    .frame(maxWidth: 360)
+                .frame(maxWidth: .infinity)
             }
         }
-        .onChange(of: isPlaying) { _, playing in
-            withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
-                tubePulse = playing ? 1.0 : 0.28
-            }
-            if !playing {
-                withAnimation(.easeOut(duration: 0.45)) { tubePulse = 0.28 }
-            }
-        }
-        .onAppear {
-            tubePulse = isPlaying ? 1.0 : 0.28
-            if isPlaying {
-                withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
-                    tubePulse = 1.0
-                }
-            }
-        }
-    }
-
-    private var tubeAmp: some View {
-        VStack(spacing: 10) {
-            EngravedLabel(text: "Tube Stage", size: 9)
-
-            HStack(spacing: 10) {
-                ForEach(0..<3, id: \.self) { _ in
-                    VacuumTube(glow: isPlaying ? tubePulse : 0.28)
-                }
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 12)
-            .frame(maxWidth: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color(red: 0.10, green: 0.08, blue: 0.06),
-                                Color(red: 0.04, green: 0.03, blue: 0.02),
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .stroke(HarborColor.aluminumDark, lineWidth: 1)
-                    )
-            )
-
-            HStack(spacing: 16) {
-                AmpKnob(label: "Gain")
-                AmpKnob(label: "Bias")
-                HStack(spacing: 5) {
-                    Circle()
-                        .fill(isPlaying ? HarborColor.powerLED : HarborColor.aluminumDark)
-                        .frame(width: 7, height: 7)
-                        .shadow(color: isPlaying ? HarborColor.powerLED.opacity(0.85) : .clear, radius: 5)
-                    EngravedLabel(text: "HT", size: 8)
-                }
-            }
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 5, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(red: 0.16, green: 0.12, blue: 0.09),
-                            Color(red: 0.08, green: 0.06, blue: 0.04),
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .stroke(Color(red: 0.55, green: 0.42, blue: 0.28).opacity(0.45), lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(0.45), radius: 12, y: 6)
-        )
     }
 }
 
 // MARK: - Photoreal macro
 
 private enum TurntableHeroLayout {
-    /// Side-by-side with tube amp — landscape hero (`nice_player_1`).
+    /// Landscape hero (`nice_player_1`).
     case wide
     /// Stacked / narrow — portrait hero (`nice_player_3`).
     case portrait
@@ -133,22 +57,23 @@ private enum TurntableHeroLayout {
 
     var stageHeight: CGFloat {
         switch self {
-        case .wide: 340
-        case .portrait: 460
+        case .wide: 400
+        case .portrait: 520
         }
     }
 
-    /// Dolly anchor toward the stylus / cartridge in each crop.
+    /// Dolly toward the stylus / cartridge. Wide crop stays left-weighted so the
+    /// truncated tonearm on the right of `nice_player_1` never sits on the frame edge.
     var dollyAnchor: UnitPoint {
         switch self {
-        case .wide: UnitPoint(x: 0.58, y: 0.48)
+        case .wide: UnitPoint(x: 0.36, y: 0.52)
         case .portrait: UnitPoint(x: 0.62, y: 0.42)
         }
     }
 
     var vignetteCenter: UnitPoint {
         switch self {
-        case .wide: UnitPoint(x: 0.55, y: 0.50)
+        case .wide: UnitPoint(x: 0.42, y: 0.52)
         case .portrait: UnitPoint(x: 0.55, y: 0.45)
         }
     }
@@ -160,6 +85,7 @@ private struct TurntableMacroView: View {
     let progress: Double
     let artwork: Image?
     let layout: TurntableHeroLayout
+    var stageHeightOverride: CGFloat? = nil
 
     /// 33⅓ RPM shimmer period.
     private static let secondsPerRevolution: Double = 1.8
@@ -175,7 +101,7 @@ private struct TurntableMacroView: View {
             GeometryReader { geo in
                 hero(size: geo.size)
             }
-            .frame(height: layout.stageHeight)
+            .frame(height: stageHeightOverride ?? layout.stageHeight)
             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
@@ -200,9 +126,13 @@ private struct TurntableMacroView: View {
 
     private func hero(size: CGSize) -> some View {
         let t = clampedProgress
-        let scale: CGFloat = 1.0 + 0.12 * t
-        let panX: CGFloat = size.width * (-0.02 - 0.06 * t)
-        let panY: CGFloat = size.height * (0.01 + 0.04 * t)
+        let cover: CGFloat = layout == .wide ? 1.22 : 1.06
+        let scale: CGFloat = cover + 0.08 * t
+        // Wide: keep the source's hard-cut tonearm off the right edge of the frame.
+        let panX: CGFloat = layout == .wide
+            ? size.width * (0.04 + 0.02 * t)
+            : size.width * (-0.02 - 0.06 * t)
+        let panY: CGFloat = size.height * (0.01 + 0.03 * t)
 
         return ZStack {
             Color(red: 0.06, green: 0.04, blue: 0.03)
@@ -225,6 +155,19 @@ private struct TurntableMacroView: View {
 
             warmGrade(size: size)
 
+            if layout == .wide {
+                LinearGradient(
+                    colors: [
+                        .clear,
+                        Color(red: 0.05, green: 0.03, blue: 0.02).opacity(0.35),
+                        Color(red: 0.04, green: 0.02, blue: 0.02).opacity(0.88),
+                    ],
+                    startPoint: UnitPoint(x: 0.58, y: 0.5),
+                    endPoint: .trailing
+                )
+                .allowsHitTesting(false)
+            }
+
             RadialGradient(
                 colors: [.clear, .clear, Color.black.opacity(0.45)],
                 center: layout.vignetteCenter,
@@ -233,6 +176,7 @@ private struct TurntableMacroView: View {
             )
             .allowsHitTesting(false)
         }
+        .clipped()
         .overlay(alignment: .bottomLeading) { artworkChip }
         .overlay(alignment: .topTrailing) {
             Circle()
@@ -349,92 +293,5 @@ private struct TurntableMacroView: View {
         if p <= 0.02 { return "Lead-in" }
         if p >= 0.98 { return "Run-out" }
         return "Groove \(Int(p * 100))%"
-    }
-}
-
-private struct VacuumTube: View {
-    let glow: CGFloat
-
-    var body: some View {
-        VStack(spacing: 4) {
-            ZStack {
-                Capsule()
-                    .fill(Color.black.opacity(0.35))
-                    .frame(width: 28, height: 52)
-
-                Capsule()
-                    .fill(
-                        RadialGradient(
-                            colors: [
-                                Color(red: 1.0, green: 0.55, blue: 0.15).opacity(Double(glow)),
-                                Color(red: 0.9, green: 0.2, blue: 0.05).opacity(Double(glow) * 0.55),
-                                .clear,
-                            ],
-                            center: .center,
-                            startRadius: 1,
-                            endRadius: 16
-                        )
-                    )
-                    .frame(width: 14, height: 34)
-                    .blur(radius: 1.2)
-                    .shadow(
-                        color: Color(red: 1.0, green: 0.45, blue: 0.1).opacity(Double(glow) * 0.7),
-                        radius: 8
-                    )
-
-                Capsule()
-                    .stroke(Color.white.opacity(0.15), lineWidth: 0.8)
-                    .frame(width: 10, height: 28)
-
-                Capsule()
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.22),
-                                Color.white.opacity(0.05),
-                                Color.clear,
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 28, height: 52)
-                    .overlay(Capsule().stroke(Color.white.opacity(0.28), lineWidth: 1))
-            }
-
-            RoundedRectangle(cornerRadius: 1)
-                .fill(HarborColor.aluminumDark)
-                .frame(width: 22, height: 8)
-        }
-    }
-}
-
-private struct AmpKnob: View {
-    let label: String
-
-    var body: some View {
-        VStack(spacing: 4) {
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            Color(red: 0.78, green: 0.62, blue: 0.38),
-                            HarborColor.aluminumDark,
-                        ],
-                        center: .topLeading,
-                        startRadius: 1,
-                        endRadius: 14
-                    )
-                )
-                .frame(width: 22, height: 22)
-                .overlay(
-                    Capsule()
-                        .fill(HarborColor.faceplate)
-                        .frame(width: 2, height: 7)
-                        .offset(y: -4)
-                )
-                .overlay(Circle().stroke(Color.black.opacity(0.35), lineWidth: 0.8))
-            EngravedLabel(text: label, size: 7)
-        }
     }
 }

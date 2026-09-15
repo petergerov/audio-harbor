@@ -10,6 +10,9 @@ protocol PlaybackEngine: AnyObject {
     var duration: TimeInterval { get }
     var activeFormatLabel: String? { get }
     var pathLabel: String { get }
+    /// VU-mapped 0…1 from the live stereo signal (0 VU ≈ −18 dBFS).
+    var meterLeft: Double { get }
+    var meterRight: Double { get }
 
     func load(_ track: Track) async throws
     func play()
@@ -18,6 +21,9 @@ protocol PlaybackEngine: AnyObject {
     func seek(to seconds: TimeInterval)
     func setOutputMode(_ mode: OutputMode)
     func setDSDStrategy(_ strategy: DSDStrategy)
+    /// Called once when the loaded track reaches its end (not on pause/stop/seek),
+    /// with the track that ended so late signals can be matched against it.
+    func setTrackEndedHandler(_ handler: @escaping (Track) -> Void)
 }
 
 enum PlaybackEngineError: LocalizedError {

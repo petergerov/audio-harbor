@@ -5,25 +5,13 @@ struct RootView: View {
 
     var body: some View {
         @Bindable var appModel = appModel
+        @Bindable var license = appModel.license
 
         Group {
             #if os(macOS)
             NavigationSplitView {
-                List(AppTab.allCases, selection: $appModel.selectedTab) { tab in
-                    Label(tab.title, systemImage: tab.systemImage)
-                        .tag(tab)
-                }
-                .navigationSplitViewColumnWidth(min: 180, ideal: 210)
-                .listStyle(.sidebar)
-                .scrollContentBackground(.hidden)
-                .background(HarborColor.chassis)
-                .safeAreaInset(edge: .bottom) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        PowerLamp(isOn: appModel.playback.isPlaying)
-                        BrandMark(compact: true)
-                    }
-                    .padding()
-                }
+                HarborSidebar()
+                    .navigationSplitViewColumnWidth(min: 212, ideal: 236, max: 280)
             } detail: {
                 detail
             }
@@ -35,10 +23,27 @@ struct RootView: View {
                         .tag(tab)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             #endif
         }
         .tint(HarborColor.amber)
         .background(HarborColor.chassis.ignoresSafeArea())
+        .environment(\.harborPlaying, appModel.playback.isPlaying)
+        .alert(
+            "Rebuild the catalogue index?",
+            isPresented: $appModel.isRebuildWarningPresented
+        ) {
+            Button("Rebuild") {
+                appModel.library.rebuildIndex()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Every connected file will be re-read from disk. On a large library this can take a long time.")
+        }
+        .sheet(isPresented: $license.isUnlockPresented) {
+            UnlockSheet()
+                .environment(appModel)
+        }
     }
 
     @ViewBuilder
@@ -50,8 +55,6 @@ struct RootView: View {
             PlaylistsView()
         case .nowPlaying:
             NowPlayingView()
-        case .effects:
-            EffectsRackView()
         case .settings:
             SettingsView()
         }
@@ -66,8 +69,6 @@ struct RootView: View {
             NavigationStack { PlaylistsView() }
         case .nowPlaying:
             NavigationStack { NowPlayingView() }
-        case .effects:
-            NavigationStack { EffectsRackView() }
         case .settings:
             NavigationStack { SettingsView() }
         }

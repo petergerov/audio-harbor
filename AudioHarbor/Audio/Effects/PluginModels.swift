@@ -37,6 +37,8 @@ struct EffectSlotState: Identifiable, Codable, Hashable, Sendable {
     var manufacturer: OSType
     var name: String
     var bypassed: Bool
+    /// Serialized `AUAudioUnit.fullState` / `fullStateForDocument` (plugin knobs, presets, IR).
+    var parameterState: Data?
 
     init(
         id: UUID = UUID(),
@@ -44,7 +46,8 @@ struct EffectSlotState: Identifiable, Codable, Hashable, Sendable {
         subType: OSType,
         manufacturer: OSType,
         name: String,
-        bypassed: Bool = false
+        bypassed: Bool = false,
+        parameterState: Data? = nil
     ) {
         self.id = id
         self.type = type
@@ -52,6 +55,7 @@ struct EffectSlotState: Identifiable, Codable, Hashable, Sendable {
         self.manufacturer = manufacturer
         self.name = name
         self.bypassed = bypassed
+        self.parameterState = parameterState
     }
 
     var audioComponentDescription: AudioComponentDescription {

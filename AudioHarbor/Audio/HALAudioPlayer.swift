@@ -24,9 +24,13 @@ final class HALAudioPlayer {
     private var framePosition: Int = 0
     private var isRunning = false
     private var didSignalEnd = false
+    private var generation: UInt64 = 0
     private let lock = NSLock()
 
-    var onReachedEnd: (() -> Void)?
+    /// Carries the load generation so the host can drop end signals from an earlier buffer.
+    var onReachedEnd: ((UInt64) -> Void)?
+    var meterProbe: StereoMeterProbe?
+    private var dsdSource: DSDStreamSource?
 
     deinit {
         stop()
@@ -35,10 +39,28 @@ final class HALAudioPlayer {
 
     func load(_ buffer: RenderBuffer) {
         lock.lock()
+        dsdSource = nil
         self.buffer = buffer
         framePosition = 0
         didSignalEnd = false
+        generation &+= 1
         lock.unlock()
+    }
+
+    func loadStream(_ source: DSDStreamSource) {
+        lock.lock()
+        dsdSource = source
+        buffer = source.makeRenderBuffer()
+        framePosition = 0
+        didSignalEnd = false
+        generation &+= 1
+        lock.unlock()
+    }
+
+    /// Generation of the buffer currently loaded.
+    var currentGeneration: UInt64 {
+        lock.lock(); defer { lock.unlock() }
+        return generation
     }
 
     func seek(frame: Int) {
@@ -64,7 +86,7 @@ final class HALAudioPlayer {
         // "HALB_IOThread::_Start: there already is a thread".
         stop()
         disposeUnit()
-        guard let buffer, buffer.frameCount > 0, !buffer.packed24.isEmpty else {
+        guard let buffer, buffer.frameCount > 0 else {
             throw PlaybackEngineError.fileUnreadable
         }
 
@@ -212,21 +234,39 @@ final class HALAudioPlayer {
         guard let first = abl.first, let dst = first.mData else { return noErr }
 
         lock.lock()
-        guard let buffer else {
-            lock.unlock()
+        let source = dsdSource
+        let packed = buffer
+        let position = framePosition
+        lock.unlock()
+
+        guard let packed else {
             memset(dst, 0, Int(first.mDataByteSize))
             return noErr
         }
 
-        let bytesPerFrame = 3 * buffer.channelCount
-        let framesAvailable = max(0, buffer.frameCount - framePosition)
+        let bytesPerFrame = 3 * packed.channelCount
+        let framesAvailable = max(0, packed.frameCount - position)
         let framesToCopy = min(frames, framesAvailable)
         let byteCount = framesToCopy * bytesPerFrame
-        let srcOffset = framePosition * bytesPerFrame
+        let srcOffset = position * bytesPerFrame
 
-        buffer.packed24.withUnsafeBytes { raw in
-            if let base = raw.baseAddress, byteCount > 0, srcOffset + byteCount <= raw.count {
-                memcpy(dst, base.advanced(by: srcOffset), byteCount)
+        if let source, framesToCopy > 0 {
+            _ = source.copyPacked24(at: position, count: framesToCopy, into: dst)
+        } else {
+            packed.packed24.withUnsafeBytes { raw in
+                if let base = raw.baseAddress, byteCount > 0, srcOffset + byteCount <= raw.count {
+                    memcpy(dst, base.advanced(by: srcOffset), byteCount)
+                    if !packed.isDoP, let probe = meterProbe {
+                        probe.ingestPacked24(
+                            bytes: base.assumingMemoryBound(to: UInt8.self),
+                            count: raw.count,
+                            frames: framesToCopy,
+                            channels: packed.channelCount,
+                            byteOffset: srcOffset,
+                            sampleRate: packed.sampleRate
+                        )
+                    }
+                }
             }
         }
 
@@ -235,17 +275,19 @@ final class HALAudioPlayer {
             memset(dst.advanced(by: byteCount), 0, totalBytes - byteCount)
         }
 
-        framePosition += framesToCopy
-        let shouldSignal = framePosition >= buffer.frameCount && !didSignalEnd
+        lock.lock()
+        framePosition = position + framesToCopy
+        let shouldSignal = framePosition >= packed.frameCount && !didSignalEnd
         if shouldSignal {
             didSignalEnd = true
         }
+        let signalGeneration = generation
         lock.unlock()
 
         // Only notify once — otherwise this floods main at audio callback rate (~32Hz+).
         if shouldSignal {
             DispatchQueue.main.async { [weak self] in
-                self?.onReachedEnd?()
+                self?.onReachedEnd?(signalGeneration)
             }
         }
         return noErr
@@ -310,16 +352,7 @@ enum PCMBufferLoader {
     }
 
     static func loadDSD(url: URL, strategy: DSDStrategy) throws -> RenderBuffer {
-        let decoded = try DSDDecoder.decode(url: url, strategy: strategy)
-        let mode = decoded.isDoP ? "DoP" : "DSD→PCM"
-        return RenderBuffer(
-            sampleRate: decoded.sampleRate,
-            channelCount: decoded.channelCount,
-            frameCount: decoded.frames,
-            packed24: decoded.packed24,
-            label: "\(mode) · \(Int(decoded.sampleRate)) Hz (src \(decoded.sourceSampleRate))",
-            isDoP: decoded.isDoP
-        )
+        try DSDStreamSource(url: url, strategy: strategy).makeRenderBuffer()
     }
 
     private static func appendPacked24(

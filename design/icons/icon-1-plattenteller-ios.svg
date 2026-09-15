@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="Audio Harbor app icon">
+<defs>
+<linearGradient id="plinth1" x1="0.15" y1="0" x2="0.85" y2="1">
+<stop offset="0" stop-color="#241E17"/><stop offset="0.45" stop-color="#14110E"/>
+<stop offset="1" stop-color="#080706"/></linearGradient>
+<linearGradient id="rim1" x1="0" y1="0" x2="0.9" y2="1">
+<stop offset="0" stop-color="#F7E3B4" stop-opacity="0.95"/>
+<stop offset="0.35" stop-color="#C79447" stop-opacity="0.5"/>
+<stop offset="0.7" stop-color="#7E5522" stop-opacity="0.35"/>
+<stop offset="1" stop-color="#F0C877" stop-opacity="0.6"/></linearGradient>
+<linearGradient id="brass1" x1="0.1" y1="0" x2="0.9" y2="1">
+<stop offset="0" stop-color="#F7E1AC"/><stop offset="0.35" stop-color="#D3A257"/>
+<stop offset="0.62" stop-color="#9C6C2C"/><stop offset="1" stop-color="#E3C489"/></linearGradient>
+<linearGradient id="brassU1" x1="120" y1="90" x2="900" y2="960" gradientUnits="userSpaceOnUse">
+<stop offset="0" stop-color="#F7E1AC"/><stop offset="0.35" stop-color="#D3A257"/>
+<stop offset="0.62" stop-color="#9C6C2C"/><stop offset="1" stop-color="#E3C489"/></linearGradient>
+<linearGradient id="brassEdge1" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#FBEDC6"/><stop offset="1" stop-color="#8A5C24"/></linearGradient>
+<radialGradient id="glow1" cx="0.5" cy="0.5" r="0.5">
+<stop offset="0" stop-color="#FFB23C" stop-opacity="0.55"/>
+<stop offset="1" stop-color="#FFB23C" stop-opacity="0"/></radialGradient>
+<radialGradient id="vign1" cx="0.42" cy="0.34" r="0.78">
+<stop offset="0" stop-color="#FFFFFF" stop-opacity="0.055"/>
+<stop offset="0.62" stop-color="#000000" stop-opacity="0"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0.5"/></radialGradient>
+</defs>
+<rect width="1024" height="1024" fill="url(#plinth1)"/>
+
+<circle cx="462" cy="452" r="330" fill="#0D0B0A"/>
+<circle cx="462" cy="452" r="330" fill="none" stroke="url(#brassEdge1)" stroke-width="3" stroke-opacity="0.65"/>
+<circle cx="462" cy="452" r="296" fill="#0A0908"/>
+<circle cx="462" cy="452" r="120" fill="none" stroke="#241F1A" stroke-width="2" stroke-opacity="0.9"/><circle cx="462" cy="452" r="137" fill="none" stroke="#241F1A" stroke-width="2" stroke-opacity="0.9"/><circle cx="462" cy="452" r="154" fill="none" stroke="#241F1A" stroke-width="2" stroke-opacity="0.9"/><circle cx="462" cy="452" r="171" fill="none" stroke="#241F1A" stroke-width="2" stroke-opacity="0.9"/><circle cx="462" cy="452" r="188" fill="none" stroke="#241F1A" stroke-width="2" stroke-opacity="0.9"/><circle cx="462" cy="452" r="205" fill="none" stroke="#241F1A" stroke-width="2" stroke-opacity="0.9"/><circle cx="462" cy="452" r="222" fill="none" stroke="#241F1A" stroke-width="2" stroke-opacity="0.9"/><circle cx="462" cy="452" r="239" fill="none" stroke="#241F1A" stroke-width="2" stroke-opacity="0.9"/><circle cx="462" cy="452" r="256" fill="none" stroke="#241F1A" stroke-width="2" stroke-opacity="0.9"/><circle cx="462" cy="452" r="273" fill="none" stroke="#241F1A" stroke-width="2" stroke-opacity="0.9"/>
+<path d="M166 452 A296 296 0 0 1 462 156" fill="none" stroke="#F3D9A0" stroke-width="7" stroke-opacity="0.5" stroke-linecap="round"/>
+<path d="M758 452 A296 296 0 0 1 502 740" fill="none" stroke="#C79447" stroke-width="5" stroke-opacity="0.32" stroke-linecap="round"/>
+<circle cx="462" cy="452" r="96" fill="url(#brass1)"/>
+<circle cx="462" cy="452" r="96" fill="none" stroke="#7E5522" stroke-width="2" stroke-opacity="0.6"/>
+<circle cx="462" cy="452" r="15" fill="#0A0908"/>
+<circle cx="462" cy="448" r="7" fill="#F7E1AC" fill-opacity="0.8"/>
+<circle cx="838" cy="252" r="58" fill="url(#brass1)"/>
+<circle cx="838" cy="252" r="19" fill="#161310"/>
+<circle cx="826" cy="240" r="40" fill="#FFFFFF" fill-opacity="0.07"/>
+<path d="M838 252 C838 420 792 520 700 600 L648 646" fill="none" stroke="url(#brassU1)" stroke-width="21" stroke-linecap="round"/>
+<path d="M838 252 C838 420 792 520 700 600 L648 646" fill="none" stroke="#FBEDC6" stroke-width="4" stroke-opacity="0.45" stroke-linecap="round"/>
+<g transform="rotate(41 648 646)">
+<rect x="600" y="616" width="96" height="58" rx="12" fill="#2A241D"/>
+<rect x="600" y="616" width="96" height="58" rx="12" fill="none" stroke="#C79447" stroke-width="3" stroke-opacity="0.7"/>
+<path d="M624 674 L618 706" stroke="#E3C489" stroke-width="6" stroke-linecap="round"/>
+</g>
+<text x="512" y="939" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="56" font-weight="700" letter-spacing="11" fill="#000000" fill-opacity="0.75">AUDIO HARBOR</text><text x="512" y="936" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="56" font-weight="700" letter-spacing="11" fill="#A2977F">AUDIO HARBOR</text>
+<rect width="1024" height="1024" fill="url(#vign1)"/>
+<path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="none" stroke="url(#rim1)" stroke-width="5"/>
+</svg>

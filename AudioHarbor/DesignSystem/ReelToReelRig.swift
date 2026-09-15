@@ -4,13 +4,25 @@ import SwiftUI
 struct ReelToReelRig: View {
     let isPlaying: Bool
     let progress: Double
+    var stageHeight: CGFloat? = nil
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            ReelHeroView(isPlaying: isPlaying, progress: progress, layout: .wide)
-                .frame(minWidth: 480, maxWidth: 720)
-            ReelHeroView(isPlaying: isPlaying, progress: progress, layout: .portrait)
-                .frame(maxWidth: 720)
+        if let stageHeight {
+            ReelHeroView(
+                isPlaying: isPlaying,
+                progress: progress,
+                layout: .wide,
+                stageHeightOverride: stageHeight
+            )
+            .frame(maxWidth: .infinity)
+        } else {
+            ViewThatFits(in: .horizontal) {
+                ReelHeroView(isPlaying: isPlaying, progress: progress, layout: .wide)
+                    .frame(minWidth: 480)
+                    .frame(maxWidth: .infinity)
+                ReelHeroView(isPlaying: isPlaying, progress: progress, layout: .portrait)
+                    .frame(maxWidth: .infinity)
+            }
         }
     }
 }
@@ -28,8 +40,8 @@ private enum ReelHeroLayout {
 
     var stageHeight: CGFloat {
         switch self {
-        case .wide: 340
-        case .portrait: 460
+        case .wide: 400
+        case .portrait: 520
         }
     }
 
@@ -53,6 +65,7 @@ private struct ReelHeroView: View {
     let isPlaying: Bool
     let progress: Double
     let layout: ReelHeroLayout
+    var stageHeightOverride: CGFloat? = nil
 
     private static let secondsPerRevolution: Double = 2.2
 
@@ -67,7 +80,7 @@ private struct ReelHeroView: View {
             GeometryReader { geo in
                 hero(size: geo.size)
             }
-            .frame(height: layout.stageHeight)
+            .frame(height: stageHeightOverride ?? layout.stageHeight)
             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)

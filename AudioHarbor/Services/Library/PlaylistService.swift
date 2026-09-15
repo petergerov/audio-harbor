@@ -194,7 +194,7 @@ final class PlaylistService {
         guard let idx = playlists.firstIndex(where: { $0.id == playlist.id }),
               !playlists[idx].isSmart
         else { return }
-        let path = track.url.path
+        let path = track.cataloguePath
         guard !playlists[idx].trackPaths.contains(path) else { return }
         playlists[idx].trackPaths.append(path)
         save()
@@ -206,7 +206,7 @@ final class PlaylistService {
         else { return }
         // Resolve via current library if possible; id alone is enough with stable Track IDs.
         playlists[idx].trackPaths.removeAll { path in
-            Track.stableID(for: URL(fileURLWithPath: path)) == id
+            Track.stableID(forIdentity: path) == id
         }
         save()
     }
@@ -215,7 +215,7 @@ final class PlaylistService {
         guard let idx = playlists.firstIndex(where: { $0.id == playlist.id }),
               !playlists[idx].isSmart
         else { return }
-        playlists[idx].trackPaths.removeAll { $0 == track.url.path }
+        playlists[idx].trackPaths.removeAll { $0 == track.cataloguePath }
         save()
     }
 
@@ -233,7 +233,7 @@ final class PlaylistService {
                     return ($0.trackNumber ?? 9999) < ($1.trackNumber ?? 9999)
                 }
         }
-        let map = Dictionary(uniqueKeysWithValues: libraryTracks.map { ($0.url.path, $0) })
+        let map = Dictionary(libraryTracks.map { ($0.cataloguePath, $0) }, uniquingKeysWith: { _, last in last })
         return playlist.trackPaths.compactMap { map[$0] }
     }
 

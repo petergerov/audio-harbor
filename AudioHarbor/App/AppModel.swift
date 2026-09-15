@@ -8,15 +8,24 @@ final class AppModel {
     let playback: PlaybackService
     let playlists: PlaylistService
     let effects: EffectHost
+    let license: LicenseService
 
     var selectedTab: AppTab = .library
+    var isRebuildWarningPresented = false
+
+    func requestIndexRebuild() {
+        guard !library.isScanning, !library.folders.isEmpty else { return }
+        isRebuildWarningPresented = true
+    }
 
     init() {
         let effects = EffectHost()
         let engine = CoreAudioPlaybackEngine(effectHost: effects)
+        let license = LicenseService()
         self.effects = effects
         self.library = LibraryService()
-        self.playback = PlaybackService(engine: engine)
+        self.license = license
+        self.playback = PlaybackService(engine: engine, license: license)
         self.playlists = PlaylistService()
     }
 }
@@ -25,7 +34,6 @@ enum AppTab: String, CaseIterable, Identifiable {
     case library
     case playlists
     case nowPlaying
-    case effects
     case settings
 
     var id: String { rawValue }
@@ -35,7 +43,6 @@ enum AppTab: String, CaseIterable, Identifiable {
         case .library: "Catalogue"
         case .playlists: "Playlists"
         case .nowPlaying: "Deck"
-        case .effects: "Rack"
         case .settings: "Settings"
         }
     }
@@ -45,7 +52,6 @@ enum AppTab: String, CaseIterable, Identifiable {
         case .library: "rectangle.stack"
         case .playlists: "music.note.list"
         case .nowPlaying: "hifispeaker.fill"
-        case .effects: "slider.vertical.3"
         case .settings: "gearshape"
         }
     }

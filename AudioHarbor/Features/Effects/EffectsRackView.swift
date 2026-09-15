@@ -4,7 +4,7 @@ import SwiftUI
 import UIKit
 #endif
 
-struct EffectsRackView: View {
+struct DeckRackPanel: View {
     @Environment(AppModel.self) private var appModel
     @State private var showBrowser = false
     #if os(iOS)
@@ -13,22 +13,61 @@ struct EffectsRackView: View {
     @State private var search = ""
 
     var body: some View {
-        @Bindable var effects = appModel.effects
-
-        ReceiverChassis {
-            VStack(spacing: 14) {
-                header
-                notice
-                chainPanel
-                if let message = effects.statusMessage {
-                    Text(message)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    EngravedLabel(text: "Rack")
+                    Text(appModel.effects.hasActiveEffects ? "Shared · FX" : "Exclusive / DoP available")
                         .font(HarborFont.mono(11))
-                        .foregroundStyle(HarborColor.amber)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 8)
+                        .foregroundStyle(appModel.effects.hasActiveEffects ? HarborColor.amber : HarborColor.ivoryDim)
+                }
+                Spacer(minLength: 8)
+                HarborButton(
+                    title: "Add",
+                    systemImage: "plus",
+                    kind: .primary,
+                    action: { showBrowser = true }
+                )
+            }
+
+            if let message = appModel.effects.statusMessage {
+                Text(message)
+                    .font(HarborFont.mono(11))
+                    .foregroundStyle(HarborColor.amber)
+            }
+
+            if appModel.effects.chain.isEmpty {
+                Text("No inserts.")
+                    .font(HarborFont.body(13))
+                    .foregroundStyle(HarborColor.ivoryDim)
+                #if os(macOS)
+                Text("Add an AUv3 or AU if you want to process the output.")
+                    .font(HarborFont.body(13))
+                    .foregroundStyle(HarborColor.ivoryDim)
+                #endif
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(appModel.effects.chain.enumerated()), id: \.element.id) { index, slot in
+                        if index > 0 {
+                            Divider().overlay(HarborColor.aluminumDark.opacity(0.45))
+                        }
+                        EffectSlotRow(
+                            slot: slot,
+                            onBypass: { appModel.effects.setBypass(slot.id, bypassed: $0) },
+                            onEdit: {
+                                #if os(macOS)
+                                Task { await appModel.effects.openEditor(for: slot.id) }
+                                #else
+                                editorSlotID = slot.id
+                                #endif
+                            },
+                            onRemove: { appModel.effects.remove(slot.id) }
+                        )
+                    }
                 }
             }
         }
+        .faceplate()
         .sheet(isPresented: $showBrowser) {
             pluginBrowser
                 #if os(macOS)
@@ -44,105 +83,10 @@ struct EffectsRackView: View {
                 PluginEditorSheet(slotID: editorSlotID)
             }
         }
-        .navigationTitle("Rack")
         #endif
         .task {
-            await effects.refreshCatalog()
+            await appModel.effects.refreshCatalog()
         }
-    }
-
-    private var header: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 8) {
-                EngravedLabel(text: "Output inserts")
-                Text("Rack")
-                    .font(HarborFont.display(28))
-                    .foregroundStyle(HarborColor.ivory)
-                Text("AUv3 on all platforms. Classic AU on Mac. Runs on the Shared output path.")
-                    .font(HarborFont.body(14))
-                    .foregroundStyle(HarborColor.ivoryDim)
-            }
-            Spacer()
-            Button {
-                showBrowser = true
-            } label: {
-                Label("Add Plugin", systemImage: "plus")
-                    .font(HarborFont.title(13))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(HarborColor.amber)
-                    .foregroundStyle(HarborColor.faceplate)
-                    .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 8)
-    }
-
-    private var notice: some View {
-        AluminumField {
-            VStack(alignment: .leading, spacing: 6) {
-                EngravedLabel(text: "Bit-perfect note", size: 9)
-                Text(
-                    appModel.effects.hasActiveEffects
-                    ? "Effects are active — output is Shared · FX (not Exclusive/DoP)."
-                    : "Empty rack keeps Exclusive / DoP available when you choose them in Settings."
-                )
-                .font(HarborFont.body(13))
-                .foregroundStyle(HarborColor.ivoryDim)
-            }
-        }
-        .padding(.horizontal, 4)
-    }
-
-    private var chainPanel: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            EngravedLabel(text: "Signal chain")
-            if appModel.effects.chain.isEmpty {
-                Text("No inserts. Add an AUv3\(macAUHint) to process the output.")
-                    .font(HarborFont.body(14))
-                    .foregroundStyle(HarborColor.ivoryDim)
-                    .frame(maxWidth: .infinity, minHeight: 120, alignment: .center)
-            } else {
-                List {
-                    ForEach(appModel.effects.chain) { slot in
-                        EffectSlotRow(
-                            slot: slot,
-                            onBypass: { appModel.effects.setBypass(slot.id, bypassed: $0) },
-                            onEdit: {
-                                #if os(macOS)
-                                Task { await appModel.effects.openEditor(for: slot.id) }
-                                #else
-                                editorSlotID = slot.id
-                                #endif
-                            },
-                            onRemove: { appModel.effects.remove(slot.id) }
-                        )
-                        .listRowBackground(HarborColor.faceplate)
-                        .listRowSeparatorTint(HarborColor.aluminumDark.opacity(0.5))
-                    }
-                    .onMove { appModel.effects.move(from: $0, to: $1) }
-                    .onDelete { offsets in
-                        offsets.map { appModel.effects.chain[$0].id }
-                            .forEach(appModel.effects.remove)
-                    }
-                }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                #if os(macOS)
-                .frame(minHeight: 220)
-                #endif
-            }
-        }
-        .faceplate()
-    }
-
-    private var macAUHint: String {
-        #if os(macOS)
-        " or AU"
-        #else
-        ""
-        #endif
     }
 
     private var pluginBrowser: some View {
@@ -162,6 +106,14 @@ struct EffectsRackView: View {
                 if appModel.effects.isLoadingCatalog {
                     ProgressView("Scanning Audio Units…")
                         .tint(HarborColor.amber)
+                        .padding()
+                } else if filteredPlugins.isEmpty {
+                    Text(search.isEmpty
+                         ? "No Audio Units found. Install an AUv3 app, then tap Refresh."
+                         : "No plugins match that search.")
+                        .font(HarborFont.body(13))
+                        .foregroundStyle(HarborColor.ivoryDim)
+                        .multilineTextAlignment(.center)
                         .padding()
                 }
 
@@ -197,6 +149,11 @@ struct EffectsRackView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { showBrowser = false }
                 }
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Refresh") {
+                        Task { await appModel.effects.refreshCatalog() }
+                    }
+                }
             }
             #else
             .toolbar {
@@ -215,11 +172,7 @@ struct EffectsRackView: View {
 
     private var filteredPlugins: [PluginDescriptor] {
         let q = search.trimmingCharacters(in: .whitespacesAndNewlines)
-        #if os(iOS)
-        let base = appModel.effects.available.filter(\.isAUv3)
-        #else
         let base = appModel.effects.available
-        #endif
         guard !q.isEmpty else { return base }
         return base.filter {
             $0.name.localizedCaseInsensitiveContains(q)
@@ -264,7 +217,7 @@ private struct EffectSlotRow: View {
                 .foregroundStyle(HarborColor.danger)
                 .font(HarborFont.panel(11))
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 4)
     }
 }
 
@@ -299,6 +252,9 @@ private struct PluginEditorSheet: View {
                     Button("Done") { dismiss() }
                 }
             }
+        }
+        .onDisappear {
+            appModel.effects.saveSettings()
         }
     }
 }

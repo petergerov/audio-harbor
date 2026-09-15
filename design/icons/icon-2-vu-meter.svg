@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="Audio Harbor app icon">
+<defs>
+<linearGradient id="plinth2" x1="0.15" y1="0" x2="0.85" y2="1">
+<stop offset="0" stop-color="#241E17"/><stop offset="0.45" stop-color="#14110E"/>
+<stop offset="1" stop-color="#080706"/></linearGradient>
+<linearGradient id="rim2" x1="0" y1="0" x2="0.9" y2="1">
+<stop offset="0" stop-color="#F7E3B4" stop-opacity="0.95"/>
+<stop offset="0.35" stop-color="#C79447" stop-opacity="0.5"/>
+<stop offset="0.7" stop-color="#7E5522" stop-opacity="0.35"/>
+<stop offset="1" stop-color="#F0C877" stop-opacity="0.6"/></linearGradient>
+<linearGradient id="brass2" x1="0.1" y1="0" x2="0.9" y2="1">
+<stop offset="0" stop-color="#F7E1AC"/><stop offset="0.35" stop-color="#D3A257"/>
+<stop offset="0.62" stop-color="#9C6C2C"/><stop offset="1" stop-color="#E3C489"/></linearGradient>
+<linearGradient id="brassU2" x1="120" y1="90" x2="900" y2="960" gradientUnits="userSpaceOnUse">
+<stop offset="0" stop-color="#F7E1AC"/><stop offset="0.35" stop-color="#D3A257"/>
+<stop offset="0.62" stop-color="#9C6C2C"/><stop offset="1" stop-color="#E3C489"/></linearGradient>
+<linearGradient id="brassEdge2" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#FBEDC6"/><stop offset="1" stop-color="#8A5C24"/></linearGradient>
+<radialGradient id="glow2" cx="0.5" cy="0.5" r="0.5">
+<stop offset="0" stop-color="#FFB23C" stop-opacity="0.55"/>
+<stop offset="1" stop-color="#FFB23C" stop-opacity="0"/></radialGradient>
+<radialGradient id="vign2" cx="0.42" cy="0.34" r="0.78">
+<stop offset="0" stop-color="#FFFFFF" stop-opacity="0.055"/>
+<stop offset="0.62" stop-color="#000000" stop-opacity="0"/>
+<stop offset="1" stop-color="#000000" stop-opacity="0.5"/></radialGradient>
+<linearGradient id="face2" x1="0" y1="0" x2="0.2" y2="1">
+<stop offset="0" stop-color="#F6EBD2"/><stop offset="0.55" stop-color="#E6D6B0"/>
+<stop offset="1" stop-color="#CBB68C"/></linearGradient></defs>
+<path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="url(#plinth2)"/>
+
+<ellipse cx="512" cy="470" rx="470" ry="380" fill="url(#glow2)"/>
+<rect x="96" y="214" width="832" height="520" rx="44" fill="url(#face2)"/>
+<rect x="96" y="214" width="832" height="520" rx="44" fill="none" stroke="url(#brass2)" stroke-width="16"/>
+<rect x="112" y="230" width="800" height="488" rx="30" fill="none" stroke="#8A5C24" stroke-width="2" stroke-opacity="0.35"/>
+<path d="M141 550 A400 400 0 0 1 769 394" fill="none" stroke="#2B2318" stroke-width="6"/>
+<path d="M769 394 A400 400 0 0 1 883 550" fill="none" stroke="#8E2F1E" stroke-width="9"/>
+<path d="M147 552 L184 567" stroke="#2B2318" stroke-width="7" stroke-linecap="round"/><path d="M192 471 L224 494" stroke="#2B2318" stroke-width="4" stroke-linecap="round"/><path d="M255 402 L281 432" stroke="#2B2318" stroke-width="4" stroke-linecap="round"/><path d="M332 350 L350 385" stroke="#2B2318" stroke-width="4" stroke-linecap="round"/><path d="M419 317 L429 356" stroke="#2B2318" stroke-width="4" stroke-linecap="round"/><path d="M512 306 L512 346" stroke="#2B2318" stroke-width="7" stroke-linecap="round"/><path d="M605 317 L595 356" stroke="#2B2318" stroke-width="4" stroke-linecap="round"/><path d="M692 350 L674 385" stroke="#2B2318" stroke-width="4" stroke-linecap="round"/><path d="M769 402 L743 432" stroke="#8E2F1E" stroke-width="4" stroke-linecap="round"/><path d="M832 471 L800 494" stroke="#8E2F1E" stroke-width="4" stroke-linecap="round"/><path d="M877 552 L840 567" stroke="#8E2F1E" stroke-width="7" stroke-linecap="round"/>
+<text x="270" y="392" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="40" font-weight="700" fill="#2B2318">-20</text>
+<text x="512" y="272" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="44" font-weight="700" fill="#2B2318">0</text>
+<text x="762" y="392" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="40" font-weight="700" fill="#8E2F1E">+3</text>
+<path d="M512 700 L787 452" stroke="#1E1913" stroke-width="9" stroke-linecap="round"/>
+<circle cx="512" cy="700" r="26" fill="url(#brass2)"/>
+<circle cx="512" cy="700" r="10" fill="#1E1913"/>
+<text x="512" y="628" text-anchor="middle" font-family="Spectral, Georgia, Times New Roman, serif" font-size="76" font-weight="600" letter-spacing="4" fill="#2B2318">Audio Harbor</text>
+<text x="286" y="694" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="30" font-weight="700" letter-spacing="12" fill="#7A6647">VU</text>
+<text x="512" y="881" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="40" font-weight="700" letter-spacing="14" fill="#000000" fill-opacity="0.75">BIT-PERFECT</text><text x="512" y="878" text-anchor="middle" font-family="Nunito Sans, Avenir Next, Helvetica Neue, Arial, sans-serif" font-size="40" font-weight="700" letter-spacing="14" fill="#8C8271">BIT-PERFECT</text>
+<path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="url(#vign2)"/>
+<path d="M512 0C245 0 106 0 53 53C0 106 0 245 0 512C0 779 0 918 53 971C106 1024 245 1024 512 1024C779 1024 918 1024 971 971C1024 918 1024 779 1024 512C1024 245 1024 106 971 53C918 0 779 0 512 0Z" fill="none" stroke="url(#rim2)" stroke-width="5"/>
+</svg>
