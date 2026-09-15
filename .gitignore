@@ -11,3 +11,4 @@ xcuserdata/
 
 # Generated from docs/images by design/tools/appstore-sizes.sh
 design/screenshots/
+.gstack/

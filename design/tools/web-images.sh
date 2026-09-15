@@ -19,7 +19,10 @@ set -euo pipefail
 
 SRC="${1:-docs/images}"
 OUT="${2:-docs/images/web}"
+# 1200 serves the 420px hero and 280px cards with room for Retina.
+# 2000 is what the lightbox shows full screen; it is fetched only on click.
 WIDTH=1200
+LIGHTBOX_WIDTH=2000
 QUALITY=88
 
 command -v cwebp >/dev/null || { echo "cwebp not found -- brew install webp" >&2; exit 1; }
@@ -42,12 +45,23 @@ for src in "$SRC"/*.png; do
     cwebp -quiet -q "$QUALITY" "$src" -o "$dst"
   fi
 
+  # Larger copy for the lightbox overlay.
+  lb="$OUT/lb"
+  mkdir -p "$lb"
+  if [ "$sw" -gt "$LIGHTBOX_WIDTH" ]; then
+    cwebp -quiet -q "$QUALITY" -resize "$LIGHTBOX_WIDTH" 0 "$src" -o "$lb/$base.webp"
+  else
+    cwebp -quiet -q "$QUALITY" "$src" -o "$lb/$base.webp"
+  fi
+
   before=$(stat -f%z "$src")
   after=$(stat -f%z "$dst")
   total_before=$(( total_before + before ))
   total_after=$(( total_after + after ))
 
-  printf "%-24s %6sKB -> %5sKB\n" "$base" "$(( before / 1024 ))" "$(( after / 1024 ))"
+  lbsize=$(stat -f%z "$lb/$base.webp")
+  printf "%-24s %6sKB -> %5sKB  (lightbox %sKB)\n" \
+    "$base" "$(( before / 1024 ))" "$(( after / 1024 ))" "$(( lbsize / 1024 ))"
 done
 
 if [ "$total_before" -eq 0 ]; then
