@@ -167,8 +167,9 @@ struct Album: Identifiable, Hashable, Sendable {
 }
 
 enum CatalogueBrowseMode: String, CaseIterable, Identifiable, Sendable {
-    case smart
+    /// Declaration order drives the Catalogue mode picker: Directories first, Albums second.
     case folders
+    case smart
 
     var id: String { rawValue }
 
