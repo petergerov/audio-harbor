@@ -101,12 +101,12 @@ struct LibraryView: View {
         }
         if let status = appModel.library.indexStatusText {
             let mode = appModel.library.browseMode == .smart
-                ? "Smart catalogue"
+                ? "Albums"
                 : "Directories"
             return "\(mode) — \(status)."
         }
         return appModel.library.browseMode == .smart
-            ? "Smart catalogue — albums & metadata search."
+            ? "Albums — artwork & metadata search."
             : "Directories — walk your music as it sits on disk."
     }
 

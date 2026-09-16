@@ -32,10 +32,11 @@ final class LibraryService {
     private var tracksByYear: [Int: [Track]] = [:]
     private var indexedDirectoryPaths: [String] = []
 
-    /// Smart (metadata albums) vs Folders (filesystem tree).
+    /// Albums (metadata, `.smart`) vs Directories (filesystem tree, `.folders`).
+    /// Directories is the default; Albums is only used when it was picked explicitly.
     var browseMode: CatalogueBrowseMode = {
         let raw = UserDefaults.standard.string(forKey: "audioharbor.catalogue.browseMode") ?? ""
-        return CatalogueBrowseMode(rawValue: raw) ?? .smart
+        return CatalogueBrowseMode(rawValue: raw) ?? .folders
     }() {
         didSet {
             UserDefaults.standard.set(browseMode.rawValue, forKey: "audioharbor.catalogue.browseMode")

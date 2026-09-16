@@ -174,14 +174,14 @@ enum CatalogueBrowseMode: String, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .smart: "Smart"
+        case .smart: "Albums"
         case .folders: "Directories"
         }
     }
 
     var subtitle: String {
         switch self {
-        case .smart: "Albums & metadata search"
+        case .smart: "Grouped by metadata, with artwork"
         case .folders: "Browse connected directories"
         }
     }
