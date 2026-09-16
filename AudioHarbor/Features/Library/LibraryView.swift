@@ -286,33 +286,6 @@ struct LibraryView: View {
     private var folderRootsList: some View {
         List {
             Section {
-                Button(action: presentAddDirectory) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "folder.badge.plus")
-                            .foregroundStyle(HarborColor.faceplate)
-                            .frame(width: 28, height: 28)
-                            .background(HarborColor.amber)
-                            .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Add Directory")
-                                .font(HarborFont.title(14))
-                                .foregroundStyle(HarborColor.ivory)
-                            Text("Connect another music folder to browse and play.")
-                                .font(HarborFont.body(11))
-                                .foregroundStyle(HarborColor.ivoryDim)
-                                .lineLimit(2)
-                        }
-                        Spacer()
-                    }
-                    .padding(.vertical, 4)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .disabled(appModel.library.isScanning)
-                .listRowBackground(HarborColor.faceplate)
-            }
-
-            Section {
                 ForEach(appModel.library.filteredFolderRoots) { bookmark in
                     directoryRow(
                         title: bookmark.name,

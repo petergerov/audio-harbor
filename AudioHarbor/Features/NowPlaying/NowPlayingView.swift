@@ -11,6 +11,16 @@ struct NowPlayingView: View {
     @State private var scrubRatio: Double?
     @AppStorage("audioharbor.deckStyle") private var deckStyleRaw: String = DeckStyle.turntable.rawValue
     @AppStorage("audioharbor.deck.contextRailVisible") private var contextRailVisible = true
+    #if os(macOS)
+    @AppStorage("audioharbor.deck.contextRailWidth") private var contextRailWidth: Double = NowPlayingView.defaultRailWidth
+    /// Live offset while the divider is being dragged; folded into `contextRailWidth` on release.
+    @State private var railDrag: CGFloat = 0
+    static let defaultRailWidth: Double = 300
+    private static let minRailWidth: CGFloat = 230
+    private static let maxRailWidth: CGFloat = 620
+    /// The deck itself never shrinks below this, however far the rail is dragged.
+    private static let minDeckWidth: CGFloat = 420
+    #endif
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showContextSheet = false
@@ -39,29 +49,45 @@ struct NowPlayingView: View {
         let style = deckStyle.wrappedValue
 
         #if os(macOS)
-        HStack(spacing: 0) {
-            deckChrome(
-                playback: playback,
-                track: track,
-                style: style,
-                progress: progress,
-                display: display,
-                duration: duration
-            )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        GeometryReader { geo in
+            let limit = railLimit(in: geo.size.width)
+            HStack(spacing: 0) {
+                deckChrome(
+                    playback: playback,
+                    track: track,
+                    style: style,
+                    progress: progress,
+                    display: display,
+                    duration: duration
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            if contextRailVisible {
-                Divider().overlay(HarborColor.aluminumDark.opacity(0.6))
-                DeckContextRail {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        contextRailVisible = false
+                if contextRailVisible {
+                    RailResizeHandle(
+                        onDrag: { railDrag = -$0 },
+                        onDragEnd: { translation in
+                            contextRailWidth = Double(clampRailWidth(contextRailWidth - Double(translation), limit: limit))
+                            railDrag = 0
+                        },
+                        onReset: {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                contextRailWidth = Double(clampRailWidth(Self.defaultRailWidth, limit: limit))
+                                railDrag = 0
+                            }
+                        }
+                    )
+                    DeckContextRail {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            contextRailVisible = false
+                        }
                     }
+                    .frame(width: clampRailWidth(contextRailWidth + Double(railDrag), limit: limit))
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
-                .frame(width: 300)
-                .transition(.move(edge: .trailing).combined(with: .opacity))
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .animation(.easeInOut(duration: 0.2), value: contextRailVisible)
         }
-        .animation(.easeInOut(duration: 0.2), value: contextRailVisible)
         #else
         GeometryReader { geo in
             ZStack(alignment: .bottom) {
@@ -439,6 +465,18 @@ struct NowPlayingView: View {
         return nil
     }
 
+    #if os(macOS)
+    /// Widest the rail may get in this window, so the deck keeps `minDeckWidth`.
+    private func railLimit(in totalWidth: CGFloat) -> CGFloat {
+        guard totalWidth > 0 else { return Self.maxRailWidth }
+        return max(Self.minRailWidth, min(Self.maxRailWidth, totalWidth - Self.minDeckWidth))
+    }
+
+    private func clampRailWidth(_ width: Double, limit: CGFloat) -> CGFloat {
+        min(max(CGFloat(width), Self.minRailWidth), limit)
+    }
+    #endif
+
     private func timeString(_ t: TimeInterval) -> String {
         guard t.isFinite else { return "0:00" }
         let total = Int(t)
@@ -483,6 +521,64 @@ private struct IPadQueuePanel: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(HarborColor.aluminumDark.opacity(0.55), lineWidth: 1)
         )
+    }
+}
+#endif
+
+#if os(macOS)
+/// Draggable divider between the deck and the context rail. Double-click resets the width.
+private struct RailResizeHandle: View {
+    var onDrag: (CGFloat) -> Void
+    var onDragEnd: (CGFloat) -> Void
+    var onReset: () -> Void
+
+    @State private var isHovering = false
+    @State private var isDragging = false
+
+    private var isActive: Bool { isHovering || isDragging }
+
+    var body: some View {
+        Rectangle()
+            .fill(Color.clear)
+            .frame(width: 9)
+            .frame(maxHeight: .infinity)
+            .overlay(
+                Rectangle()
+                    .fill(isActive ? HarborColor.amber.opacity(0.7) : HarborColor.aluminumDark.opacity(0.6))
+                    .frame(width: isActive ? 2 : 1)
+            )
+            .contentShape(Rectangle())
+            .onHover { hovering in
+                guard hovering != isHovering else { return }
+                isHovering = hovering
+                if hovering {
+                    NSCursor.resizeLeftRight.push()
+                } else if !isDragging {
+                    NSCursor.pop()
+                }
+            }
+            .onDisappear {
+                if isHovering {
+                    NSCursor.pop()
+                    isHovering = false
+                }
+            }
+            .gesture(
+                DragGesture(minimumDistance: 1)
+                    .onChanged { value in
+                        isDragging = true
+                        onDrag(value.translation.width)
+                    }
+                    .onEnded { value in
+                        isDragging = false
+                        onDragEnd(value.translation.width)
+                    }
+            )
+            .onTapGesture(count: 2, perform: onReset)
+            .animation(.easeInOut(duration: 0.15), value: isActive)
+            .accessibilityElement()
+            .accessibilityLabel("Resize queue sidebar")
+            .accessibilityHint("Drag left or right. Double-click to reset.")
     }
 }
 #endif
