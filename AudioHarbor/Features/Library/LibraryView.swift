@@ -229,44 +229,54 @@ struct LibraryView: View {
 
         case .audioFile:
             let track = appModel.library.trackForPlayback(at: hit.entry.url, identity: hit.entry.id)
-            Button {
-                let playback = appModel.library.folderPlaybackQueue(startingAt: hit.entry.url, identity: hit.entry.id)
-                let folderName = hit.entry.url.deletingLastPathComponent().lastPathComponent
-                appModel.playback.play(
-                    track: playback.track,
-                    in: playback.queue,
-                    sourceName: folderName,
-                    sourceKind: "Folder"
-                )
-                appModel.selectedTab = .nowPlaying
-            } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: "music.note")
-                        .foregroundStyle(HarborColor.amber)
-                        .frame(width: 22)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(track.title)
-                            .font(HarborFont.title(14))
-                            .foregroundStyle(HarborColor.ivory)
-                            .lineLimit(1)
-                        Text(hit.relativePath)
-                            .font(HarborFont.body(11))
-                            .foregroundStyle(HarborColor.ivoryDim)
-                            .lineLimit(1)
+            let folderName = hit.entry.url.deletingLastPathComponent().lastPathComponent
+            HStack(spacing: 10) {
+                Button {
+                    playFolderOfHit(hit, startingAtHit: true)
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "music.note")
+                            .foregroundStyle(HarborColor.amber)
+                            .frame(width: 22)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(track.title)
+                                .font(HarborFont.title(14))
+                                .foregroundStyle(HarborColor.ivory)
+                                .lineLimit(1)
+                            Text(hit.relativePath)
+                                .font(HarborFont.body(11))
+                                .foregroundStyle(HarborColor.ivoryDim)
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: 8)
+                        FormatBadge(
+                            format: track.format,
+                            sampleRateHz: track.sampleRateHz,
+                            bitDepth: track.bitDepth
+                        )
                     }
-                    Spacer()
-                    FormatBadge(
-                        format: track.format,
-                        sampleRateHz: track.sampleRateHz,
-                        bitDepth: track.bitDepth
-                    )
+                    .padding(.vertical, 5)
+                    .contentShape(Rectangle())
                 }
-                .padding(.vertical, 5)
-                .contentShape(Rectangle())
+                .buttonStyle(.plain)
+
+                HarborIconButton(
+                    systemName: "play.square.stack",
+                    help: "Play the whole \"\(folderName)\" folder from the top"
+                ) {
+                    playFolderOfHit(hit, startingAtHit: false)
+                }
             }
-            .buttonStyle(.plain)
             .contextMenu {
+                Button("Play This Track First") {
+                    playFolderOfHit(hit, startingAtHit: true)
+                }
+                Button("Play Folder “\(folderName)” from Start") {
+                    playFolderOfHit(hit, startingAtHit: false)
+                }
+                Divider()
                 Button("Reveal in Folders") {
+                    searchDraft = ""
                     appModel.library.searchQuery = ""
                     appModel.library.revealInFolders(url: hit.entry.url)
                 }
@@ -281,6 +291,22 @@ struct LibraryView: View {
                 }
             }
         }
+    }
+
+    /// Queue the folder holding the hit — either from the hit itself or from the folder's first track.
+    private func playFolderOfHit(_ hit: FolderSearchHit, startingAtHit: Bool) {
+        let playback = appModel.library.folderPlaybackQueue(
+            startingAt: hit.entry.url,
+            identity: hit.entry.id
+        )
+        guard let start = startingAtHit ? playback.track : playback.queue.first else { return }
+        appModel.playback.play(
+            track: start,
+            in: playback.queue,
+            sourceName: hit.entry.url.deletingLastPathComponent().lastPathComponent,
+            sourceKind: "Folder"
+        )
+        appModel.selectedTab = .nowPlaying
     }
 
     private var folderRootsList: some View {
