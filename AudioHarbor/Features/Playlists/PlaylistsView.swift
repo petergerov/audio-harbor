@@ -1,17 +1,40 @@
 import SwiftUI
 
+private enum PlaylistBrowserScope: String, CaseIterable, Identifiable {
+    case playlists
+    case artists
+    case labels
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .playlists: "Playlists"
+        case .artists: "Artists"
+        case .labels: "Labels"
+        }
+    }
+
+    func contains(_ item: PlaylistBrowserItem) -> Bool {
+        switch (self, item) {
+        case (.playlists, .playlist): true
+        case (.artists, .artist): true
+        case (.labels, .label): true
+        default: false
+        }
+    }
+}
+
 private enum PlaylistBrowserItem: Hashable, Identifiable {
     case playlist(UUID)
     case artist(String)
     case label(String)
-    case year(Int)
 
     var id: String {
         switch self {
         case .playlist(let id): "playlist-\(id.uuidString)"
         case .artist(let name): "artist-\(name)"
         case .label(let name): "label-\(name)"
-        case .year(let year): "year-\(year)"
         }
     }
 
@@ -20,7 +43,6 @@ private enum PlaylistBrowserItem: Hashable, Identifiable {
         case .playlist: "Playlist"
         case .artist(let name): name
         case .label(let name): name
-        case .year(let year): String(year)
         }
     }
 
@@ -29,7 +51,6 @@ private enum PlaylistBrowserItem: Hashable, Identifiable {
         case .playlist: "Playlist"
         case .artist: "Artist"
         case .label: "Label"
-        case .year: "Year"
         }
     }
 }
@@ -44,6 +65,14 @@ struct PlaylistsView: View {
     @State private var renameDraft = ""
     @State private var renaming: Playlist?
     @State private var selection: PlaylistBrowserItem?
+    @AppStorage("audioharbor.playlists.browserScope") private var browserScopeRaw: String = PlaylistBrowserScope.playlists.rawValue
+
+    private var browserScope: Binding<PlaylistBrowserScope> {
+        Binding(
+            get: { PlaylistBrowserScope(rawValue: browserScopeRaw) ?? .playlists },
+            set: { browserScopeRaw = $0.rawValue }
+        )
+    }
 
     var body: some View {
         ReceiverChassis {
@@ -87,14 +116,13 @@ struct PlaylistsView: View {
             }
         }
         #endif
-        .alert("New Playlist", isPresented: $isCreating) {
-            TextField("Name", text: $newName)
-            Button("Cancel", role: .cancel) {
-                newName = ""
+        .onChange(of: browserScopeRaw) { _, _ in
+            if let selection, !browserScope.wrappedValue.contains(selection) {
+                self.selection = nil
             }
-            Button("Create") {
-                createManual()
-            }
+        }
+        .sheet(isPresented: $isCreating) {
+            newPlaylistSheet
         }
         .alert("Rename Playlist", isPresented: Binding(
             get: { renaming != nil },
@@ -113,9 +141,8 @@ struct PlaylistsView: View {
 
     private var header: some View {
         ScreenHeader(
-            kicker: "Collections",
             title: "Playlists",
-            subtitle: "Your lists, plus artists, labels, and years from the catalogue."
+            subtitle: "Switch the list on the left — playlists, artists, labels."
         ) {
             HarborButton(
                 title: "Add Playlist",
@@ -130,114 +157,132 @@ struct PlaylistsView: View {
     }
 
     private var browserSidebar: some View {
-        List(selection: $selection) {
-            Section {
-                if appModel.playlists.playlists.filter({ !$0.isSmart }).isEmpty {
-                    Text("No playlists yet")
-                        .font(HarborFont.body(13))
-                        .foregroundStyle(HarborColor.ivoryDim)
-                        .listRowBackground(HarborColor.faceplate)
-                } else {
-                    ForEach(appModel.playlists.playlists.filter { !$0.isSmart }) { playlist in
-                        sidebarRow(
-                            title: playlist.name,
-                            subtitle: "\(playlist.trackPaths.count) tracks",
-                            systemImage: "music.note.list",
-                            item: .playlist(playlist.id)
-                        )
-                        .contextMenu {
-                            Button("Play") { play(item: .playlist(playlist.id)) }
-                            Button("Rename") {
-                                renameDraft = playlist.name
-                                renaming = playlist
-                            }
-                            Button("Delete", role: .destructive) {
-                                if selection == .playlist(playlist.id) { selection = nil }
-                                appModel.playlists.delete(playlist)
-                            }
-                        }
-                    }
-                    .onDelete { offsets in
-                        let manuals = appModel.playlists.playlists.filter { !$0.isSmart }
-                        offsets.map { manuals[$0] }.forEach(appModel.playlists.delete)
-                    }
+        VStack(spacing: 10) {
+            scopePicker
+            List(selection: $selection) {
+                switch browserScope.wrappedValue {
+                case .playlists:
+                    playlistsSection
+                case .artists:
+                    artistsSection
+                case .labels:
+                    labelsSection
                 }
-            } header: {
-                EngravedLabel(text: "Playlists")
             }
+            .listStyle(.sidebar)
+            .scrollContentBackground(.hidden)
+        }
+        .padding(.top, 8)
+    }
 
-            Section {
-                if appModel.library.artistFacets.isEmpty {
-                    Text("No artists yet")
-                        .font(HarborFont.body(13))
-                        .foregroundStyle(HarborColor.ivoryDim)
-                        .listRowBackground(HarborColor.faceplate)
-                } else {
-                    ForEach(appModel.library.artistFacets) { facet in
-                        sidebarRow(
-                            title: facet.name,
-                            subtitle: "\(facet.count) tracks",
-                            systemImage: "person.wave.2",
-                            item: .artist(facet.name)
-                        )
-                        .contextMenu {
-                            Button("Play") { play(item: .artist(facet.name)) }
-                        }
+    private var scopePicker: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(PlaylistBrowserScope.allCases) { scope in
+                    let selected = browserScope.wrappedValue == scope
+                    Button {
+                        browserScope.wrappedValue = scope
+                    } label: {
+                        Text(scope.title.uppercased())
+                            .font(HarborFont.panel(9))
+                            .tracking(0.8)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 7)
+                            .foregroundStyle(selected ? HarborColor.faceplate : HarborColor.ivoryDim)
+                            .background(
+                                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                    .fill(selected ? HarborColor.amber : HarborColor.faceplate.opacity(0.5))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                            .stroke(HarborColor.aluminumDark, lineWidth: 1)
+                                    )
+                            )
                     }
+                    .buttonStyle(.plain)
                 }
-            } header: {
-                EngravedLabel(text: "Artists")
             }
+            .padding(.horizontal, 10)
+        }
+        .scrollClipDisabled()
+        .accessibilityLabel("Switch between playlists, artists, and labels")
+    }
 
-            Section {
-                if appModel.library.labelFacets.isEmpty {
-                    Text("Add labels from Catalogue (right‑click a track).")
-                        .font(HarborFont.body(13))
-                        .foregroundStyle(HarborColor.ivoryDim)
-                        .listRowBackground(HarborColor.faceplate)
-                } else {
-                    ForEach(appModel.library.labelFacets) { facet in
-                        sidebarRow(
-                            title: facet.name,
-                            subtitle: "\(facet.count) tracks",
-                            systemImage: "tag",
-                            item: .label(facet.name)
-                        )
-                        .contextMenu {
-                            Button("Play") { play(item: .label(facet.name)) }
-                        }
+    @ViewBuilder
+    private var playlistsSection: some View {
+        if appModel.playlists.playlists.filter({ !$0.isSmart }).isEmpty {
+            Text("No playlists yet")
+                .font(HarborFont.body(13))
+                .foregroundStyle(HarborColor.ivoryDim)
+                .listRowBackground(HarborColor.faceplate)
+        } else {
+            ForEach(appModel.playlists.playlists.filter { !$0.isSmart }) { playlist in
+                sidebarRow(
+                    title: playlist.name,
+                    subtitle: "\(playlist.trackPaths.count) tracks",
+                    systemImage: "music.note.list",
+                    item: .playlist(playlist.id)
+                )
+                .contextMenu {
+                    Button("Play") { play(item: .playlist(playlist.id)) }
+                    Button("Rename") {
+                        renameDraft = playlist.name
+                        renaming = playlist
+                    }
+                    Button("Delete", role: .destructive) {
+                        if selection == .playlist(playlist.id) { selection = nil }
+                        appModel.playlists.delete(playlist)
                     }
                 }
-            } header: {
-                EngravedLabel(text: "Labels")
             }
-
-            Section {
-                if appModel.library.yearFacets.isEmpty {
-                    Text("No release years in metadata yet")
-                        .font(HarborFont.body(13))
-                        .foregroundStyle(HarborColor.ivoryDim)
-                        .listRowBackground(HarborColor.faceplate)
-                } else {
-                    ForEach(appModel.library.yearFacets) { facet in
-                        let year = Int(facet.name) ?? 0
-                        sidebarRow(
-                            title: facet.name,
-                            subtitle: "\(facet.count) tracks",
-                            systemImage: "calendar",
-                            item: .year(year)
-                        )
-                        .contextMenu {
-                            Button("Play") { play(item: .year(year)) }
-                        }
-                    }
-                }
-            } header: {
-                EngravedLabel(text: "Years")
+            .onDelete { offsets in
+                let manuals = appModel.playlists.playlists.filter { !$0.isSmart }
+                offsets.map { manuals[$0] }.forEach(appModel.playlists.delete)
             }
         }
-        .listStyle(.sidebar)
-        .scrollContentBackground(.hidden)
+    }
+
+    @ViewBuilder
+    private var artistsSection: some View {
+        if appModel.library.artistFacets.isEmpty {
+            Text("No artists yet")
+                .font(HarborFont.body(13))
+                .foregroundStyle(HarborColor.ivoryDim)
+                .listRowBackground(HarborColor.faceplate)
+        } else {
+            ForEach(appModel.library.artistFacets) { facet in
+                sidebarRow(
+                    title: facet.name,
+                    subtitle: "\(facet.count) tracks",
+                    systemImage: "person.wave.2",
+                    item: .artist(facet.name)
+                )
+                .contextMenu {
+                    Button("Play") { play(item: .artist(facet.name)) }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var labelsSection: some View {
+        if appModel.library.labelFacets.isEmpty {
+            Text("Add labels from Catalogue (right‑click a track).")
+                .font(HarborFont.body(13))
+                .foregroundStyle(HarborColor.ivoryDim)
+                .listRowBackground(HarborColor.faceplate)
+        } else {
+            ForEach(appModel.library.labelFacets) { facet in
+                sidebarRow(
+                    title: facet.name,
+                    subtitle: "\(facet.count) tracks",
+                    systemImage: "tag",
+                    item: .label(facet.name)
+                )
+                .contextMenu {
+                    Button("Play") { play(item: .label(facet.name)) }
+                }
+            }
+        }
     }
 
     private func sidebarRow(
@@ -354,7 +399,7 @@ struct PlaylistsView: View {
             VStack(spacing: 12) {
                 Spacer()
                 EngravedLabel(text: "Select a collection")
-                Text("Choose a playlist, artist, label, or year on the left.")
+                Text("Choose a playlist, artist, or label on the left.")
                     .font(HarborFont.body(14))
                     .foregroundStyle(HarborColor.ivoryDim)
                     .multilineTextAlignment(.center)
@@ -374,8 +419,6 @@ struct PlaylistsView: View {
             return appModel.library.tracks(forArtist: name)
         case .label(let name):
             return appModel.library.tracks(forLabel: name)
-        case .year(let year):
-            return appModel.library.tracks(forYear: year)
         }
     }
 
@@ -385,8 +428,6 @@ struct PlaylistsView: View {
             return appModel.playlists.playlists.first(where: { $0.id == id })?.name ?? "Playlist"
         case .artist(let name), .label(let name):
             return name
-        case .year(let year):
-            return String(year)
         }
     }
 
@@ -402,8 +443,6 @@ struct PlaylistsView: View {
             return "No tracks for this artist in the catalogue."
         case .label:
             return "No tracks use this label yet."
-        case .year:
-            return "No tracks with this release year."
         }
     }
 
@@ -434,8 +473,65 @@ struct PlaylistsView: View {
         appModel.selectedTab = .nowPlaying
     }
 
+    private var newPlaylistSheet: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            EngravedLabel(text: "Collections")
+            Text("New Playlist")
+                .font(HarborFont.title(18))
+                .foregroundStyle(HarborColor.ivory)
+            TextField("Name", text: $newName)
+                .textFieldStyle(.plain)
+                .font(HarborFont.body(14))
+                .foregroundStyle(HarborColor.ivory)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(HarborColor.faceplateLift)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .stroke(HarborColor.aluminumDark.opacity(0.7), lineWidth: 1)
+                        )
+                )
+                .onSubmit(createManual)
+            HStack {
+                Spacer()
+                HarborButton(title: "Cancel", kind: .secondary) {
+                    newName = ""
+                    isCreating = false
+                }
+                HarborButton(title: "Create", kind: .primary, action: createManual)
+            }
+        }
+        .padding(22)
+        .frame(minWidth: 360)
+        .background(HarborColor.faceplate)
+        #if os(macOS)
+        .frame(width: 400)
+        #endif
+    }
+
     private func createManual() {
-        appModel.playlists.createPlaylist(named: newName)
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = trimmed.isEmpty ? nextUntitledPlaylistName() : trimmed
+        appModel.playlists.createPlaylist(named: name)
+        browserScopeRaw = PlaylistBrowserScope.playlists.rawValue
+        if let created = appModel.playlists.playlists.first(where: { !$0.isSmart && $0.name == name }) {
+            selection = .playlist(created.id)
+        }
         newName = ""
+        isCreating = false
+    }
+
+    private func nextUntitledPlaylistName() -> String {
+        let existing = Set(appModel.playlists.playlists.map(\.name))
+        if !existing.contains("Untitled Playlist") {
+            return "Untitled Playlist"
+        }
+        var index = 2
+        while existing.contains("Untitled Playlist \(index)") {
+            index += 1
+        }
+        return "Untitled Playlist \(index)"
     }
 }

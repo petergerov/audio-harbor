@@ -136,13 +136,13 @@ struct EngravedLabel: View {
 }
 
 struct ScreenHeader<Trailing: View>: View {
-    let kicker: String
+    var kicker: String? = nil
     let title: String
     var subtitle: String?
     @ViewBuilder var trailing: Trailing
 
     init(
-        kicker: String,
+        kicker: String? = nil,
         title: String,
         subtitle: String? = nil,
         @ViewBuilder trailing: () -> Trailing
@@ -156,7 +156,9 @@ struct ScreenHeader<Trailing: View>: View {
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
-                EngravedLabel(text: kicker)
+                if let kicker {
+                    EngravedLabel(text: kicker)
+                }
                 Text(title)
                     .font(HarborFont.display(30))
                     .foregroundStyle(HarborColor.ivory)
@@ -176,7 +178,7 @@ struct ScreenHeader<Trailing: View>: View {
 }
 
 extension ScreenHeader where Trailing == EmptyView {
-    init(kicker: String, title: String, subtitle: String? = nil) {
+    init(kicker: String? = nil, title: String, subtitle: String? = nil) {
         self.init(kicker: kicker, title: title, subtitle: subtitle) { EmptyView() }
     }
 }

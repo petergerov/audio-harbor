@@ -69,7 +69,6 @@ struct LibraryView: View {
 
     private var header: some View {
         ScreenHeader(
-            kicker: "Listening room",
             title: "Catalogue",
             subtitle: catalogueSubtitle
         ) {
