@@ -7,7 +7,7 @@
 | UI | SwiftUI (multiplatform) |
 | Language | Swift 5.10+ / Swift 6 concurrency where safe |
 | App shape | One shared target via XcodeGen → iOS + macOS |
-| Persistence | SwiftData (library index) + FilePresenter/FSEvents (folder watch, Mac) |
+| Persistence | SQLite+FTS5 catalogue in Application Support; portable library file for playlists/labels (see below) |
 | Metadata | AVFoundation + TagLib-style fallback later for exotic tags |
 | Audio | Core Audio / AVAudioEngine; custom DSD path |
 | Min OS | iOS 17 · macOS 14 (bump if needed for APIs) |
@@ -42,9 +42,9 @@
 └───────────────┬──────────┘  └───────┬───────────────────┘
                 │                     │
 ┌───────────────▼──────────┐  ┌───────▼───────────────────┐
-│   SwiftData + Filesystem │  │      Audio Engine         │
-│                          │  │ Protocol + CoreAudio impl │
-│                          │  │ Decoders: PCM · DSD stub  │
+│   SQLite catalogue       │  │      Audio Engine         │
+│   + portable library     │  │ Protocol + CoreAudio impl │
+│   + folder bookmarks     │  │ Decoders: PCM · DSD       │
 └──────────────────────────┘  └───────────────────────────┘
 ```
 
@@ -101,11 +101,85 @@ Rules:
 
 ## Library architecture
 
-1. **Folder roots** stored in settings (security-scoped bookmarks on both platforms).
-2. **Scanner** walks trees, hashes path+mtime, extracts tags/artwork.
-3. **SwiftData** stores `TrackEntity`, `AlbumEntity`, relations; UI never scans live on every open.
-4. **Artwork** on-disk cache keyed by album id / file hash.
-5. **Search** via SwiftData predicates first; Spotlight later if needed.
+1. **Folder roots** stored as security-scoped bookmarks (this Mac + this app only).
+2. **Scanner** walks trees, hashes path+mtime, extracts tags/artwork. Incremental; Rebuild is explicit.
+3. **Catalogue** is SQLite+FTS5 (`catalogue.sqlite` in Application Support). UI never scans live on every open.
+4. **Artwork** on-disk cache keyed by file hash.
+5. **Search** via FTS5.
+
+Identity of a track is `cataloguePath` (file path, plus virtual suffixes for SACD ISO / DFF chapters). Playlists and labels must key off that, never off scan UUIDs.
+
+---
+
+## Persistence (later)
+
+Three kinds of data. Do not store them in the same place.
+
+| Kind | Examples | Source of truth | Regenerable? |
+|---|---|---|---|
+| Access | Security-scoped folder bookmarks | App container / Keychain | No on a new Mac — user re-adds the folder |
+| Cache | `catalogue.sqlite`, artwork, SACD extract | Application Support + Caches | Yes — rescan / rebuild |
+| Authored | Playlists, smart rules, labels | Portable Harbor library file | No |
+
+**Rule:** files stay in the folders the user adds. Harbor’s memory of those files lives in Application Support. Harbor’s opinions (playlists, labels) live in a portable library file the user can back up — never inside every album folder, never only in UserDefaults.
+
+### Do not put in the music folders
+
+- The SQLite index. It is a speed cache. Two roots, a NAS, and Mac App Store `user-selected.read-only` all fight writing `catalogue.sqlite` next to FLACs.
+- The only copy of playlists or labels. Album folders are not a database. A playlist can span roots.
+- Tags written into the audio files by default. Mutating Vorbis/ID3 fights *Local. Bit-perfect. Calm.* Optional “write tags to files” can exist later, off.
+
+### Do not leave authored data in UserDefaults
+
+Playlists are JSON in UserDefaults today (`audioharbor.playlists`). Labels sit on SQLite rows and die on Rebuild. UserDefaults is size-capped, invisible, and dies with the container. Fine as a bootstrap, not as the library.
+
+### Target layout
+
+```
+Application Support/AudioHarbor/
+  catalogue.sqlite          ← cache, rebuildable
+  artwork/
+  bookmarks.json            ← this Mac only (security-scoped blobs)
+
+Caches/AudioHarbor/
+  sacd-extracts/            ← disposable
+
+~/Music/Audio Harbor/       ← user-owned; backup this
+  library.json              ← playlists, smart rules, labels
+  exports/                  ← optional M3U8 / XSPF
+```
+
+The library file location should be choosable (internal SSD, NAS, the music volume). Default `~/Music/Audio Harbor/` is enough for v1 of this work.
+
+### Track identity in the library file
+
+Relative paths from each folder root, not absolute paths and not UUIDs. `/Volumes/Music` vs `/Volumes/Music 1` must not empty playlists. Virtual catalogue paths (`path#sacd/N`, `path#dff/N`) stay as suffixes on the relative path.
+
+### Optional export into the tree
+
+Writing M3U8/XSPF *into* an added folder is a feature so foobar/VLC see the same list. It is a copy, not the source of truth. Needs read-write access the MAS sandbox does not grant today — ask only for that export.
+
+### New Mac / reinstall
+
+1. Re-add the music folder (bookmark cannot travel).
+2. Open the same `library.json` (or it lives on the music disk already).
+3. Scan rebuilds `catalogue.sqlite`; playlists/labels rematch on relative paths.
+
+### iCloud later
+
+Sync the small library file, not the audio. See [`PRODUCT.md`](PRODUCT.md) (Library Pro: playlist sync, not files). No account in the product; iCloud is the user’s Apple ID, not Harbor’s.
+
+**Not a date — an order.** iCloud is not in MVP and not in the first Mac App Store upload. Do this only after Exclusive/DoP and the sandbox are boring.
+
+1. **Now / next persistence slice:** move playlists + labels out of UserDefaults / rebuild-fragile SQLite columns into `library.json` (app container or `~/Music/Audio Harbor/`). Relative paths. That is the whole feature for a while.
+2. **Then:** user-picked location for that file (external disk / NAS). Export M3U optional.
+3. **Then, Library Pro / Continuity:** iCloud Drive on the same small file so Mac and iPhone share playlists and labels. Catalogue SQLite stays local and rebuilds. Folder bookmarks stay per device — user re-adds the folder on the phone if needed.
+
+Do not iCloud-sync `catalogue.sqlite` or bookmarks. Do not invent a Harbor account to sync it.
+
+### MAS sandbox
+
+Keep `user-selected.read-only` + app-scope bookmarks for the collection. The portable library file is user-selected or in the app’s own container until they pick a folder. Do not require write access to the music tree for Harbor to work.
 
 ---
 
