@@ -32,8 +32,7 @@ final class LibraryService {
     private var tracksByYear: [Int: [Track]] = [:]
     private var indexedDirectoryPaths: [String] = []
 
-    /// Albums (metadata, `.smart`) vs Directories (filesystem tree, `.folders`).
-    /// Directories is the default; Albums is only used when it was picked explicitly.
+    /// Catalogue tabs: Directories (`.folders`), Albums (`.smart`), Artists (`.artists`).
     var browseMode: CatalogueBrowseMode = {
         let raw = UserDefaults.standard.string(forKey: "audioharbor.catalogue.browseMode") ?? ""
         return CatalogueBrowseMode(rawValue: raw) ?? .folders
@@ -101,9 +100,24 @@ final class LibraryService {
         }
     }
 
+    var filteredArtistFacets: [LibraryFacet] {
+        guard let paths = searchHitPaths else { return artistFacets }
+        return artistFacets.compactMap { facet in
+            let count = tracks(forArtist: facet.name).filter { paths.contains($0.cataloguePath) }.count
+            guard count > 0 else { return nil }
+            return LibraryFacet(id: facet.id, name: facet.name, count: count)
+        }
+    }
+
     func visibleTracks(in album: Album) -> [Track] {
         guard let paths = searchHitPaths else { return album.tracks }
         return album.tracks.filter { paths.contains($0.cataloguePath) }
+    }
+
+    func visibleTracks(forArtist name: String) -> [Track] {
+        let tracks = tracks(forArtist: name)
+        guard let paths = searchHitPaths else { return tracks }
+        return tracks.filter { paths.contains($0.cataloguePath) }
     }
 
     func tracks(forArtist name: String) -> [Track] {
@@ -262,7 +276,7 @@ final class LibraryService {
             Track(
                 title: url.deletingPathExtension().lastPathComponent,
                 artist: "Unknown Artist",
-                album: url.deletingLastPathComponent().lastPathComponent,
+                album: "Unknown Album",
                 duration: 0,
                 format: format,
                 url: url
@@ -673,19 +687,27 @@ final class LibraryService {
     }
 
     nonisolated private static func makeAlbums(from tracks: [Track]) -> [Album] {
-        Dictionary(grouping: tracks) { "\($0.album)|\($0.artist)" }
+        Dictionary(grouping: tracks) { track -> String in
+            if CatalogueUnknown.isAlbum(track.album) { return "unknown|" }
+            return "\(track.album)|\(track.artist)"
+        }
             .values
             .map { list in
                 let first = list[0]
+                let unknownAlbum = CatalogueUnknown.isAlbum(first.album)
                 return Album(
-                    title: first.album,
-                    artist: first.artist,
-                    year: first.year,
+                    title: unknownAlbum ? CatalogueUnknown.display : first.album,
+                    artist: unknownAlbum ? CatalogueUnknown.display : first.artist,
+                    year: unknownAlbum ? nil : first.year,
                     tracks: list.sorted { ($0.trackNumber ?? 9999) < ($1.trackNumber ?? 9999) },
                     artworkHash: list.first(where: { $0.artworkHash != nil })?.artworkHash
                 )
             }
-            .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+            .sorted { lhs, rhs in
+                if CatalogueUnknown.isAlbum(lhs.title) { return false }
+                if CatalogueUnknown.isAlbum(rhs.title) { return true }
+                return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+            }
     }
 
     nonisolated private static func sortFolderTracks(_ lhs: Track, _ rhs: Track) -> Bool {
@@ -707,10 +729,10 @@ final class LibraryService {
         years.reserveCapacity(64)
 
         for track in tracks {
-            let artistKey = track.artist.lowercased()
-            if !track.artist.isEmpty {
-                artists[artistKey, default: []].append(track)
-            }
+            let artistKey = CatalogueUnknown.isArtist(track.artist)
+                ? "unknown"
+                : track.artist.lowercased()
+            artists[artistKey, default: []].append(track)
             for label in track.labels {
                 labels[label.lowercased(), default: []].append(track)
             }
@@ -739,12 +761,17 @@ final class LibraryService {
         tracksByLabelKey = labels
         tracksByYear = years
 
-        artistFacets = artists.values.compactMap { group in
-            let name = group.first?.artist ?? ""
-            guard !name.isEmpty, name != "Unknown Artist" else { return nil }
-            return LibraryFacet(id: "artist-\(name)", name: name, count: group.count)
+        artistFacets = artists.map { key, group in
+            let name = key == "unknown"
+                ? CatalogueUnknown.display
+                : (group.first?.artist ?? key)
+            return LibraryFacet(id: "artist-\(key)", name: name, count: group.count)
         }
-        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        .sorted { lhs, rhs in
+            if CatalogueUnknown.isArtist(lhs.name) { return false }
+            if CatalogueUnknown.isArtist(rhs.name) { return true }
+            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+        }
 
         labelFacets = labels.map { key, group in
             let name = group.flatMap(\.labels).first { $0.lowercased() == key } ?? key
@@ -1656,7 +1683,7 @@ enum CatalogueIndexer {
         guard let header = try? DSDDecoder.probe(url: file.url) else { return [] }
         let chapters = DFFChapters.list(url: file.url, header: header)
         guard chapters.count > 1 else { return [] }
-        let album = file.url.deletingLastPathComponent().lastPathComponent
+        let album = "Unknown Album"
         return chapters.map { chapter in
             let identity = VirtualTrackPath.dff(file.path, track: chapter.number)
             return IndexedTrackRecord(

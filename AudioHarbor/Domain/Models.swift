@@ -125,6 +125,27 @@ struct LibraryFacet: Identifiable, Hashable, Sendable {
     var count: Int
 }
 
+enum CatalogueUnknown {
+    static let display = "Unknown"
+
+    static func isArtist(_ name: String) -> Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return true }
+        return trimmed.compare("Unknown Artist", options: .caseInsensitive) == .orderedSame
+            || trimmed.compare("Unknown", options: .caseInsensitive) == .orderedSame
+    }
+
+    static func isAlbum(_ name: String) -> Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return true }
+        return trimmed.compare("Unknown Album", options: .caseInsensitive) == .orderedSame
+            || trimmed.compare("Unknown", options: .caseInsensitive) == .orderedSame
+    }
+
+    static func artistSortsLast(_ name: String) -> Bool { isArtist(name) }
+    static func albumSortsLast(_ name: String) -> Bool { isAlbum(name) }
+}
+
 struct Album: Identifiable, Hashable, Sendable {
     let id: UUID
     var title: String
@@ -167,23 +188,26 @@ struct Album: Identifiable, Hashable, Sendable {
 }
 
 enum CatalogueBrowseMode: String, CaseIterable, Identifiable, Sendable {
-    /// Declaration order drives the Catalogue mode picker: Directories first, Albums second.
+    /// Catalogue tabs: Directories · Albums · Artists.
     case folders
     case smart
+    case artists
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .smart: "Albums"
         case .folders: "Directories"
+        case .smart: "Albums"
+        case .artists: "Artists"
         }
     }
 
     var subtitle: String {
         switch self {
-        case .smart: "Grouped by metadata, with artwork"
         case .folders: "Browse connected directories"
+        case .smart: "Grouped by metadata, with artwork"
+        case .artists: "Grouped by artist"
         }
     }
 }

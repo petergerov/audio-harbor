@@ -36,7 +36,7 @@ enum MetadataReader {
             return TrackMetadata(
                 title: fallbackTitle,
                 artist: "Unknown Artist",
-                album: url.deletingLastPathComponent().lastPathComponent,
+                album: "Unknown Album",
                 trackNumber: nil,
                 year: nil,
                 duration: header.duration,
@@ -50,7 +50,7 @@ enum MetadataReader {
             return TrackMetadata(
                 title: fallbackTitle,
                 artist: "Unknown Artist",
-                album: url.deletingLastPathComponent().lastPathComponent,
+                album: "Unknown Album",
                 trackNumber: nil,
                 year: nil,
                 duration: 0,
@@ -67,7 +67,7 @@ enum MetadataReader {
         var meta = TrackMetadata(
             title: fallbackTitle,
             artist: "Unknown Artist",
-            album: url.deletingLastPathComponent().lastPathComponent,
+            album: "Unknown Album",
             trackNumber: nil,
             year: nil,
             duration: 0,

@@ -2,7 +2,6 @@ import SwiftUI
 
 private enum PlaylistBrowserScope: String, CaseIterable, Identifiable {
     case playlists
-    case artists
     case labels
 
     var id: String { rawValue }
@@ -10,7 +9,6 @@ private enum PlaylistBrowserScope: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .playlists: "Playlists"
-        case .artists: "Artists"
         case .labels: "Labels"
         }
     }
@@ -18,7 +16,6 @@ private enum PlaylistBrowserScope: String, CaseIterable, Identifiable {
     func contains(_ item: PlaylistBrowserItem) -> Bool {
         switch (self, item) {
         case (.playlists, .playlist): true
-        case (.artists, .artist): true
         case (.labels, .label): true
         default: false
         }
@@ -27,13 +24,11 @@ private enum PlaylistBrowserScope: String, CaseIterable, Identifiable {
 
 private enum PlaylistBrowserItem: Hashable, Identifiable {
     case playlist(UUID)
-    case artist(String)
     case label(String)
 
     var id: String {
         switch self {
         case .playlist(let id): "playlist-\(id.uuidString)"
-        case .artist(let name): "artist-\(name)"
         case .label(let name): "label-\(name)"
         }
     }
@@ -41,7 +36,6 @@ private enum PlaylistBrowserItem: Hashable, Identifiable {
     var title: String {
         switch self {
         case .playlist: "Playlist"
-        case .artist(let name): name
         case .label(let name): name
         }
     }
@@ -49,7 +43,6 @@ private enum PlaylistBrowserItem: Hashable, Identifiable {
     var kindLabel: String {
         switch self {
         case .playlist: "Playlist"
-        case .artist: "Artist"
         case .label: "Label"
         }
     }
@@ -142,7 +135,7 @@ struct PlaylistsView: View {
     private var header: some View {
         ScreenHeader(
             title: "Playlists",
-            subtitle: "Switch the list on the left — playlists, artists, labels."
+            subtitle: "Switch the list on the left — playlists or labels."
         ) {
             HarborButton(
                 title: "Add Playlist",
@@ -163,8 +156,6 @@ struct PlaylistsView: View {
                 switch browserScope.wrappedValue {
                 case .playlists:
                     playlistsSection
-                case .artists:
-                    artistsSection
                 case .labels:
                     labelsSection
                 }
@@ -204,7 +195,7 @@ struct PlaylistsView: View {
             .padding(.horizontal, 10)
         }
         .scrollClipDisabled()
-        .accessibilityLabel("Switch between playlists, artists, and labels")
+        .accessibilityLabel("Switch between playlists and labels")
     }
 
     @ViewBuilder
@@ -237,28 +228,6 @@ struct PlaylistsView: View {
             .onDelete { offsets in
                 let manuals = appModel.playlists.playlists.filter { !$0.isSmart }
                 offsets.map { manuals[$0] }.forEach(appModel.playlists.delete)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var artistsSection: some View {
-        if appModel.library.artistFacets.isEmpty {
-            Text("No artists yet")
-                .font(HarborFont.body(13))
-                .foregroundStyle(HarborColor.ivoryDim)
-                .listRowBackground(HarborColor.faceplate)
-        } else {
-            ForEach(appModel.library.artistFacets) { facet in
-                sidebarRow(
-                    title: facet.name,
-                    subtitle: "\(facet.count) tracks",
-                    systemImage: "person.wave.2",
-                    item: .artist(facet.name)
-                )
-                .contextMenu {
-                    Button("Play") { play(item: .artist(facet.name)) }
-                }
             }
         }
     }
@@ -399,7 +368,7 @@ struct PlaylistsView: View {
             VStack(spacing: 12) {
                 Spacer()
                 EngravedLabel(text: "Select a collection")
-                Text("Choose a playlist, artist, or label on the left.")
+                Text("Choose a playlist or label on the left.")
                     .font(HarborFont.body(14))
                     .foregroundStyle(HarborColor.ivoryDim)
                     .multilineTextAlignment(.center)
@@ -415,8 +384,6 @@ struct PlaylistsView: View {
         case .playlist(let id):
             guard let playlist = appModel.playlists.playlists.first(where: { $0.id == id }) else { return [] }
             return appModel.playlists.tracks(for: playlist, from: appModel.library.allTracks)
-        case .artist(let name):
-            return appModel.library.tracks(forArtist: name)
         case .label(let name):
             return appModel.library.tracks(forLabel: name)
         }
@@ -426,7 +393,7 @@ struct PlaylistsView: View {
         switch item {
         case .playlist(let id):
             return appModel.playlists.playlists.first(where: { $0.id == id })?.name ?? "Playlist"
-        case .artist(let name), .label(let name):
+        case .label(let name):
             return name
         }
     }
@@ -439,8 +406,6 @@ struct PlaylistsView: View {
         switch item {
         case .playlist:
             return "Open Catalogue, right‑click a track, Add to Playlist."
-        case .artist:
-            return "No tracks for this artist in the catalogue."
         case .label:
             return "No tracks use this label yet."
         }

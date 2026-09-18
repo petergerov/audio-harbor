@@ -13,6 +13,7 @@ struct LibraryView: View {
     @State private var searchDraft = ""
     @State private var searchTask: Task<Void, Never>?
     @State private var expandedAlbumID: UUID?
+    @State private var expandedArtistName: String?
 
     var body: some View {
         @Bindable var library = appModel.library
@@ -31,6 +32,12 @@ struct LibraryView: View {
                         } else {
                             CatalogueAlbumList(expandedAlbumID: $expandedAlbumID)
                         }
+                    case .artists:
+                        if library.filteredArtistFacets.isEmpty {
+                            emptyState
+                        } else {
+                            CatalogueArtistList(expandedArtistName: $expandedArtistName)
+                        }
                     case .folders:
                         folderBrowser
                     }
@@ -48,6 +55,7 @@ struct LibraryView: View {
                 guard !Task.isCancelled else { return }
                 appModel.library.searchQuery = newValue
                 expandedAlbumID = nil
+                expandedArtistName = nil
             }
         }
         .fileImporter(
@@ -99,14 +107,9 @@ struct LibraryView: View {
             return "Demo library — add a directory to start."
         }
         if let status = appModel.library.indexStatusText {
-            let mode = appModel.library.browseMode == .smart
-                ? "Albums"
-                : "Directories"
-            return "\(mode) — \(status)."
+            return "\(appModel.library.browseMode.title) — \(status)."
         }
-        return appModel.library.browseMode == .smart
-            ? "Albums — artwork & metadata search."
-            : "Directories — walk your music as it sits on disk."
+        return "\(appModel.library.browseMode.title) — \(appModel.library.browseMode.subtitle.lowercased())."
     }
 
     private func presentAddDirectory() {
@@ -121,17 +124,33 @@ struct LibraryView: View {
     }
 
     private func modePicker(_ mode: Binding<CatalogueBrowseMode>) -> some View {
-        Picker("Browse mode", selection: mode) {
+        HStack(spacing: 6) {
             ForEach(CatalogueBrowseMode.allCases) { option in
-                Text(option.title).tag(option)
+                let selected = mode.wrappedValue == option
+                Button {
+                    appModel.library.setBrowseMode(option)
+                } label: {
+                    Text(option.title.uppercased())
+                        .font(HarborFont.panel(9))
+                        .tracking(0.8)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .foregroundStyle(selected ? HarborColor.faceplate : HarborColor.ivoryDim)
+                        .background(
+                            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                .fill(selected ? HarborColor.amber : HarborColor.faceplate.opacity(0.5))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                        .stroke(HarborColor.aluminumDark, lineWidth: 1)
+                                )
+                        )
+                }
+                .buttonStyle(.plain)
             }
+            Spacer(minLength: 0)
         }
-        .pickerStyle(.segmented)
-        .labelsHidden()
         .padding(.horizontal, 4)
-        .onChange(of: mode.wrappedValue) { _, newValue in
-            appModel.library.setBrowseMode(newValue)
-        }
+        .accessibilityLabel("Switch between directories, albums, and artists")
     }
 
     private func searchBar(_ query: Binding<String>, mode: CatalogueBrowseMode) -> some View {
@@ -140,9 +159,7 @@ struct LibraryView: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(HarborColor.ivoryDim)
                 TextField(
-                    mode == .smart
-                        ? "Find album, artist, track"
-                        : "Find directories & files",
+                    searchPrompt(for: mode),
                     text: query
                 )
                     .textFieldStyle(.plain)
@@ -150,6 +167,14 @@ struct LibraryView: View {
             }
         }
         .padding(.horizontal, 4)
+    }
+
+    private func searchPrompt(for mode: CatalogueBrowseMode) -> String {
+        switch mode {
+        case .folders: "Find directories & files"
+        case .smart: "Find album, artist, track"
+        case .artists: "Find artist, album, track"
+        }
     }
 
     @ViewBuilder
@@ -657,6 +682,105 @@ private struct CatalogueAlbumList: View {
                     in: album.tracks,
                     sourceName: album.title,
                     sourceKind: "Album"
+                )
+                appModel.selectedTab = .nowPlaying
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+private struct CatalogueArtistList: View {
+    @Environment(AppModel.self) private var appModel
+    @Binding var expandedArtistName: String?
+
+    var body: some View {
+        let playlists = appModel.playlists.playlists
+        let labels = appModel.library.allLabels
+        List {
+            ForEach(appModel.library.filteredArtistFacets) { facet in
+                let isExpanded = expandedArtistName == facet.name
+                let tracks = appModel.library.visibleTracks(forArtist: facet.name)
+                artistHeader(facet, trackCount: tracks.count, isExpanded: isExpanded)
+                    .listRowBackground(HarborColor.faceplate)
+                    .listRowSeparatorTint(HarborColor.aluminumDark.opacity(0.5))
+                if isExpanded {
+                    ForEach(tracks) { track in
+                        TrackRow(
+                            track: track,
+                            playlists: playlists,
+                            onPlay: {
+                                appModel.playback.play(
+                                    track: track,
+                                    in: tracks,
+                                    sourceName: facet.name,
+                                    sourceKind: "Artist"
+                                )
+                                appModel.selectedTab = .nowPlaying
+                            },
+                            onAddToPlaylist: { playlist in
+                                appModel.playlists.add(track, to: playlist)
+                            },
+                            onAddLabel: { label in
+                                appModel.library.addLabel(label, to: track)
+                            },
+                            onRemoveLabel: { label in
+                                appModel.library.removeLabel(label, from: track)
+                            },
+                            knownLabels: labels
+                        )
+                        .listRowBackground(HarborColor.faceplate)
+                        .listRowSeparatorTint(HarborColor.aluminumDark.opacity(0.5))
+                        .padding(.leading, 12)
+                    }
+                }
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+    }
+
+    private func artistHeader(_ facet: LibraryFacet, trackCount: Int, isExpanded: Bool) -> some View {
+        HStack(spacing: 12) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    expandedArtistName = isExpanded ? nil : facet.name
+                }
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "person.wave.2")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(HarborColor.amber)
+                        .frame(width: 56, height: 56)
+                        .background(HarborColor.faceplateLift)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(facet.name)
+                            .font(HarborFont.title(15))
+                            .foregroundStyle(HarborColor.ivory)
+                            .lineLimit(1)
+                        Text(trackCount == 1 ? "1 track" : "\(trackCount) tracks")
+                            .font(HarborFont.body(11))
+                            .foregroundStyle(HarborColor.ivoryDim)
+                    }
+                    Spacer(minLength: 8)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(HarborColor.ivoryDim)
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            HarborIconButton(systemName: "play.fill", help: "Play artist") {
+                let tracks = appModel.library.visibleTracks(forArtist: facet.name)
+                guard let first = tracks.first else { return }
+                appModel.playback.play(
+                    track: first,
+                    in: tracks,
+                    sourceName: facet.name,
+                    sourceKind: "Artist"
                 )
                 appModel.selectedTab = .nowPlaying
             }
