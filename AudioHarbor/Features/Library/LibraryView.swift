@@ -14,6 +14,8 @@ struct LibraryView: View {
     @State private var searchTask: Task<Void, Never>?
     @State private var expandedAlbumID: UUID?
     @State private var expandedArtistName: String?
+    @State private var folderPlaylistDraft = ""
+    @State private var folderPlaylistTrack: Track?
 
     var body: some View {
         @Bindable var library = appModel.library
@@ -68,6 +70,23 @@ struct LibraryView: View {
                 if appModel.library.browseMode != .folders {
                     appModel.library.setBrowseMode(.folders)
                 }
+            }
+        }
+        .alert("New Playlist", isPresented: Binding(
+            get: { folderPlaylistTrack != nil },
+            set: { if !$0 { folderPlaylistTrack = nil } }
+        )) {
+            TextField("Name", text: $folderPlaylistDraft)
+            Button("Cancel", role: .cancel) {
+                folderPlaylistTrack = nil
+            }
+            Button("Create") {
+                if let track = folderPlaylistTrack,
+                   let playlist = appModel.playlists.createPlaylist(named: folderPlaylistDraft) {
+                    appModel.playlists.add(track, to: playlist)
+                }
+                folderPlaylistTrack = nil
+                folderPlaylistDraft = ""
             }
         }
         #if os(iOS)
@@ -304,9 +323,15 @@ struct LibraryView: View {
                     appModel.library.searchQuery = ""
                     appModel.library.revealInFolders(url: hit.entry.url)
                 }
-                if !appModel.playlists.playlists.isEmpty {
-                    Menu("Add to Playlist") {
-                        ForEach(appModel.playlists.playlists) { playlist in
+                Menu("Add to Playlist") {
+                    Button("New Playlist…") {
+                        folderPlaylistDraft = ""
+                        folderPlaylistTrack = track
+                    }
+                    let manuals = appModel.playlists.playlists.filter { !$0.isSmart }
+                    if !manuals.isEmpty {
+                        Divider()
+                        ForEach(manuals) { playlist in
                             Button(playlist.name) {
                                 appModel.playlists.add(track, to: playlist)
                             }
@@ -790,6 +815,7 @@ private struct CatalogueArtistList: View {
 }
 
 struct TrackRow: View {
+    @Environment(AppModel.self) private var appModel
     let track: Track
     var playlists: [Playlist] = []
     let onPlay: () -> Void
@@ -799,6 +825,8 @@ struct TrackRow: View {
     var knownLabels: [String] = []
     @State private var newLabelDraft = ""
     @State private var showNewLabelAlert = false
+    @State private var newPlaylistDraft = ""
+    @State private var showNewPlaylistAlert = false
 
     var body: some View {
         Button(action: onPlay) {
@@ -833,8 +861,13 @@ struct TrackRow: View {
         .contextMenu {
             if let onAddToPlaylist {
                 let manual = playlists.filter { !$0.isSmart }
-                if !manual.isEmpty {
-                    Menu("Add to Playlist") {
+                Menu("Add to Playlist") {
+                    Button("New Playlist…") {
+                        newPlaylistDraft = ""
+                        showNewPlaylistAlert = true
+                    }
+                    if !manual.isEmpty {
+                        Divider()
                         ForEach(manual) { playlist in
                             Button(playlist.name) {
                                 onAddToPlaylist(playlist)
@@ -845,30 +878,39 @@ struct TrackRow: View {
             }
             if onAddLabel != nil || onRemoveLabel != nil {
                 Menu("Labels") {
-                    ForEach(mergedLabelSuggestions, id: \.self) { label in
-                        let hasLabel = track.labels.contains {
-                            $0.caseInsensitiveCompare(label) == .orderedSame
-                        }
-                        Button {
-                            if hasLabel {
-                                onRemoveLabel?(label)
-                            } else {
-                                onAddLabel?(label)
-                            }
-                        } label: {
-                            if hasLabel {
-                                Label(label, systemImage: "checkmark")
-                            } else {
-                                Text(label)
-                            }
-                        }
-                    }
-                    Divider()
                     Button("New Label…") {
                         newLabelDraft = ""
                         showNewLabelAlert = true
                     }
+                    if !mergedLabelSuggestions.isEmpty {
+                        Divider()
+                        ForEach(mergedLabelSuggestions, id: \.self) { label in
+                            let hasLabel = track.labels.contains {
+                                $0.caseInsensitiveCompare(label) == .orderedSame
+                            }
+                            Button {
+                                if hasLabel {
+                                    onRemoveLabel?(label)
+                                } else {
+                                    onAddLabel?(label)
+                                }
+                            } label: {
+                                if hasLabel {
+                                    Label(label, systemImage: "checkmark")
+                                } else {
+                                    Text(label)
+                                }
+                            }
+                        }
+                    }
                 }
+            }
+        }
+        .alert("New Playlist", isPresented: $showNewPlaylistAlert) {
+            TextField("Name", text: $newPlaylistDraft)
+            Button("Cancel", role: .cancel) {}
+            Button("Create") {
+                onCreatePlaylistFromContext()
             }
         }
         .alert("New Label", isPresented: $showNewLabelAlert) {
@@ -895,5 +937,11 @@ struct TrackRow: View {
             parts.append("\(total / 60):\(String(format: "%02d", total % 60))")
         }
         return parts.joined(separator: " · ")
+    }
+
+    private func onCreatePlaylistFromContext() {
+        guard let playlist = appModel.playlists.createPlaylist(named: newPlaylistDraft) else { return }
+        onAddToPlaylist?(playlist)
+        newPlaylistDraft = ""
     }
 }

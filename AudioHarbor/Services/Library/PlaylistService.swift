@@ -134,11 +134,26 @@ final class PlaylistService {
         }
     }
 
-    func createPlaylist(named name: String) {
+    @discardableResult
+    func createPlaylist(named name: String) -> Playlist? {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        playlists.insert(Playlist(name: trimmed), at: 0)
+        let resolved = trimmed.isEmpty ? nextUntitledName() : trimmed
+        let playlist = Playlist(name: resolved)
+        playlists.insert(playlist, at: 0)
         save()
+        return playlist
+    }
+
+    private func nextUntitledName() -> String {
+        let existing = Set(playlists.map(\.name))
+        if !existing.contains("Untitled Playlist") {
+            return "Untitled Playlist"
+        }
+        var index = 2
+        while existing.contains("Untitled Playlist \(index)") {
+            index += 1
+        }
+        return "Untitled Playlist \(index)"
     }
 
     func createSmartPlaylist(named name: String, rules: [SmartPlaylistRule]) {
