@@ -128,7 +128,7 @@ App → Monetization → In-App Purchases → **Non-Consumable**
 - Anzeigename: `Audio Harbor freischalten`
 - Beschreibung: `Einmaliger Kauf nach 7 Tagen Probe. Lokale Bibliothek spielen — inklusive Exclusive, DoP und Plugin-Rack.`
 
-Review screenshot: Paywall mit Preis und Restore. Review notes: Sandbox-Schritte (Trial umgehen per StoreKit-Config oder Hinweis, wie Reviewer 7 Tage überspringt — z. B. Debug-Override nur in `#if DEBUG`, nicht im Release).
+Review screenshot: Paywall mit Preis und Restore — [`docs/images/review-information.png`](docs/images/review-information.png) (1280 × 800, kein Fensterrahmen). In App Store Connect unter dem IAP **Review Information → Screenshot** hochladen. Review notes: Sandbox-Schritte (Trial umgehen per StoreKit-Config oder Hinweis, wie Reviewer 7 Tage überspringt — z. B. Debug-Override nur in `#if DEBUG`, nicht im Release).
 
 ---
 
@@ -205,7 +205,7 @@ Mindestens 3, besser 5 Bilder, **ohne** Fake-Hardware-Rahmen:
 2. Deck / Now Playing + VU
 3. Settings — Shared / Exclusive / DoP erklärt
 4. Plugin-Rack (Shared · FX)
-5. Paywall oder Settings mit Trial/Unlock — Reviewer sieht das Angebot
+5. Paywall / Settings License — [`docs/images/review-information.png`](docs/images/review-information.png) (Unlock · €9.90 + Restore)
 
 Caption-Stil: ein Satz, Englisch, kein „Best ever!!!“.
 
