@@ -11,6 +11,7 @@ enum DSDDecoder {
         var dataOffset: Int
         var dataSize: Int
         var format: AudioFormat
+        var isDSTCompressed: Bool = false
 
         var duration: TimeInterval {
             guard sampleRate > 0 else { return 0 }
@@ -106,6 +107,8 @@ enum DSDDecoder {
         var sampleCount: UInt64 = 0
         var dataOffset = 0
         var dataSize = 0
+        var isDSTCompressed = false
+        var dstFrames: UInt64 = 0
 
         while c.remaining >= 12 {
             let id = try c.fourCC()
@@ -124,6 +127,11 @@ enum DSDDecoder {
                         sampleRate = Int(try c.u32be())
                     } else if subID == "CHNL", subSize >= 2 {
                         channelCount = Int(try c.u16be())
+                    } else if subID == "CMPR", subSize >= 4 {
+                        let four = String(data: data.subdata(in: subStart..<(subStart + 4)), encoding: .ascii) ?? ""
+                        if four.hasPrefix("DST") {
+                            isDSTCompressed = true
+                        }
                     }
                     c.offset = min(data.count, subStart + subSize + (subSize % 2))
                 }
@@ -135,9 +143,19 @@ enum DSDDecoder {
                     sampleCount = UInt64(dataSize * 8 / channelCount)
                 }
                 break
+            } else if id == "DST " {
+                isDSTCompressed = true
+                dstFrames = max(dstFrames, dstFrameCount(in: data, start: payloadStart, size: chunkSize))
+                c.offset = min(data.count, payloadStart + chunkSize + (chunkSize % 2))
             } else {
                 c.offset = min(data.count, payloadStart + chunkSize + (chunkSize % 2))
             }
+        }
+
+        if dataSize == 0, isDSTCompressed {
+            let oversample = max(1, sampleRate / 44_100)
+            sampleCount = dstFrames * UInt64(588 * oversample)
+            dataSize = 1
         }
 
         guard dataSize > 0 else { throw DSDError.badDataChunk }
@@ -149,8 +167,41 @@ enum DSDDecoder {
             sampleCountPerChannel: sampleCount,
             dataOffset: dataOffset,
             dataSize: dataSize,
-            format: .dff
+            format: .dff,
+            isDSTCompressed: isDSTCompressed && dataOffset == 0
         )
+    }
+
+    private static func dstFrameCount(in data: Data, start: Int, size: Int) -> UInt64 {
+        let end = start + size
+        var offset = start
+        var framesFromIndex: UInt64 = 0
+        var framesFromChunks: UInt64 = 0
+        while offset + 12 <= end {
+            let id = String(data: data.subdata(in: offset..<(offset + 4)), encoding: .ascii) ?? ""
+            let chunk = Int(be64(data, offset + 4))
+            let payload = offset + 12
+            guard chunk >= 0, payload + chunk <= end else { break }
+            if id == "FRTE", chunk >= 4 {
+                framesFromIndex = UInt64(be32(data, payload))
+            } else if id == "DSTF", chunk > 0 {
+                framesFromChunks += 1
+            }
+            offset = payload + chunk + (chunk % 2)
+        }
+        return framesFromIndex > 0 ? framesFromIndex : framesFromChunks
+    }
+
+    private static func be32(_ d: Data, _ o: Int) -> UInt32 {
+        guard o + 3 < d.count else { return 0 }
+        return (UInt32(d[o]) << 24) | (UInt32(d[o + 1]) << 16) | (UInt32(d[o + 2]) << 8) | UInt32(d[o + 3])
+    }
+
+    private static func be64(_ d: Data, _ o: Int) -> UInt64 {
+        guard o + 7 < d.count else { return 0 }
+        var v: UInt64 = 0
+        for i in 0..<8 { v = (v << 8) | UInt64(d[o + i]) }
+        return v
     }
 }
 

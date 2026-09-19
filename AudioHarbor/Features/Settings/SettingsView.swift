@@ -72,7 +72,7 @@ struct SettingsView: View {
                     panel(title: "About") {
                         LabeledContent("App", value: Brand.name)
                             .foregroundStyle(HarborColor.ivory)
-                        LabeledContent("Version", value: "0.2.0")
+                        LabeledContent("Version", value: Brand.versionLabel)
                             .foregroundStyle(HarborColor.ivory)
                         Text(Brand.tagline)
                             .font(HarborFont.body(13))

@@ -50,6 +50,18 @@ struct SACDDiscTrack: Sendable {
     var isDST: Bool
 }
 
+private func decodeDSTFrame(_ decoder: OpaquePointer, _ frame: Data, into decoded: inout Data) -> Int32 {
+    frame.withUnsafeBytes { src in
+        decoded.withUnsafeMutableBytes { dest -> Int32 in
+            guard let srcPtr = src.bindMemory(to: UInt8.self).baseAddress,
+                  let destPtr = dest.bindMemory(to: UInt8.self).baseAddress else {
+                return Int32(AHDST_ERR_ARGUMENT)
+            }
+            return AHDSTDecoderDecode(decoder, srcPtr, src.count, destPtr, dest.count)
+        }
+    }
+}
+
 enum SACDError: LocalizedError {
     case notScarletBook
     case truncated
@@ -64,7 +76,7 @@ enum SACDError: LocalizedError {
         case .truncated:
             "The SACD image is truncated or unreadable."
         case .dstCompressed:
-            "This SACD track is DST-compressed. Audio Harbor lists the titles; uncompressed DSD areas play now."
+            "This SACD track uses a DST layout Audio Harbor cannot decode yet."
         case .noStereoArea:
             "No stereo SACD area on this disc."
         case .extractFailed:
@@ -79,18 +91,25 @@ enum DSDPlayback {
             let url = try SACDISO.playbackURL(for: track)
             return try DSDStreamSource(url: url, strategy: strategy)
         }
+        let fileURL = track.url
+        let playURL: URL
+        if fileURL.pathExtension.lowercased() == "dff", DFFDST.isCompressed(url: fileURL) {
+            playURL = try DFFDST.playbackURL(for: track)
+        } else {
+            playURL = fileURL
+        }
         if let chapter = VirtualTrackPath.dffTrack(from: track.cataloguePath) {
-            let header = try DSDDecoder.probe(url: track.url)
-            if let found = DFFChapters.list(url: track.url, header: header).first(where: { $0.number == chapter }) {
+            let header = try DSDDecoder.probe(url: fileURL)
+            if let found = DFFChapters.list(url: fileURL, header: header).first(where: { $0.number == chapter }) {
                 return try DSDStreamSource(
-                    url: track.url,
+                    url: playURL,
                     strategy: strategy,
                     startSample: found.startSample,
                     sampleCount: found.sampleCount
                 )
             }
         }
-        return try DSDStreamSource(url: track.url, strategy: strategy)
+        return try DSDStreamSource(url: playURL, strategy: strategy)
     }
 }
 
@@ -155,7 +174,7 @@ enum SACDISO {
         }
     }
 
-    /// Extract one uncompressed DSD track to a cached DFF and return that URL.
+    /// Extract one SACD track to a cached DFF (DST frames are decoded first) and return that URL.
     static func playbackURL(for track: Track) throws -> URL {
         let fileURL = track.url
         guard let number = VirtualTrackPath.sacdTrack(from: track.cataloguePath) ?? track.trackNumber else {
@@ -165,9 +184,8 @@ enum SACDISO {
         guard let discTrack = tracks.first(where: { $0.number == number }) else {
             throw SACDError.extractFailed
         }
-        if discTrack.isDST { throw SACDError.dstCompressed }
 
-        let cache = try cacheURL(for: fileURL, track: number)
+        let cache = try cacheURL(for: fileURL, track: number, kind: discTrack.isDST ? "dst2" : "dsd2")
         if FileManager.default.fileExists(atPath: cache.path),
            let attrs = try? FileManager.default.attributesOfItem(atPath: cache.path),
            let size = attrs[.size] as? NSNumber,
@@ -175,7 +193,11 @@ enum SACDISO {
             return cache
         }
 
-        try extract(track: discTrack, from: fileURL, to: cache)
+        if discTrack.isDST {
+            try extractDST(track: discTrack, from: fileURL, to: cache)
+        } else {
+            try extract(track: discTrack, from: fileURL, to: cache)
+        }
         return cache
     }
 
@@ -224,14 +246,95 @@ enum SACDISO {
         try FileManager.default.moveItem(at: tmp, to: output)
     }
 
-    private static func cacheURL(for iso: URL, track: Int) throws -> URL {
+    private static func extractDST(track: SACDDiscTrack, from iso: URL, to output: URL) throws {
+        guard track.startLSN > 0, track.lengthLSN > 0 else { throw SACDError.extractFailed }
+        guard let decoder = AHDSTDecoderCreate(Int32(track.sampleRateHz), Int32(track.channelCount)) else {
+            throw SACDError.extractFailed
+        }
+        defer { AHDSTDecoderDestroy(decoder) }
+
+        let frameBytes = AHDSTDecoderFrameByteCount(decoder)
+        guard frameBytes > 0 else { throw SACDError.extractFailed }
+        var decoded = Data(count: frameBytes)
+        let layout = try layout(of: iso)
+        let map = try NSData(contentsOf: iso, options: [.mappedIfSafe])
+        let preamble = dffPreamble(sampleRate: track.sampleRateHz, channels: track.channelCount)
+        let tmp = output.appendingPathExtension("part")
+        try? FileManager.default.removeItem(at: tmp)
+        FileManager.default.createFile(atPath: tmp.path, contents: nil)
+        let out = try FileHandle(forWritingTo: tmp)
+        try out.write(contentsOf: preamble)
+
+        var dataBytes: UInt64 = 0
+        var current = Data()
+        current.reserveCapacity(8192)
+        var haveFrame = false
+
+        func flushFrame() throws {
+            guard haveFrame, !current.isEmpty else { return }
+            let status = decodeDSTFrame(decoder, current, into: &decoded)
+            current.removeAll(keepingCapacity: true)
+            haveFrame = false
+            if status == AHDST_ERR_UNSUPPORTED {
+                throw SACDError.dstCompressed
+            }
+            guard status == AHDST_OK else { throw SACDError.extractFailed }
+            try out.write(contentsOf: decoded)
+            dataBytes += UInt64(decoded.count)
+        }
+
+        let end = track.startLSN &+ track.lengthLSN
+        var lsn = track.startLSN
+        while lsn < end {
+            let sector = try mappedSector(map, lsn: lsn, layout: layout)
+            for packet in audioPackets(in: sector) where packet.type == 2 {
+                if packet.start {
+                    try flushFrame()
+                    current.append(packet.data)
+                    haveFrame = true
+                } else if haveFrame {
+                    current.append(packet.data)
+                }
+            }
+            lsn += 1
+        }
+        try flushFrame()
+
+        let fileSize = UInt64(preamble.count) + dataBytes
+        var frm8 = Data()
+        appendU64BE(&frm8, fileSize > 12 ? fileSize - 12 : 0)
+        try out.seek(toOffset: 4)
+        try out.write(contentsOf: frm8)
+        var dsdSize = Data()
+        appendU64BE(&dsdSize, dataBytes)
+        try out.seek(toOffset: UInt64(preamble.count - 8))
+        try out.write(contentsOf: dsdSize)
+        try out.close()
+
+        guard dataBytes > 0 else {
+            try? FileManager.default.removeItem(at: tmp)
+            throw SACDError.extractFailed
+        }
+        try? FileManager.default.removeItem(at: output)
+        try FileManager.default.moveItem(at: tmp, to: output)
+    }
+
+    static func cacheFileURL(for file: URL, track: Int, kind: String) throws -> URL {
+        try cacheURL(for: file, track: track, kind: kind)
+    }
+
+    static func makeDFFPreamble(sampleRate: Int, channels: Int) -> Data {
+        dffPreamble(sampleRate: sampleRate, channels: channels)
+    }
+
+    private static func cacheURL(for file: URL, track: Int, kind: String = "dsd2") throws -> URL {
         let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSTemporaryDirectory())
         let dir = base.appendingPathComponent("AudioHarbor", isDirectory: true)
             .appendingPathComponent("SACD", isDirectory: true)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let mtime = (try? iso.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate?.timeIntervalSince1970) ?? 0
-        let key = "\(iso.path)|\(mtime)|\(track)"
+        let mtime = (try? file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate?.timeIntervalSince1970) ?? 0
+        let key = "\(file.path)|\(mtime)|\(track)|\(kind)"
         let digest = SHA256.hash(data: Data(key.utf8)).prefix(12).map { String(format: "%02x", $0) }.joined()
         return dir.appendingPathComponent("\(digest).dff")
     }
@@ -496,39 +599,55 @@ enum SACDISO {
         return (titles, performers)
     }
 
-    // MARK: - Sector demux (uncompressed DSD)
+    // MARK: - Sector demux
 
-    private static func demuxAudioPackets(_ sector: Data) -> Data {
-        guard sector.count == sectorSize else { return Data() }
+    private struct SectorPacket {
+        var start: Bool
+        var type: UInt8
+        var data: Data
+    }
+
+    private static func audioPackets(in sector: Data) -> [SectorPacket] {
+        guard sector.count == sectorSize else { return [] }
         let header = sector[0]
         let packetCount = Int((header >> 5) & 0x07)
         let frameInfoCount = Int((header >> 2) & 0x07)
         let dstEncoded = (header & 0x01) != 0
         var offset = 1
-        var packets: [(start: Bool, type: UInt8, length: Int)] = []
-        packets.reserveCapacity(packetCount)
+        var headers: [(start: Bool, type: UInt8, length: Int)] = []
+        headers.reserveCapacity(packetCount)
         for _ in 0..<packetCount {
-            guard offset + 2 <= sector.count else { return Data() }
+            guard offset + 2 <= sector.count else { return [] }
             let b0 = sector[offset]
             let b1 = sector[offset + 1]
-            packets.append((
+            headers.append((
                 start: (b0 & 0x80) != 0,
                 type: (b0 >> 3) & 0x07,
                 length: Int((UInt16(b0 & 0x07) << 8) | UInt16(b1))
             ))
             offset += 2
         }
-        let frameInfoSize = dstEncoded ? 4 : 3
-        offset += frameInfoCount * frameInfoSize
-        guard offset <= sector.count else { return Data() }
+        offset += frameInfoCount * (dstEncoded ? 4 : 3)
+        guard offset <= sector.count else { return [] }
 
+        var packets: [SectorPacket] = []
+        packets.reserveCapacity(headers.count)
+        for header in headers {
+            guard offset + header.length <= sector.count else { break }
+            packets.append(SectorPacket(
+                start: header.start,
+                type: header.type,
+                data: sector.subdata(in: offset..<(offset + header.length))
+            ))
+            offset += header.length
+        }
+        return packets
+    }
+
+    private static func demuxAudioPackets(_ sector: Data) -> Data {
         var audio = Data()
-        for packet in packets {
-            guard offset + packet.length <= sector.count else { break }
-            if packet.type == 2 {
-                audio.append(sector.subdata(in: offset..<(offset + packet.length)))
-            }
-            offset += packet.length
+        for packet in audioPackets(in: sector) where packet.type == 2 {
+            audio.append(packet.data)
         }
         return audio
     }
@@ -609,6 +728,134 @@ enum SACDISO {
 
     private static func nonempty(_ values: String...) -> String {
         values.first { !$0.isEmpty } ?? ""
+    }
+}
+
+/// DST-compressed DSDIFF (`DST ` / `DSTF` chunks) — decode to a cached uncompressed DFF.
+enum DFFDST {
+    static func isCompressed(url: URL) -> Bool {
+        (try? DSDDecoder.probe(url: url))?.isDSTCompressed == true
+    }
+
+    static func playbackURL(for track: Track) throws -> URL {
+        let fileURL = track.url
+        let header = try DSDDecoder.probe(url: fileURL)
+        guard header.isDSTCompressed else { return fileURL }
+
+        let cache = try SACDISOCache.dffURL(for: fileURL, track: 0, kind: "dff-dst2")
+        if FileManager.default.fileExists(atPath: cache.path),
+           let attrs = try? FileManager.default.attributesOfItem(atPath: cache.path),
+           let size = attrs[.size] as? NSNumber,
+           size.intValue > 128 {
+            return cache
+        }
+
+        try decodeFile(url: fileURL, header: header, to: cache)
+        return cache
+    }
+
+    private static func decodeFile(url: URL, header: DSDDecoder.Header, to output: URL) throws {
+        guard let decoder = AHDSTDecoderCreate(Int32(header.sampleRate), Int32(header.channelCount)) else {
+            throw SACDError.extractFailed
+        }
+        defer { AHDSTDecoderDestroy(decoder) }
+
+        let data = try Data(contentsOf: url, options: [.mappedIfSafe])
+        let frames = dstFrames(in: data)
+        guard !frames.isEmpty else { throw SACDError.extractFailed }
+
+        let frameBytes = AHDSTDecoderFrameByteCount(decoder)
+        var decoded = Data(count: frameBytes)
+        let preamble = SACDExtract.dffPreamble(sampleRate: header.sampleRate, channels: header.channelCount)
+        let tmp = output.appendingPathExtension("part")
+        try? FileManager.default.removeItem(at: tmp)
+        FileManager.default.createFile(atPath: tmp.path, contents: nil)
+        let out = try FileHandle(forWritingTo: tmp)
+        try out.write(contentsOf: preamble)
+
+        var dataBytes: UInt64 = 0
+        for frame in frames {
+            let status = decodeDSTFrame(decoder, frame, into: &decoded)
+            if status == AHDST_ERR_UNSUPPORTED { throw SACDError.dstCompressed }
+            guard status == AHDST_OK else { throw SACDError.extractFailed }
+            try out.write(contentsOf: decoded)
+            dataBytes += UInt64(decoded.count)
+        }
+
+        var frm8 = Data()
+        appendU64BE(&frm8, UInt64(preamble.count) + dataBytes > 12 ? UInt64(preamble.count) + dataBytes - 12 : 0)
+        try out.seek(toOffset: 4)
+        try out.write(contentsOf: frm8)
+        var dsdSize = Data()
+        appendU64BE(&dsdSize, dataBytes)
+        try out.seek(toOffset: UInt64(preamble.count - 8))
+        try out.write(contentsOf: dsdSize)
+        try out.close()
+
+        guard dataBytes > 0 else {
+            try? FileManager.default.removeItem(at: tmp)
+            throw SACDError.extractFailed
+        }
+        try? FileManager.default.removeItem(at: output)
+        try FileManager.default.moveItem(at: tmp, to: output)
+    }
+
+    private static func dstFrames(in data: Data) -> [Data] {
+        guard data.count >= 16, data.prefix(4) == Data("FRM8".utf8) else { return [] }
+        var frames: [Data] = []
+        var offset = 12
+        while offset + 12 <= data.count {
+            let id = String(data: data.subdata(in: offset..<(offset + 4)), encoding: .ascii) ?? ""
+            let size = Int(be64(data, offset + 4))
+            let payload = offset + 12
+            guard size >= 0, payload + size <= data.count else { break }
+            if id == "DST " {
+                collectDSTF(data.subdata(in: payload..<(payload + size)), into: &frames)
+            } else if id == "DSTF", size > 0 {
+                frames.append(data.subdata(in: payload..<(payload + size)))
+            }
+            offset = payload + size + (size % 2)
+        }
+        return frames
+    }
+
+    private static func collectDSTF(_ body: Data, into frames: inout [Data]) {
+        var offset = 0
+        while offset + 12 <= body.count {
+            let id = String(data: body.subdata(in: offset..<(offset + 4)), encoding: .ascii) ?? ""
+            let size = Int(be64(body, offset + 4))
+            let payload = offset + 12
+            guard size >= 0, payload + size <= body.count else { break }
+            if id == "DSTF", size > 0 {
+                frames.append(body.subdata(in: payload..<(payload + size)))
+            }
+            offset = payload + size + (size % 2)
+        }
+    }
+
+    private static func be64(_ d: Data, _ o: Int) -> UInt64 {
+        guard o + 7 < d.count else { return 0 }
+        var v: UInt64 = 0
+        for i in 0..<8 { v = (v << 8) | UInt64(d[o + i]) }
+        return v
+    }
+
+    private static func appendU64BE(_ d: inout Data, _ v: UInt64) {
+        for shift in [56, 48, 40, 32, 24, 16, 8, 0] {
+            d.append(UInt8((v >> shift) & 0xFF))
+        }
+    }
+}
+
+enum SACDISOCache {
+    static func dffURL(for file: URL, track: Int, kind: String) throws -> URL {
+        try SACDISO.cacheFileURL(for: file, track: track, kind: kind)
+    }
+}
+
+enum SACDExtract {
+    static func dffPreamble(sampleRate: Int, channels: Int) -> Data {
+        SACDISO.makeDFFPreamble(sampleRate: sampleRate, channels: channels)
     }
 }
 

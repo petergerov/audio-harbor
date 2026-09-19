@@ -3,3 +3,4 @@
 //
 
 #import "../Audio/AHExceptionCatcher.h"
+#import "../Audio/AHDSTDecoder.h"

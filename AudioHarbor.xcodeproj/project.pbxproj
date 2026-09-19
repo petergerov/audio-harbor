@@ -33,6 +33,7 @@
 		99450450F3D9268044E4C720 /* PlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53FFE55BC32CF1A7706C1FB8 /* PlaybackEngine.swift */; };
 		A692674AF7B4415B48E15E8B /* PlaylistsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BD0C6F97FBE4AFC33CFC218 /* PlaylistsView.swift */; };
 		B1ABBE0CD9CC54DC22612982 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39783E66128487305A0C7D56 /* RootView.swift */; };
+		D0A3F7E6C5B4A39281706F5E /* AHDSTDecoder.c in Sources */ = {isa = PBXBuildFile; fileRef = C9F2E6D5B4A39281706F5E4D /* AHDSTDecoder.c */; };
 		D25979B7C11D28CF35877269 /* EffectHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7791DBBE83A46FD67D0FF7AF /* EffectHost.swift */; };
 		DAB691949E3F25874EDB84DB /* SACDISO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A1FA52445E7B70108990A40 /* SACDISO.swift */; };
 		DC90E70F88326A380D4E5DAB /* DeckStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FD9C674B1601479DDAB0618 /* DeckStage.swift */; };
@@ -74,8 +75,10 @@
 		A2F79E705295934168D2B714 /* PlaylistService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistService.swift; sourceTree = "<group>"; };
 		B46479C25FC8808DAFFF49F9 /* ListeningRig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListeningRig.swift; sourceTree = "<group>"; };
 		B4A41324040AB2B247A6E4AF /* AudioHarbor.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = AudioHarbor.storekit; sourceTree = "<group>"; };
+		B8E1D5C4A39281706F5E4D3C /* AHDSTDecoder.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AHDSTDecoder.h; sourceTree = "<group>"; };
 		BA07B3758CAB9B2E18996EDE /* HarborTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HarborTheme.swift; sourceTree = "<group>"; };
 		C98A719353878C893B9C45EC /* MetadataReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataReader.swift; sourceTree = "<group>"; };
+		C9F2E6D5B4A39281706F5E4D /* AHDSTDecoder.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = AHDSTDecoder.c; sourceTree = "<group>"; };
 		CE0277F8E124960C06139C61 /* DSDDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSDDecoder.swift; sourceTree = "<group>"; };
 		D2DCF3754E5DF184BE6DDD50 /* CoreAudioPlaybackEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreAudioPlaybackEngine.swift; sourceTree = "<group>"; };
 		DBA8EC8CD38B2C8BDB195995 /* NowPlayingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingView.swift; sourceTree = "<group>"; };
@@ -229,6 +232,8 @@
 				EAEBC954F636F8E28044E1EC /* Effects */,
 				738F2F62A97B87688A414103 /* AHExceptionCatcher.h */,
 				39554B53A77D1827EF86E62D /* AHExceptionCatcher.m */,
+				B8E1D5C4A39281706F5E4D3C /* AHDSTDecoder.h */,
+				C9F2E6D5B4A39281706F5E4D /* AHDSTDecoder.c */,
 				D2DCF3754E5DF184BE6DDD50 /* CoreAudioPlaybackEngine.swift */,
 				CE0277F8E124960C06139C61 /* DSDDecoder.swift */,
 				798CED25B49983F451051372 /* HALAudioPlayer.swift */,
@@ -339,6 +344,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1A63B2AB53DF58BCA93B13E3 /* AHExceptionCatcher.m in Sources */,
+				D0A3F7E6C5B4A39281706F5E /* AHDSTDecoder.c in Sources */,
 				72AC3D43010A0065825644E4 /* AppModel.swift in Sources */,
 				45123F24370F36D3534914B2 /* AudioHarborApp.swift in Sources */,
 				FE99BD8D8179E02001401C60 /* BookmarkStore.swift in Sources */,
@@ -446,12 +452,13 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = C9LBGZNZ6P;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AudioHarbor/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Audio Harbor";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
 				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -546,12 +553,13 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = C9LBGZNZ6P;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AudioHarbor/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Audio Harbor";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
 				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				LD_RUNPATH_SEARCH_PATHS = (

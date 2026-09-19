@@ -26,7 +26,7 @@
 ### Playback
 - [x] Gapless PCM playback
 - [x] Formats: FLAC, ALAC, WAV, AIFF, AAC/M4A, MP3
-- [x] DSD: DSF (+ DFF if time); DoP on supported Mac DACs; PCM fallback when needed
+- [x] DSD: DSF, DFF, SACD ISO stereo (including DST); DoP on supported Mac DACs; PCM fallback when needed
 - [x] Automatic sample-rate switching to match the file (Mac)
 - [x] Exclusive / bit-perfect output mode (Mac)
 - [x] Queue + play next / play later
@@ -54,7 +54,7 @@
 - [x] ReplayGain off / track / album (optional if low cost)
 
 ### Explicitly out of MVP
-- Video, SACD ISO, converter suite
+- Video, converter suite, CUE sheets, multi-channel SACD, DST encoder / `.dst` container
 - DLNA / Chromecast / AirPlay multi-room as product focus
 - Streaming services (Qobuz, Tidal, etc.)
 - Heavy parametric EQ / DSP playground

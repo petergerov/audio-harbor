@@ -70,6 +70,19 @@ enum Brand {
     static let name = "Audio Harbor"
     static let subtitle = "Local audiophile player"
     static let tagline = "Local. Bit-perfect. Calm."
+
+    /// Marketing version from the target (`MARKETING_VERSION` / CFBundleShortVersionString).
+    static var version: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
+    }
+
+    static var build: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
+    }
+
+    static var versionLabel: String {
+        build.isEmpty || build == version ? version : "\(version) (\(build))"
+    }
 }
 
 struct HarborLamp: View {

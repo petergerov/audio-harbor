@@ -40,7 +40,7 @@ Default playback is **dual audio tracks** so crossfade and on-the-fly format con
 
 ### Where Pine wins
 
-- Format and collector files: CUE, APE, SACD ISO, DST, converter. Harbor is catching up on ISO/DFF; Pine has lived there for years.
+- Format and collector files: CUE, APE, SACD ISO, DST, converter. Harbor now plays SACD ISO (including DST) and DFF chapters; Pine still has the converter and `.dst` container.
 - Shop visibility: MAS, “DAC / DSD / EQ / 768 kHz” in the subtitle. People searching that string land on Pine first.
 - Price vs Origin: $30 feels cheap next to Audirvāna. Harbor is cheaper still (€9.90), but Pine **free** is the budget default.
 - DSP as product: 12-band EQ, bass control, OSF/CSF. Audiophiles who *want* a processing playground pick Pine or HQPlayer.
@@ -121,11 +121,11 @@ Harbor’s model stays: empty rack = Exclusive / DoP = the file. Loaded AU = **S
 Roon dissolves folders into AllMusic. Pine already does CUE and SACD ISO. Harbor should be *clearer* than both at:
 
 - Folder view, multi-disc sets, box sets
-- CUE sheets
-- SACD ISO per-track, DFF chapters
-- Honest DST (list titles; don’t fake playback)
+- CUE sheets (still to ship)
+- SACD ISO per-track, including DST decode to the same DoP / PCM path
+- DFF chapters and DST-compressed DFF
 
-This is a real niche, not a checkbox. ISO / DFF work already started; finish it as *album objects*, not virtual-path trivia.
+This is a real niche, not a checkbox. ISO / DFF / DST playback is in; the next honesty step is treating a disc as an album object, not only virtual paths.
 
 ### 5. Daily driver, not a lab
 

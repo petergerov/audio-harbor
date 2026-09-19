@@ -158,9 +158,9 @@ AUv3 inserts (and classic AU on Mac) live on the Deck rack. The rack uses Shared
 
 What you get
 • Folders you pick — security-scoped, remembered
-• Catalogue by album, artist, and folder, with search and playlists
+• Catalogue by directory, album, and artist, with search, playlists, and labels
 • FLAC, ALAC, WAV, AIFF, AAC, MP3, DSF, DFF
-• SACD ISO — stereo tracks listed from the disc TOC
+• SACD ISO — stereo tracks from the disc TOC, including DST-compressed areas
 • Shared, Exclusive, and DoP — explained in plain language
 • Optional AU / AUv3 rack on Shared
 
@@ -224,7 +224,9 @@ To review past the trial immediately: use the sandbox account; or in the attache
 
 Exclusive / DoP need an external USB DAC. Shared works on built-in speakers.
 
-SACD ISO: stereo TOC tracks. DST-compressed tracks list titles but do not play yet.
+SACD ISO: stereo area only. Tracks come from the Scarlet Book TOC. Uncompressed DSD and DST-compressed tracks both play: DST is decoded with Harbor’s own MPEG-4 DST decoder to a cached DFF, then the same DoP / PCM path as DSF. The first play of a DST track may pause while that cache is built. Multi-channel SACD areas, CUE sheets, and format conversion are not in this version.
+
+Please use your own files or a short CC clip. Do not require ripped commercial SACD images for review.
 ```
 
 Demo-Musik: ein kurzes **eigenes** oder CC-File im Review-Ordner erwähnen, oder Reviewer eigene Dateien nutzen lassen. Keine gerippten Major-Label-ISOs mitschicken.
@@ -245,7 +247,7 @@ xcodegen generate
 - Destination **macOS**, nicht iOS
 - Destination iOS im Target darf bleiben; einfach nicht archivieren
 - Nach Processing: Build der Version 1.0.0 zuweisen, IAP der Version anhängen (IAP muss **Ready to Submit** sein)
-- Export Compliance: ohne eigenen Verschlüsselungs-Layer außer HTTPS → übliche ITSAppUsesNonExemptEncryption = NO, wenn ihr nichts Eigenes verschlüsselt
+- Export Compliance: `ITSAppUsesNonExemptEncryption = NO` steht in Info.plist / project.yml (HTTPS + Hashing only). Damit fällt „Missing Compliance“ nach dem Upload weg. Nur ändern, wenn ihr eigene nicht-exempt Verschlüsselung einbaut.
 
 ---
 

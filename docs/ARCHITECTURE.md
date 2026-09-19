@@ -78,7 +78,8 @@ Rules:
 1. **Default = bit-perfect** for PCM when exclusive mode is on.
 2. **Never silently resample** on the audiophile path; show a clear badge if conversion is active.
 3. **DSD:** Prefer DoP to DAC; if unsupported → high-quality PCM conversion with UI disclosure.
-4. **iOS:** Use `AVAudioEngine` / `AVAudioPlayerNode` + `AVAudioSession` category `.playback`; document that true exclusive HAL mode is a Mac strength.
+4. **DST:** MPEG-4 DST (Scarlet Book / DST-DFF) is lossless DSD compression. Harbor decodes each 1/75 s frame to raw DSD, caches an uncompressed DFF, then uses the normal DoP / PCM path. Do not play DST bytes as DSD.
+5. **iOS:** Use `AVAudioEngine` / `AVAudioPlayerNode` + `AVAudioSession` category `.playback`; document that true exclusive HAL mode is a Mac strength.
 
 ### Decoders
 
@@ -87,7 +88,11 @@ Rules:
 | ALAC, AAC, MP3, WAV, AIFF | AVAudioFile / ExtAudioFile |
 | FLAC | AVAudioFile (system) or libFLAC if gaps |
 | DSF / DFF | Custom parser + DoP framer or PCM convert |
-| CUE / SACD ISO | Pro only |
+| SACD ISO | Scarlet Book stereo TOC → per-track catalogue rows; uncompressed DSD copied to a cached DFF |
+| DST (SACD ISO / DFF) | Harbor MPEG-4 DST decoder (ISO/IEC 14496-3 Subpart 10) → cached uncompressed DFF → same DSD path |
+| CUE | Later — not in the current build |
+
+DST frames are 1/75 s of DSD64. Harbor does not play DST bytes as DSD. The common Scarlet Book layout (one segment, all channels) is decoded; a rare multi-segment frame fails with a clear error. There is no DST encoder and no Pine `.dst` container.
 
 ### Output modes (Mac)
 
@@ -118,7 +123,7 @@ Three kinds of data. Do not store them in the same place.
 | Kind | Examples | Source of truth | Regenerable? |
 |---|---|---|---|
 | Access | Security-scoped folder bookmarks | App container / Keychain | No on a new Mac — user re-adds the folder |
-| Cache | `catalogue.sqlite`, artwork, SACD extract | Application Support + Caches | Yes — rescan / rebuild |
+| Cache | `catalogue.sqlite`, artwork, SACD / DST extract | Application Support + Caches | Yes — rescan / rebuild |
 | Authored | Playlists, smart rules, labels | Portable Harbor library file | No |
 
 **Rule:** files stay in the folders the user adds. Harbor’s memory of those files lives in Application Support. Harbor’s opinions (playlists, labels) live in a portable library file the user can back up — never inside every album folder, never only in UserDefaults.
@@ -142,7 +147,7 @@ Application Support/AudioHarbor/
   bookmarks.json            ← this Mac only (security-scoped blobs)
 
 Caches/AudioHarbor/
-  sacd-extracts/            ← disposable
+  SACD/                     ← disposable DFF extracts (uncompressed + DST decode)
 
 ~/Music/Audio Harbor/       ← user-owned; backup this
   library.json              ← playlists, smart rules, labels

@@ -21,14 +21,16 @@ open AudioHarbor.xcodeproj
 
 Select the **AudioHarbor** scheme → **My Mac** or an iPhone simulator → Run.
 
-## What’s in v0.2
+## What’s in the current build
 
 - Security-scoped folder bookmarks (persist across launches)
+- Catalogue: directories, albums, artists; playlists and labels
 - Real metadata + artwork via AVFoundation / DSD probe
 - Mac exclusive mode: hog + sample-rate match + HAL 24-bit path
-- DSF → DoP (or DSD→PCM fallback); DFF probe (playback next)
+- DSF / DFF → DoP (or DSD→PCM fallback)
+- SACD ISO stereo tracks, including MPEG-4 DST → cached DFF → same DSD path
 - Shared AVAudioEngine path as default/stable playback
 
-## MVP formats
+## Formats
 
-FLAC · ALAC · WAV · AIFF · AAC · MP3 · DSF (DoP/PCM) · DFF (probe)
+FLAC · ALAC · WAV · AIFF · AAC · MP3 · DSF · DFF · SACD ISO (stereo, including DST)
