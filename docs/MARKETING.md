@@ -143,6 +143,6 @@ Product UI stays the dark chassis. The **site** stays light so it reads as a Ger
 ## Legal / honesty
 
 - No ZYX / Revox / DAC brand as if affiliated  
-- DFF playback is not the hero until it ships  
+- DFF and SACD ISO (including DST) play; do not sell a converter or a DST encoder  
 - Plugin rack is Shared · FX — Exclusive is empty rack  
 - Local files only; DRM Apple Music library is out of scope
