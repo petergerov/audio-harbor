@@ -10,6 +10,15 @@ final class AudioHarborAppDelegate: NSObject, UIApplicationDelegate {
         UIDevice.current.userInterfaceIdiom == .pad ? .all : .portrait
     }
 }
+    #elseif os(macOS)
+import AppKit
+
+final class AudioHarborAppDelegate: NSObject, NSApplicationDelegate {
+    /// A single `Window` scene would otherwise quit the app (and stop playback) when it is closed.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
+    }
+}
 #endif
 
 @main
@@ -18,6 +27,8 @@ struct AudioHarborApp: App {
     @Environment(\.scenePhase) private var scenePhase
     #if os(iOS)
     @UIApplicationDelegateAdaptor(AudioHarborAppDelegate.self) private var appDelegate
+    #elseif os(macOS)
+    @NSApplicationDelegateAdaptor(AudioHarborAppDelegate.self) private var appDelegate
     #endif
 
     var body: some Scene {
