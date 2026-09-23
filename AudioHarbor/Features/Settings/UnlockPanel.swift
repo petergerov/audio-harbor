@@ -32,12 +32,12 @@ struct UnlockPanel: View {
                 EmptyView()
             } else {
                 HarborButton(
-                    title: license.isPurchasing ? "Purchasing…" : "Unlock · \(license.priceText)",
+                    title: unlockTitle(license),
                     systemImage: "key.fill"
                 ) {
                     Task { await license.purchase() }
                 }
-                .disabled(license.isPurchasing || license.isRestoring)
+                .disabled(license.isPurchasing || license.isRestoring || license.isLoadingProduct)
 
                 HarborButton(
                     title: license.isRestoring ? "Restoring…" : "Restore Purchase",
@@ -70,6 +70,18 @@ struct UnlockPanel: View {
             .buttonStyle(.plain)
             #endif
         }
+        .task {
+            if license.status != .unlocked {
+                await license.loadProductIfNeeded()
+            }
+        }
+    }
+
+    private func unlockTitle(_ license: LicenseService) -> String {
+        if license.isPurchasing { return "Purchasing…" }
+        if license.isLoadingProduct { return "Loading…" }
+        if let price = license.priceText { return "Unlock · \(price)" }
+        return "Unlock"
     }
 
     private var statusColor: Color {

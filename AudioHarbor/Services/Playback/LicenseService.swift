@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import OSLog
 import Security
 import StoreKit
 
@@ -20,6 +21,7 @@ final class LicenseService {
     private(set) var product: Product?
     private(set) var isPurchasing = false
     private(set) var isRestoring = false
+    private(set) var isLoadingProduct = false
     private(set) var message: String?
     var isUnlockPresented = false
 
@@ -30,8 +32,9 @@ final class LicenseService {
         }
     }
 
-    var priceText: String {
-        product?.displayPrice ?? "€9.90"
+    /// Localized App Store price; nil until the product has loaded (never a hardcoded fallback).
+    var priceText: String? {
+        product?.displayPrice
     }
 
     var statusHeadline: String {
@@ -57,6 +60,7 @@ final class LicenseService {
     }
 
     private var updatesTask: Task<Void, Never>?
+    private let logger = Logger(subsystem: "com.gerov.audioharbor.player", category: "License")
 
     init() {
         _ = TrialClock.recordFirstInstallIfNeeded()
@@ -72,6 +76,13 @@ final class LicenseService {
     func requestUnlock() {
         guard !canPlay else { return }
         isUnlockPresented = true
+        Task { await loadProductIfNeeded() }
+    }
+
+    /// Retries the App Store lookup, e.g. when the unlock UI appears after a failed launch-time load.
+    func loadProductIfNeeded() async {
+        guard product == nil, !isLoadingProduct else { return }
+        await loadProduct()
     }
 
     func purchase() async {
@@ -84,7 +95,9 @@ final class LicenseService {
                 await loadProduct()
             }
             guard let product else {
-                message = "The unlock is not available yet. Try Restore, or open the app from a signed-in App Store."
+                if message == nil {
+                    message = "Could not reach the App Store. Check your connection and try again."
+                }
                 return
             }
             let result = try await product.purchase()
@@ -144,12 +157,24 @@ final class LicenseService {
     }
 
     private func loadProduct() async {
-        do {
-            let found = try await Product.products(for: [Self.productID])
-            product = found.first
-        } catch {
-            product = nil
+        isLoadingProduct = true
+        defer { isLoadingProduct = false }
+        for attempt in 0..<3 {
+            do {
+                let found = try await Product.products(for: [Self.productID])
+                if let first = found.first {
+                    product = first
+                    return
+                }
+                logger.error("App Store returned no product for \(Self.productID, privacy: .public)")
+            } catch {
+                logger.error("Product lookup failed: \(error.localizedDescription, privacy: .public)")
+            }
+            if attempt < 2 {
+                try? await Task.sleep(for: .seconds(Double(attempt + 1) * 2))
+            }
         }
+        product = nil
     }
 
     private func refreshEntitlements() async {
