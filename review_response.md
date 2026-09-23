@@ -1,4 +1,4 @@
-# App Review Response — Audio Harbor 1.0.0 (8)
+# App Review Response — Audio Harbor 1.0.0 (9)
 
 Antwort auf Submission `bf8f2b4e-e84a-4bca-8205-90549435bbd2` (Review vom 23.09.2026, Guideline 2.1(b) und 4).
 
@@ -7,8 +7,8 @@ Antwort auf Submission `bf8f2b4e-e84a-4bca-8205-90549435bbd2` (Review vom 23.09.
 - [ ] Business → Agreements: **Paid Applications Agreement** ist **Active** (Bank + Steuer vollständig)
 - [ ] IAP `com.gerov.audioharbor.unlock`: Status **Ready to Submit** (nicht „Missing Metadata“), Preis, Lokalisierung, Review-Screenshot gesetzt
 - [ ] IAP ist auf der Seite von Version 1.0.0 unter „In-App Purchases and Subscriptions“ **angehängt**
-- [ ] Build 8 archiviert, hochgeladen und der Version zugewiesen
-- [ ] In TestFlight mit Sandbox-Account getestet: Kauf, Restore, Fenster schließen und über Window → Audio Harbor (⌘0), File → Show Main Window und Dock-Klick wieder öffnen
+- [ ] Build 9 archiviert, hochgeladen und der Version zugewiesen
+- [ ] In TestFlight mit Sandbox-Account getestet: Kauf, Restore, Fenster schließen und über Window → Audio Harbor (⌘0) und Dock-Klick wieder öffnen
 - [ ] Zeilen in `[eckigen Klammern]` unten nur stehen lassen, wenn der Punkt wirklich erledigt ist; Klammern vor dem Absenden entfernen
 
 ## Nachricht an App Review
@@ -16,7 +16,7 @@ Antwort auf Submission `bf8f2b4e-e84a-4bca-8205-90549435bbd2` (Review vom 23.09.
 ```
 Hello,
 
-Thank you for the review and the detailed feedback. We have addressed both issues in build 1.0.0 (8).
+Thank you for the review and the detailed feedback. We have addressed both issues in build 1.0.0 (9).
 
 Guideline 2.1(b) – In-App Purchase "unlock" unavailable
 
@@ -40,9 +40,8 @@ The unlock screen and the purchase flow are available at any time in Settings �
 Guideline 4 – Design
 
 The main window is now listed in the Window menu ("Window → Audio Harbor", shortcut ⌘0),
-so it can be reopened after it has been closed. It can also be reopened with
-"File → Show Main Window" or by clicking the app icon in the Dock. Playback continues
-while the window is closed.
+so it can be reopened after it has been closed. It can also be reopened by clicking the
+app icon in the Dock. Playback continues while the window is closed.
 
 Thank you,
 Petar Gerov

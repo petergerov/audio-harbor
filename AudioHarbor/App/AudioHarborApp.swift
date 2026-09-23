@@ -30,12 +30,12 @@ final class AudioHarborAppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-/// File menu item that reopens the main window after it has been closed.
+/// Window menu item that reopens the main window after it has been closed.
 private struct ShowMainWindowButton: View {
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        Button("Show Main Window") {
+        Button("Audio Harbor") {
             openWindow(id: "main")
         }
     }
@@ -66,21 +66,24 @@ struct AudioHarborApp: App {
 
     var body: some Scene {
         #if os(macOS)
-        // Single-window scene: SwiftUI lists it in the Window menu so it can be reopened after closing.
+        // Single-window scene. SwiftUI does not list it in the Window menu, so the commands below
+        // add an explicit item to reopen it after closing.
         Window("Audio Harbor", id: "main") {
             mainContent
                 .modifier(MainWindowReopenRegistration(appDelegate: appDelegate))
         }
         .defaultSize(width: 1180, height: 760)
-        .keyboardShortcut("0", modifiers: [.command])
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("Add Music Folder…") {
                     appModel.library.addFolder()
                 }
                 .keyboardShortcut("o", modifiers: [.command])
-                Divider()
+            }
+            CommandGroup(before: .windowList) {
                 ShowMainWindowButton()
+                    .keyboardShortcut("0", modifiers: [.command])
+                Divider()
             }
             CommandMenu("Catalogue") {
                 Button("Rebuild Index") {
