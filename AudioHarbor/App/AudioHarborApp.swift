@@ -10,13 +10,46 @@ final class AudioHarborAppDelegate: NSObject, UIApplicationDelegate {
         UIDevice.current.userInterfaceIdiom == .pad ? .all : .portrait
     }
 }
-    #elseif os(macOS)
+#elseif os(macOS)
 import AppKit
 
 final class AudioHarborAppDelegate: NSObject, NSApplicationDelegate {
+    /// Set by the main window so AppKit callbacks can reopen the SwiftUI `Window` scene.
+    var openMainWindow: (() -> Void)?
+
     /// A single `Window` scene would otherwise quit the app (and stop playback) when it is closed.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
+    }
+
+    /// Clicking the Dock icon with no window open brings the main window back.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        guard !flag, let openMainWindow else { return true }
+        openMainWindow()
+        return false
+    }
+}
+
+/// File menu item that reopens the main window after it has been closed.
+private struct ShowMainWindowButton: View {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button("Show Main Window") {
+            openWindow(id: "main")
+        }
+    }
+}
+
+/// Hands the scene's `openWindow` action to the app delegate for Dock reopen.
+private struct MainWindowReopenRegistration: ViewModifier {
+    @Environment(\.openWindow) private var openWindow
+    let appDelegate: AudioHarborAppDelegate
+
+    func body(content: Content) -> some View {
+        content.onAppear {
+            appDelegate.openMainWindow = { openWindow(id: "main") }
+        }
     }
 }
 #endif
@@ -36,6 +69,7 @@ struct AudioHarborApp: App {
         // Single-window scene: SwiftUI lists it in the Window menu so it can be reopened after closing.
         Window("Audio Harbor", id: "main") {
             mainContent
+                .modifier(MainWindowReopenRegistration(appDelegate: appDelegate))
         }
         .defaultSize(width: 1180, height: 760)
         .keyboardShortcut("0", modifiers: [.command])
@@ -45,6 +79,8 @@ struct AudioHarborApp: App {
                     appModel.library.addFolder()
                 }
                 .keyboardShortcut("o", modifiers: [.command])
+                Divider()
+                ShowMainWindowButton()
             }
             CommandMenu("Catalogue") {
                 Button("Rebuild Index") {
