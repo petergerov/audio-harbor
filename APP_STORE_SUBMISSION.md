@@ -35,7 +35,7 @@ Ohne diese Punkte Review oder Sandbox-Start nicht überstehen.
 ### 1.1 StoreKit (noch nicht im Code)
 
 - [ ] StoreKit 2: Product laden, kaufen, `Transaction.currentEntitlements`, Finish, **Restore**
-- [ ] Product ID: `com.gerov.audioharbor.player.unlock` (an ASC angleichen)
+- [ ] Product ID: `com.gerov.audioharbor.unlock` (an ASC angleichen)
 - [ ] Trial: Zeitstempel **erste Installation** im **Keychain** (überlebt Löschen der App auf demselben Mac besser als UserDefaults)
 - [ ] Nach Tag 7 ohne Receipt: kein Playback; Catalogue / Settings / Restore bleiben erreichbar
 - [ ] Paywall-Copy ehrlich: „7 days free. Then €9.90 once.“ inkl. Preis aus StoreKit (`displayPrice`), nicht hardcodiert
@@ -114,7 +114,7 @@ App → Monetization → In-App Purchases → **Non-Consumable**
 | Feld | Wert |
 |---|---|
 | Reference Name | Audio Harbor Unlock |
-| Product ID | `com.gerov.audioharbor.player.unlock` |
+| Product ID | `com.gerov.audioharbor.unlock` |
 | Price | 9,90 € (DE); übrige Storefronts von Apple ableiten lassen |
 | Availability | Alle Länder, in denen wir listen |
 
@@ -298,6 +298,6 @@ Data Used to Track You: **No**.
 | Category (Info.plist) | `public.app-category.music` |
 | macOS deployment | 14.0 |
 | App-Preis | Free — jeder darf installieren |
-| IAP product (geplant) | `com.gerov.audioharbor.player.unlock` |
+| IAP product (geplant) | `com.gerov.audioharbor.unlock` |
 | Trial | 7 Tage ab erster Installation |
 | Unlock | 9,90 € einmalig |

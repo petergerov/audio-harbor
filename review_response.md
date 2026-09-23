@@ -1,13 +1,13 @@
-# App Review Response — Audio Harbor 1.0.0 (5)
+# App Review Response — Audio Harbor 1.0.0 (6)
 
 Antwort auf Submission `bf8f2b4e-e84a-4bca-8205-90549435bbd2` (Review vom 23.09.2026, Guideline 2.1(b) und 4).
 
 ## Vor dem Absenden
 
 - [ ] Business → Agreements: **Paid Applications Agreement** ist **Active** (Bank + Steuer vollständig)
-- [ ] IAP `com.gerov.audioharbor.player.unlock`: Status **Ready to Submit** (nicht „Missing Metadata“), Preis, Lokalisierung, Review-Screenshot gesetzt
+- [ ] IAP `com.gerov.audioharbor.unlock`: Status **Ready to Submit** (nicht „Missing Metadata“), Preis, Lokalisierung, Review-Screenshot gesetzt
 - [ ] IAP ist auf der Seite von Version 1.0.0 unter „In-App Purchases and Subscriptions“ **angehängt**
-- [ ] Build 5 archiviert, hochgeladen und der Version zugewiesen
+- [ ] Build 6 archiviert, hochgeladen und der Version zugewiesen
 - [ ] In TestFlight mit Sandbox-Account getestet: Kauf, Restore, Fenster schließen und über Window → Audio Harbor (⌘0) wieder öffnen
 - [ ] Zeilen in `[eckigen Klammern]` unten nur stehen lassen, wenn der Punkt wirklich erledigt ist; Klammern vor dem Absenden entfernen
 
@@ -16,15 +16,14 @@ Antwort auf Submission `bf8f2b4e-e84a-4bca-8205-90549435bbd2` (Review vom 23.09.
 ```
 Hello,
 
-Thank you for the review and the detailed feedback. We have addressed both issues in build 1.0.0 (5).
+Thank you for the review and the detailed feedback. We have addressed both issues in build 1.0.0 (6).
 
 Guideline 2.1(b) – In-App Purchase "unlock" unavailable
 
-The unlock product could not be loaded from the App Store in the review environment.
-We have corrected the configuration:
-[- The Paid Applications Agreement is now active in App Store Connect.]
-[- The non-consumable In-App Purchase "Unlock Audio Harbor"
-  (com.gerov.audioharbor.player.unlock) is complete and attached to this version.]
+The unlock could not be loaded because the app requested a product identifier that did not
+match the one configured in App Store Connect. The app now requests the correct identifier,
+com.gerov.audioharbor.unlock (non-consumable, "Unlock Audio Harbor").
+[- The In-App Purchase is complete and attached to this version.]
 
 We also improved the app itself: the unlock button now shows the localized App Store
 price only once the product has loaded, and the app retries loading the product when the

@@ -8,7 +8,7 @@ import StoreKit
 @Observable
 @MainActor
 final class LicenseService {
-    static let productID = "com.gerov.audioharbor.player.unlock"
+    static let productID = "com.gerov.audioharbor.unlock"
     static let trialDuration: TimeInterval = 7 * 24 * 60 * 60
 
     enum Status: Equatable {
@@ -22,6 +22,7 @@ final class LicenseService {
     private(set) var isPurchasing = false
     private(set) var isRestoring = false
     private(set) var isLoadingProduct = false
+    private var productLookupFailed = false
     private(set) var message: String?
     var isUnlockPresented = false
 
@@ -95,9 +96,9 @@ final class LicenseService {
                 await loadProduct()
             }
             guard let product else {
-                if message == nil {
-                    message = "Could not reach the App Store. Check your connection and try again."
-                }
+                message = productLookupFailed
+                    ? "Could not reach the App Store. Check your connection and try again."
+                    : "The unlock is not available from the App Store right now. Please try again later."
                 return
             }
             let result = try await product.purchase()
@@ -162,12 +163,15 @@ final class LicenseService {
         for attempt in 0..<3 {
             do {
                 let found = try await Product.products(for: [Self.productID])
+                productLookupFailed = false
                 if let first = found.first {
                     product = first
                     return
                 }
+                // Reachable store, but the product is not live for this storefront (App Store Connect setup).
                 logger.error("App Store returned no product for \(Self.productID, privacy: .public)")
             } catch {
+                productLookupFailed = true
                 logger.error("Product lookup failed: \(error.localizedDescription, privacy: .public)")
             }
             if attempt < 2 {

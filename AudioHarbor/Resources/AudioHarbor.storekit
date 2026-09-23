@@ -30,7 +30,7 @@
           "locale" : "de"
         }
       ],
-      "productID" : "com.gerov.audioharbor.player.unlock",
+      "productID" : "com.gerov.audioharbor.unlock",
       "referenceName" : "Audio Harbor Unlock",
       "type" : "NonConsumable"
     }
