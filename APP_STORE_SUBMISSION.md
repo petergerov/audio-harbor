@@ -2,7 +2,7 @@
 
 Erste Veröffentlichung: **Mac App Store only**. iPhone/iPad bleiben im Xcode-Projekt, gehen aber noch nicht live.
 
-Stand der App im Repo: Bundle `com.gerov.audioharbor.player`, Version **1.0.0 (11)**, App Sandbox aktiv, StoreKit 2 (Trial + Unlock) eingebaut. Archiviert wird vom Branch `release/REL_1.0.0`. Offen sind vor allem Sandbox-Tests, Verträge und App Store Connect.
+Stand der App im Repo: Bundle `com.gerov.audioharbor.player`, Version **1.0.0 (12)**, App Sandbox aktiv, StoreKit 2 (Trial + Unlock) eingebaut. Archiviert wird vom Branch `release/REL_1.0.0`. Offen sind vor allem Sandbox-Tests, Verträge und App Store Connect.
 
 ---
 
@@ -81,7 +81,7 @@ Ordnerzugriff läuft über `NSOpenPanel` / `fileImporter` + security-scoped Book
 
 ### 1.3 Version, Signing, Privacy-URL
 
-- [x] Marketing-Version **1.0.0** — in `project.yml` gesetzt, landet über XcodeGen im Projekt. Aktueller Build **11** (`CURRENT_PROJECT_VERSION`), jeder Upload +1
+- [x] Marketing-Version **1.0.0** — in `project.yml` gesetzt, landet über XcodeGen im Projekt. Aktueller Build **12** (`CURRENT_PROJECT_VERSION`), jeder Upload +1
 - [ ] Team: Apple Developer Program, Signing **Apple Distribution** / Mac App Store (nicht Developer ID)
 - [x] Privacy Policy **live per HTTPS**: <https://petergerov.github.io/audio-harbor/privacy.html>
       (GitHub Pages, Quelle `main` + `/docs`). Geprüft: 200, HTTP wird auf HTTPS umgeleitet, Inhalt identisch mit `main`.
@@ -94,6 +94,7 @@ Ordnerzugriff läuft über `NSOpenPanel` / `fileImporter` + security-scoped Book
 | 9 | Hauptfenster im Window-Menü |
 | 10 | DoP-Bitreihenfolge korrigiert (Rauschen bei DoP, z. B. SACD ISO); DoP-Aussetzer behoben (größerer HAL-IO-Puffer ~50 ms, DSD-Daten werden vorausgelesen) |
 | 11 | DSD-Strategie entfernt, der Output-Modus entscheidet; Exclusive spielt DSD exklusiv als PCM (Umrechnung vorab im Hintergrund); DoP nur an externe DACs (USB, Thunderbolt, FireWire, PCI); AU-Plugins ohne `sandboxSafe` laden out-of-process; kein Absturz mehr beim Start mit Plugin-Rack |
+| 12 | DAC bleibt über Titelwechsel exklusiv (kein DSD↔PCM-Umschalten pro Titel, das manche DACs per USB-Reset quittieren); solange die App den DAC hält, ist er das Ziel statt des System-Standards; Play nach fehlgeschlagenem Laden lädt den Titel neu |
 
 - [ ] Vor dem Upload mit USB-DAC testen: DSF, DFF und SACD ISO in **DoP** (kein Rauschen, keine Aussetzer), PCM in **Exclusive**
 

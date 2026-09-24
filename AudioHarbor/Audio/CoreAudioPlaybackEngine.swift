@@ -1,5 +1,6 @@
 import AVFoundation
 import Foundation
+import os
 
 #if os(macOS)
 import CoreAudio
@@ -32,6 +33,7 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
     private let effectHost: EffectHost
 
     private var outputMode: OutputMode = .shared
+    private let logger = Logger(subsystem: "com.gerov.audioharbor.player", category: "Playback")
     private var usingHAL = false
     private var activeRender: RenderBuffer?
     private var seekOffset: TimeInterval = 0
@@ -77,7 +79,9 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
     }
 
     func load(_ track: Track) async throws {
-        stop()
+        // Keep the DAC hogged across tracks: releasing restores its old rate and re-hogging
+        // switches it back, a DSD↔PCM flip per track that some DACs answer with a USB reset.
+        stopPlayback(releaseDevice: false)
         state = .loading
         loadedTrack = track
 
@@ -89,8 +93,12 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
             } else {
                 try loadSharedPCM(track)
             }
+            if !usingHAL {
+                releaseExclusiveSession()
+            }
             state = .paused
         } catch {
+            releaseExclusiveSession()
             state = .failed(error.localizedDescription)
             throw error
         }
@@ -108,6 +116,8 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
                     : (loadedTrack?.format.isDSD == true ? "Exclusive · DSD→PCM" : "Exclusive · Bit-perfect")
                 startTimer()
             } catch {
+                let halError = error as NSError
+                logger.error("Exclusive start failed (\(render.label, privacy: .public)): \(halError.domain, privacy: .public) \(halError.code) \(halError.localizedDescription, privacy: .public)")
                 // Never fall back into AVAudioEngine.connect with a custom format (crashes).
                 releaseExclusiveSession()
                 usingHAL = false
@@ -122,7 +132,11 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
                         }
                         try startSharedPlayback()
                     } catch {
-                        state = .failed(error.localizedDescription)
+                        let sharedError = error as NSError
+                        logger.error("Shared fallback failed: \(sharedError.domain, privacy: .public) \(sharedError.code) \(sharedError.localizedDescription, privacy: .public)")
+                        state = .failed(
+                            "Exclusive: \(halError.localizedDescription) · Shared fallback: \(sharedError.localizedDescription)"
+                        )
                     }
                 } else {
                     state = .failed(
@@ -139,6 +153,8 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         do {
             try startSharedPlayback()
         } catch {
+            let nsError = error as NSError
+            logger.error("Shared start failed: \(nsError.domain, privacy: .public) \(nsError.code) \(nsError.localizedDescription, privacy: .public)")
             state = .failed(error.localizedDescription)
         }
     }
@@ -165,11 +181,17 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
     }
 
     func stop() {
+        stopPlayback(releaseDevice: true)
+    }
+
+    private func stopPlayback(releaseDevice: Bool) {
         stopTimer()
         isSeeking = false
         clearSharedAnchor()
         halPlayer.stopIO()
-        releaseExclusiveSession()
+        if releaseDevice {
+            releaseExclusiveSession()
+        }
         stopSharedEngine()
         sharedFile = nil
         activeRender = nil
@@ -232,9 +254,17 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
     private func startExclusive(render: RenderBuffer) throws {
         halPlayer.seek(frame: Int((seekOffset * render.sampleRate).rounded(.down)))
         let device: AudioDeviceID
-        if let exclusiveDeviceID {
+        if let exclusiveDeviceID, deviceController.isAlive(exclusiveDeviceID) {
+            // Same session across tracks: only touch the rate when this track needs another one.
+            try deviceController.switchExclusiveRate(to: render.sampleRate)
             device = exclusiveDeviceID
         } else {
+            // First track, or the DAC vanished (e.g. USB reset): a stale device ID only times
+            // out in AudioUnitInitialize.
+            if exclusiveDeviceID != nil {
+                logger.info("Exclusive device gone — re-acquiring")
+                releaseExclusiveSession()
+            }
             device = try deviceController.prepareExclusive(sampleRate: render.sampleRate)
             exclusiveDeviceID = device
         }
@@ -329,16 +359,20 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         // DoP sends real DSD; Exclusive converts DSD to PCM but keeps the DAC exclusive.
         // DoP only goes to an external interface; a DoP rate the DAC cannot take falls back
         // to exclusive PCM, then to Shared.
-        let device = try? deviceController.defaultOutputDeviceID()
+        // While we hog the DAC, macOS reports another default output — decide against the DAC.
+        let device = try? deviceController.exclusiveTargetDevice()
         let dopOK = outputMode == .dop && device.map { deviceController.canCarryDoP(device: $0) } == true
         let strategies: [DSDStrategy] = dopOK ? [.preferDoP, .convertToPCM] : [.convertToPCM]
+        logger.info("DSD load \(track.url.lastPathComponent, privacy: .public): output \(self.outputMode.rawValue, privacy: .public), hal \(wantHAL), dopOK \(dopOK)")
         for strategy in strategies where wantHAL {
             guard let device else { break }
             do {
                 let source = try await Task.detached(priority: .userInitiated) {
                     try DSDPlayback.stream(for: track, strategy: strategy)
                 }.value
-                if deviceController.supportsNominalRate(source.sampleRate, device: device) {
+                let rateOK = deviceController.supportsNominalRate(source.sampleRate, device: device)
+                logger.info("DSD \(source.label, privacy: .public): device rate ok \(rateOK)")
+                if rateOK {
                     usingHAL = true
                     activeRender = source.makeRenderBuffer()
                     sharedFile = nil
@@ -353,6 +387,8 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
                     return
                 }
             } catch {
+                let nsError = error as NSError
+                logger.error("DSD HAL load failed (\(strategy.rawValue, privacy: .public)): \(nsError.domain, privacy: .public) \(nsError.code) \(nsError.localizedDescription, privacy: .public)")
                 // Fall through to Shared PCM — never crash the process on a DoP-incapable output.
             }
         }

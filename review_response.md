@@ -1,4 +1,4 @@
-# App Review Response — Audio Harbor 1.0.0 (11)
+# App Review Response — Audio Harbor 1.0.0 (12)
 
 Antwort auf Submission `bf8f2b4e-e84a-4bca-8205-90549435bbd2` (Review vom 23.09.2026, Guideline 2.1(b) und 4).
 
@@ -7,7 +7,7 @@ Antwort auf Submission `bf8f2b4e-e84a-4bca-8205-90549435bbd2` (Review vom 23.09.
 - [ ] Business → Agreements: **Paid Applications Agreement** ist **Active** (Bank + Steuer vollständig)
 - [ ] IAP `com.gerov.audioharbor.unlock`: Status **Ready to Submit** (nicht „Missing Metadata“), Preis, Lokalisierung, Review-Screenshot gesetzt
 - [ ] IAP ist auf der Seite von Version 1.0.0 unter „In-App Purchases and Subscriptions“ **angehängt**
-- [ ] Build 11 archiviert, hochgeladen und der Version zugewiesen
+- [ ] Build 12 archiviert, hochgeladen und der Version zugewiesen
 - [ ] In TestFlight mit Sandbox-Account getestet: Kauf, Restore, Fenster schließen und über Window → Audio Harbor (⌘0) und Dock-Klick wieder öffnen
 - [ ] Zeilen in `[eckigen Klammern]` unten nur stehen lassen, wenn der Punkt wirklich erledigt ist; Klammern vor dem Absenden entfernen
 
@@ -16,7 +16,7 @@ Antwort auf Submission `bf8f2b4e-e84a-4bca-8205-90549435bbd2` (Review vom 23.09.
 ```
 Hello,
 
-Thank you for the review and the detailed feedback. We have addressed both issues in build 1.0.0 (11).
+Thank you for the review and the detailed feedback. We have addressed both issues in build 1.0.0 (12).
 
 Guideline 2.1(b) – In-App Purchase "unlock" unavailable
 

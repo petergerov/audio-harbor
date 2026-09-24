@@ -123,13 +123,22 @@ final class PlaybackService {
         } else if let track = currentTrack {
             guard allowPlayback() else { return }
             // After the queue ran out the file sits at its end — start it over.
-            if queueEnded {
+            // A failed load or start leaves the engine empty — load the track again
+            // instead of playing nothing ("Could not read the audio file").
+            if queueEnded || engineIsEmpty {
                 Task { await loadAndPlay(track) }
                 return
             }
             engine.play()
             syncFromEngine()
             startSyncing()
+        }
+    }
+
+    private var engineIsEmpty: Bool {
+        switch engine.state {
+        case .idle, .failed: true
+        case .loading, .playing, .paused: false
         }
     }
 

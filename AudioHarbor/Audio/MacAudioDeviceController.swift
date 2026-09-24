@@ -72,6 +72,39 @@ final class MacAudioDeviceController: @unchecked Sendable {
         return device
     }
 
+    /// The device exclusive playback targets: the one we hog while it is alive — macOS moves the
+    /// system default elsewhere as soon as we hog it — otherwise the current default output.
+    func exclusiveTargetDevice() throws -> AudioDeviceID {
+        if let hoggedDevice, isAlive(hoggedDevice) {
+            return hoggedDevice
+        }
+        return try defaultOutputDeviceID()
+    }
+
+    /// False once the device was unplugged or reset (its ID is then stale).
+    func isAlive(_ device: AudioDeviceID) -> Bool {
+        var alive: UInt32 = 0
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyDeviceIsAlive,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        guard AudioObjectGetPropertyData(device, &address, 0, nil, &size, &alive) == noErr, alive != 0 else {
+            return false
+        }
+        return true
+    }
+
+    /// Change the rate of the hogged device, only if it differs.
+    func switchExclusiveRate(to rate: Double) throws {
+        guard let device = hoggedDevice else { return }
+        if let current = try? currentSampleRate(device: device), abs(current - rate) < 1 {
+            return
+        }
+        try setSampleRate(device: device, rate: rate)
+    }
+
     func releaseExclusive() {
         guard let device = hoggedDevice else { return }
         if let previousSampleRate {
@@ -252,6 +285,9 @@ final class MacAudioDeviceController: @unchecked Sendable {
     func currentSampleRate(device: UInt32) throws -> Float64 { 0 }
     func supportsNominalRate(_ rate: Double, device: UInt32) -> Bool { false }
     func canCarryDoP(device: UInt32) -> Bool { false }
+    func exclusiveTargetDevice() throws -> UInt32 { 0 }
+    func isAlive(_ device: UInt32) -> Bool { false }
+    func switchExclusiveRate(to rate: Double) throws {}
 }
 
 #endif
