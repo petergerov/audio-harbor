@@ -284,6 +284,8 @@ final class DSDStreamSource: @unchecked Sendable {
     private let lock = NSLock()
     private var filters: [DSDLowpass]
     private var nextBit: Int
+    /// Keeps the prefetch reads from being optimised away.
+    private var prefetchSink: UInt8 = 0
 
     init(url: URL, strategy: DSDStrategy, startSample: UInt64 = 0, sampleCount: UInt64? = nil) throws {
         let map = try NSData(contentsOf: url, options: [.mappedIfSafe])
@@ -537,13 +539,40 @@ final class DSDStreamSource: @unchecked Sendable {
         return max(min(v, (1 << 23) - 1), -(1 << 23))
     }
 
-    private func read16(src: UnsafePointer<UInt8>, channel: Int, byteIndex: Int) -> UInt16 {
-        let b0 = byte(src, channel: channel, index: byteIndex)
-        let b1 = byte(src, channel: channel, index: byteIndex + 1)
-        if lsbFirst {
-            return UInt16(b0) | (UInt16(b1) << 8)
+    /// Touch the mapped pages for `count` frames from `startFrame` so the IO thread never
+    /// page-faults on disk. Call off the audio thread.
+    func prefetch(from startFrame: Int, count: Int) {
+        let first = max(0, startFrame)
+        let last = min(frameCount, first + count)
+        guard last > first else { return }
+        let bitsLo = clipStartBit + first * bitsPerFrame
+        let bitsHi = clipStartBit + last * bitsPerFrame
+        // Interleave is per block, so the covered file range is whole blocks × channels.
+        let blockLo = (bitsLo >> 3) / block
+        let blockHi = ((bitsHi >> 3) + block - 1) / block
+        let lo = header.dataOffset + blockLo * block * channelCount
+        let hi = min(dataEnd, byteCount, header.dataOffset + blockHi * block * channelCount)
+        guard hi > lo else { return }
+        let page = Int(getpagesize())
+        var sum: UInt8 = 0
+        var p = lo
+        while p < hi {
+            sum &+= bytes[p]
+            p += page
         }
-        return UInt16(b0.bitReversed) | (UInt16(b1.bitReversed) << 8)
+        sum &+= bytes[hi - 1]
+        prefetchSink = sum
+    }
+
+    /// DoP payload: the oldest DSD bit sits in bit 15, so the first byte (MSB-first) goes high.
+    private func read16(src: UnsafePointer<UInt8>, channel: Int, byteIndex: Int) -> UInt16 {
+        var b0 = byte(src, channel: channel, index: byteIndex)
+        var b1 = byte(src, channel: channel, index: byteIndex + 1)
+        if lsbFirst {
+            b0 = b0.bitReversed
+            b1 = b1.bitReversed
+        }
+        return (UInt16(b0) << 8) | UInt16(b1)
     }
 
     private func byte(_ src: UnsafePointer<UInt8>, channel: Int, index: Int) -> UInt8 {

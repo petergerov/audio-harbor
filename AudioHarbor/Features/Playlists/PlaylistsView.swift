@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 private enum PlaylistBrowserScope: String, CaseIterable, Identifiable {
     case playlists
@@ -58,6 +59,8 @@ struct PlaylistsView: View {
     @State private var renameDraft = ""
     @State private var renaming: Playlist?
     @State private var selection: PlaylistBrowserItem?
+    @State private var isImportingM3U = false
+    @State private var importReport: ImportReport?
     @AppStorage("audioharbor.playlists.browserScope") private var browserScopeRaw: String = PlaylistBrowserScope.playlists.rawValue
 
     private var browserScope: Binding<PlaylistBrowserScope> {
@@ -117,6 +120,27 @@ struct PlaylistsView: View {
         .sheet(isPresented: $isCreating) {
             newPlaylistSheet
         }
+        .fileImporter(
+            isPresented: $isImportingM3U,
+            allowedContentTypes: Self.m3uContentTypes,
+            allowsMultipleSelection: true
+        ) { result in
+            if case .success(let urls) = result {
+                importM3U(urls: urls)
+            }
+        }
+        .alert(
+            importReport?.title ?? "",
+            isPresented: Binding(
+                get: { importReport != nil },
+                set: { if !$0 { importReport = nil } }
+            ),
+            presenting: importReport
+        ) { _ in
+            Button("OK", role: .cancel) { importReport = nil }
+        } message: { report in
+            Text(report.message)
+        }
         .alert("Rename Playlist", isPresented: Binding(
             get: { renaming != nil },
             set: { if !$0 { renaming = nil } }
@@ -137,6 +161,12 @@ struct PlaylistsView: View {
             title: "Playlists",
             subtitle: "Switch the list on the left — playlists or labels."
         ) {
+            HarborButton(
+                title: "Import M3U",
+                systemImage: "square.and.arrow.down",
+                kind: .secondary,
+                action: { isImportingM3U = true }
+            )
             HarborButton(
                 title: "Add Playlist",
                 systemImage: "plus",
@@ -215,6 +245,9 @@ struct PlaylistsView: View {
                 )
                 .contextMenu {
                     Button("Play") { play(item: .playlist(playlist.id)) }
+                    #if os(macOS)
+                    Button("Export M3U8…") { exportM3U8(item: .playlist(playlist.id)) }
+                    #endif
                     Button("Rename") {
                         renameDraft = playlist.name
                         renaming = playlist
@@ -301,6 +334,17 @@ struct PlaylistsView: View {
                             .foregroundStyle(HarborColor.ivoryDim)
                     }
                     Spacer()
+                    #if os(macOS)
+                    Button("Export M3U8") { exportM3U8(item: selection) }
+                        .font(HarborFont.panel(11))
+                        .foregroundStyle(HarborColor.ivory)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(HarborColor.faceplateLift)
+                        .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
+                        .buttonStyle(.plain)
+                        .disabled(tracks.isEmpty)
+                    #endif
                     Button("Play All") { play(item: selection) }
                         .font(HarborFont.panel(11))
                         .foregroundStyle(HarborColor.faceplate)
@@ -498,5 +542,114 @@ struct PlaylistsView: View {
             index += 1
         }
         return "Untitled Playlist \(index)"
+    }
+
+    // MARK: - M3U8 export
+
+    #if os(macOS)
+    private func exportM3U8(item: PlaylistBrowserItem) {
+        let tracks = tracks(for: item)
+        guard !tracks.isEmpty else { return }
+        let name = detailTitle(for: item)
+
+        let panel = NSSavePanel()
+        panel.title = "Export Playlist"
+        panel.message = "Saves an M3U8 file that foobar2000, VLC and other players can open."
+        panel.prompt = "Export"
+        // `.m3u8` is a tag of public.m3u-playlist; the panel keeps it instead of forcing `.m3u`.
+        panel.allowedContentTypes = [.m3uPlaylist]
+        panel.nameFieldStringValue = "\(name.replacingOccurrences(of: "/", with: "-")).m3u8"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        do {
+            try Data(M3UWriter.render(name: name, tracks: tracks).utf8).write(to: url, options: .atomic)
+        } catch {
+            importReport = ImportReport(
+                title: "Export Failed",
+                message: "\(url.lastPathComponent) could not be written. \(error.localizedDescription)"
+            )
+        }
+    }
+    #endif
+
+    // MARK: - M3U import
+
+    private struct ImportReport {
+        var title: String
+        var message: String
+    }
+
+    private static let m3uContentTypes: [UTType] = {
+        var types: [UTType] = [.m3uPlaylist]
+        for ext in ["m3u", "m3u8"] {
+            if let type = UTType(filenameExtension: ext), !types.contains(type) {
+                types.append(type)
+            }
+        }
+        return types
+    }()
+
+    private func importM3U(urls: [URL]) {
+        let libraryTracks = appModel.library.allTracks
+        guard !libraryTracks.isEmpty else {
+            importReport = ImportReport(
+                title: "Nothing to Match Yet",
+                message: "Add the folders with your music first. Playlists only point at files Harbor already knows."
+            )
+            return
+        }
+
+        let matcher = M3UMatcher(tracks: libraryTracks)
+        var lines: [String] = []
+        var lastImported: Playlist?
+        for url in urls {
+            // Picker URLs are security-scoped; read synchronously while access is open.
+            let started = url.startAccessingSecurityScopedResource()
+            let data = try? Data(contentsOf: url)
+            if started {
+                url.stopAccessingSecurityScopedResource()
+            }
+            guard let data, let text = M3UParser.decode(data) else {
+                lines.append("\(url.lastPathComponent): could not be read.")
+                continue
+            }
+
+            let result = matcher.resolve(M3UParser.parse(text), playlistURL: url)
+            guard !result.trackPaths.isEmpty else {
+                lines.append("“\(result.name)”: none of \(result.entryCount) entries found in your folders — not imported.")
+                continue
+            }
+
+            let playlist = appModel.playlists.importPlaylist(named: result.name, trackPaths: result.trackPaths)
+            lastImported = playlist
+            lines.append(summary(for: result, importedAs: playlist.name))
+        }
+
+        if let lastImported {
+            browserScopeRaw = PlaylistBrowserScope.playlists.rawValue
+            selection = .playlist(lastImported.id)
+        }
+        importReport = ImportReport(
+            title: lastImported == nil ? "Import Failed" : "Playlist Imported",
+            message: lines.joined(separator: "\n\n")
+        )
+    }
+
+    private func summary(for result: M3UImportResult, importedAs name: String) -> String {
+        let fileEntries = result.entryCount - result.skippedRemoteCount
+        var text = "“\(name)”: \(fileEntries - result.unmatched.count) of \(fileEntries) tracks."
+        if result.skippedRemoteCount > 0 {
+            text += " \(result.skippedRemoteCount) stream URLs skipped."
+        }
+        if !result.unmatched.isEmpty {
+            let names = result.unmatched.prefix(5).map { entry in
+                entry.displayName ?? URL(fileURLWithPath: entry.location.replacingOccurrences(of: "\\", with: "/")).lastPathComponent
+            }
+            text += "\nNot in your folders:\n" + names.map { "· \($0)" }.joined(separator: "\n")
+            if result.unmatched.count > names.count {
+                text += "\n· … and \(result.unmatched.count - names.count) more"
+            }
+        }
+        return text
     }
 }

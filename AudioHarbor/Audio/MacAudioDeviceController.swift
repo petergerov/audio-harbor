@@ -124,6 +124,30 @@ final class MacAudioDeviceController: @unchecked Sendable {
         }
     }
 
+    /// Only a real external interface can carry DoP to a DSD decoder. Built-in speakers, virtual
+    /// devices (VB-Cable, BlackHole), aggregates, Bluetooth, and AirPlay would play the DoP words as noise.
+    func canCarryDoP(device: AudioDeviceID) -> Bool {
+        var transport: UInt32 = 0
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyTransportType,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        guard AudioObjectGetPropertyData(device, &address, 0, nil, &size, &transport) == noErr else {
+            return false
+        }
+        switch transport {
+        case kAudioDeviceTransportTypeUSB,
+             kAudioDeviceTransportTypeThunderbolt,
+             kAudioDeviceTransportTypeFireWire,
+             kAudioDeviceTransportTypePCI:
+            return true
+        default:
+            return false
+        }
+    }
+
     func supportsNominalRate(_ rate: Double, device: AudioDeviceID) -> Bool {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioDevicePropertyAvailableNominalSampleRates,
@@ -227,6 +251,7 @@ final class MacAudioDeviceController: @unchecked Sendable {
     func releaseExclusive() {}
     func currentSampleRate(device: UInt32) throws -> Float64 { 0 }
     func supportsNominalRate(_ rate: Double, device: UInt32) -> Bool { false }
+    func canCarryDoP(device: UInt32) -> Bool { false }
 }
 
 #endif

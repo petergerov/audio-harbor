@@ -20,7 +20,6 @@ protocol PlaybackEngine: AnyObject {
     func stop()
     func seek(to seconds: TimeInterval)
     func setOutputMode(_ mode: OutputMode)
-    func setDSDStrategy(_ strategy: DSDStrategy)
     /// Called once when the loaded track reaches its end (not on pause/stop/seek),
     /// with the track that ended so late signals can be matched against it.
     func setTrackEndedHandler(_ handler: @escaping (Track) -> Void)

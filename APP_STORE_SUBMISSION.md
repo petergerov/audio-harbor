@@ -2,7 +2,7 @@
 
 Erste Veröffentlichung: **Mac App Store only**. iPhone/iPad bleiben im Xcode-Projekt, gehen aber noch nicht live.
 
-Stand der App im Repo (vor Store-Arbeit): Bundle `com.gerov.audioharbor.player`, Marketing-Version `0.1.0`, Entitlements leer, **kein StoreKit**. Unten steht, was vor dem Upload noch gebaut werden muss.
+Stand der App im Repo: Bundle `com.gerov.audioharbor.player`, Version **1.0.0 (11)**, App Sandbox aktiv, StoreKit 2 (Trial + Unlock) eingebaut. Archiviert wird vom Branch `release/REL_1.0.0`. Offen sind vor allem Sandbox-Tests, Verträge und App Store Connect.
 
 ---
 
@@ -32,14 +32,17 @@ App Store Connect: **Pricing and Availability → Price Schedule → Free.** Die
 
 Ohne diese Punkte Review oder Sandbox-Start nicht überstehen.
 
-### 1.1 StoreKit (noch nicht im Code)
+### 1.1 StoreKit
 
-- [ ] StoreKit 2: Product laden, kaufen, `Transaction.currentEntitlements`, Finish, **Restore**
-- [ ] Product ID: `com.gerov.audioharbor.unlock` (an ASC angleichen)
-- [ ] Trial: Zeitstempel **erste Installation** im **Keychain** (überlebt Löschen der App auf demselben Mac besser als UserDefaults)
-- [ ] Nach Tag 7 ohne Receipt: kein Playback; Catalogue / Settings / Restore bleiben erreichbar
-- [ ] Paywall-Copy ehrlich: „7 days free. Then €9.90 once.“ inkl. Preis aus StoreKit (`displayPrice`), nicht hardcodiert
-- [ ] StoreKit Configuration File für lokale Tests (`.storekit`)
+Umgesetzt in `Services/Playback/LicenseService.swift` und `Features/Settings/UnlockPanel.swift`.
+
+- [x] StoreKit 2: Product laden, kaufen, `Transaction.currentEntitlements`, Finish, **Restore** (`AppStore.sync()`)
+- [x] Product ID: `com.gerov.audioharbor.unlock` (in ASC identisch anlegen)
+- [x] Trial: Zeitstempel **erste Installation** im **Keychain** (Data Protection Keychain)
+- [x] Nach Tag 7 ohne Receipt: kein Playback (`PlaybackService` prüft `license.canPlay`); Catalogue / Settings / Restore bleiben erreichbar
+- [x] Preis aus StoreKit (`displayPrice`), nicht hardcodiert
+- [x] StoreKit Configuration File für lokale Tests: `AudioHarbor/Resources/AudioHarbor.storekit`
+- [x] Debug-Buttons „expire / reset trial“ nur unter `#if DEBUG`, nicht im Release
 - [ ] Sandbox-Apple-ID: Trial ablaufen lassen, kaufen, App löschen, Restore
 
 Gate nach Ablauf (Vorschlag, nicht verhandelbar für Review):
@@ -54,14 +57,12 @@ Während der 7 Tage: volle App, kein Wasserzeichen, kein Nagscreen alle 30 Sekun
 
 ### 1.2 Mac App Store Sandbox
 
-`AudioHarbor/Resources/AudioHarbor.entitlements` ist heute leer. MAS **erzwingt** App Sandbox.
-
-Mindestens:
+MAS **erzwingt** App Sandbox. `AudioHarbor/Resources/AudioHarbor.entitlements` ist gesetzt:
 
 ```xml
 <key>com.apple.security.app-sandbox</key>
 <true/>
-<key>com.apple.security.files.user-selected.read-only</key>
+<key>com.apple.security.files.user-selected.read-write</key>
 <true/>
 <key>com.apple.security.files.bookmarks.app-scope</key>
 <true/>
@@ -76,15 +77,27 @@ Zusätzlich prüfen (AU-Rack / Classic AU außerhalb des Containers):
 
 Ordnerzugriff läuft über `NSOpenPanel` / `fileImporter` + security-scoped Bookmarks — das passt zum Sandbox-Modell. Nicht die ganze Platte freischalten.
 
+`read-write` statt `read-only` nur für den Playlist-Export (M3U8 per `NSSavePanel`). Musikordner-Bookmarks werden mit `securityScopeAllowOnlyReadAccess` angelegt. Falls Review fragt: „Users export playlists as M3U8 files to a location they choose in the save panel.“
+
 ### 1.3 Version, Signing, Privacy-URL
 
-- [x] Marketing-Version **1.0.0** — in `project.yml` gesetzt, landet über XcodeGen im Projekt. Build `1`, jeder Upload +1
+- [x] Marketing-Version **1.0.0** — in `project.yml` gesetzt, landet über XcodeGen im Projekt. Aktueller Build **11** (`CURRENT_PROJECT_VERSION`), jeder Upload +1
 - [ ] Team: Apple Developer Program, Signing **Apple Distribution** / Mac App Store (nicht Developer ID)
 - [x] Privacy Policy **live per HTTPS**: <https://petergerov.github.io/audio-harbor/privacy.html>
       (GitHub Pages, Quelle `main` + `/docs`). Geprüft: 200, HTTP wird auf HTTPS umgeleitet, Inhalt identisch mit `main`.
 - [x] Kauf-Absatz steht in der Policy: Apple wickelt die Zahlung ab, Receipt bleibt bei Apple, kein Account, Trial-Datum im Keychain
 
-### 1.4 App Store Connect (Verträge)
+### 1.4 Build-Stand
+
+| Build | Inhalt |
+|---|---|
+| 9 | Hauptfenster im Window-Menü |
+| 10 | DoP-Bitreihenfolge korrigiert (Rauschen bei DoP, z. B. SACD ISO); DoP-Aussetzer behoben (größerer HAL-IO-Puffer ~50 ms, DSD-Daten werden vorausgelesen) |
+| 11 | DSD-Strategie entfernt, der Output-Modus entscheidet; Exclusive spielt DSD exklusiv als PCM (Umrechnung vorab im Hintergrund); DoP nur an externe DACs (USB, Thunderbolt, FireWire, PCI); AU-Plugins ohne `sandboxSafe` laden out-of-process; kein Absturz mehr beim Start mit Plugin-Rack |
+
+- [ ] Vor dem Upload mit USB-DAC testen: DSF, DFF und SACD ISO in **DoP** (kein Rauschen, keine Aussetzer), PCM in **Exclusive**
+
+### 1.5 App Store Connect (Verträge)
 
 - [ ] Paid Applications Agreement akzeptieren
 - [ ] Bank / Tax / W-8 oder EU-Steuer
@@ -152,7 +165,7 @@ Audio Harbor is a local audiophile player for Mac. Add the folders you already h
 
 Free to install for everyone. Seven days full use after you first install. Then a one-time unlock (€9.90). No subscription. No account.
 
-Shared is the everyday path — other Mac sound still works. Exclusive takes over a USB DAC for bit-perfect playback and sample-rate match. DoP sends DSD to a DAC that understands it; otherwise Audio Harbor converts to PCM so the track still plays.
+Shared is the everyday path — other Mac sound still works. Exclusive takes over a USB DAC for bit-perfect playback and sample-rate match; DSD is converted to PCM. DoP does the same and sends DSD files to a DSD-capable DAC as real DSD.
 
 AUv3 inserts (and classic AU on Mac) live on the Deck rack. The rack uses Shared. Exclusive stays bit-perfect when the rack is empty.
 
@@ -162,6 +175,7 @@ What you get
 • FLAC, ALAC, WAV, AIFF, AAC, MP3, DSF, DFF
 • SACD ISO — stereo tracks from the disc TOC, including DST-compressed areas
 • Shared, Exclusive, and DoP — explained in plain language
+• Import and export M3U / M3U8 playlists
 • Optional AU / AUv3 rack on Shared
 
 What you do not get
@@ -298,6 +312,6 @@ Data Used to Track You: **No**.
 | Category (Info.plist) | `public.app-category.music` |
 | macOS deployment | 14.0 |
 | App-Preis | Free — jeder darf installieren |
-| IAP product (geplant) | `com.gerov.audioharbor.unlock` |
+| IAP product | `com.gerov.audioharbor.unlock` |
 | Trial | 7 Tage ab erster Installation |
 | Unlock | 9,90 € einmalig |

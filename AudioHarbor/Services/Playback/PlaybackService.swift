@@ -34,14 +34,6 @@ final class PlaybackService {
         }
     }
 
-    var dsdStrategy: DSDStrategy = .preferDoP {
-        didSet {
-            guard dsdStrategy != oldValue else { return }
-            UserDefaults.standard.set(dsdStrategy.rawValue, forKey: Self.dsdStrategyKey)
-            engine.setDSDStrategy(dsdStrategy)
-        }
-    }
-
     var repeatMode: RepeatMode = .off {
         didSet {
             guard repeatMode != oldValue else { return }
@@ -69,7 +61,6 @@ final class PlaybackService {
     private var orderPosition: Int = 0
 
     private static let outputModeKey = "audioharbor.outputMode"
-    private static let dsdStrategyKey = "audioharbor.dsdStrategy"
     private static let repeatModeKey = "audioharbor.repeatMode"
     private static let shuffleKey = "audioharbor.shuffle"
 
@@ -80,17 +71,13 @@ final class PlaybackService {
            let mode = OutputMode(rawValue: raw) {
             outputMode = mode
         }
-        if let raw = UserDefaults.standard.string(forKey: Self.dsdStrategyKey),
-           let strategy = DSDStrategy(rawValue: raw) {
-            dsdStrategy = strategy
-        }
+        UserDefaults.standard.removeObject(forKey: "audioharbor.dsdStrategy")
         if let raw = UserDefaults.standard.string(forKey: Self.repeatModeKey),
            let mode = RepeatMode(rawValue: raw) {
             repeatMode = mode
         }
         isShuffled = UserDefaults.standard.bool(forKey: Self.shuffleKey)
         engine.setOutputMode(outputMode)
-        engine.setDSDStrategy(dsdStrategy)
         engine.setTrackEndedHandler { [weak self] endedTrack in
             self?.advanceAfterTrackEnd(after: endedTrack)
         }

@@ -128,6 +128,8 @@ final class EffectHost {
     }
 
     func remove(_ id: UUID) {
+        // "Loaded …" from add() would otherwise outlive the plugin it names.
+        statusMessage = nil
         remove(id, notify: true)
     }
 
@@ -290,10 +292,26 @@ final class EffectHost {
         #endif
     }
 
+    /// The app is sandboxed, so AUv2 plug-ins without `sandboxSafe` (most commercial ones)
+    /// cannot load in-process. Those go to the system AU host; sandbox-safe ones stay in-process.
+    private static func instantiationOptions(for desc: AudioComponentDescription) -> AudioComponentInstantiationOptions {
+        #if os(macOS)
+        let registered = AVAudioUnitComponentManager.shared().components(matching: desc).first?
+            .audioComponentDescription.componentFlags ?? desc.componentFlags
+        let flags = AudioComponentFlags(rawValue: registered)
+        if flags.contains(.sandboxSafe) || flags.contains(.isV3AudioUnit) {
+            return []
+        }
+        return .loadOutOfProcess
+        #else
+        []
+        #endif
+    }
+
     private func loadUnit(for slot: EffectSlotState) async throws {
         let desc = slot.audioComponentDescription
         let unit: AVAudioUnit = try await withCheckedThrowingContinuation { continuation in
-            AVAudioUnit.instantiate(with: desc, options: []) { avAudioUnit, error in
+            AVAudioUnit.instantiate(with: desc, options: Self.instantiationOptions(for: desc)) { avAudioUnit, error in
                 if let error {
                     continuation.resume(throwing: error)
                 } else if let avAudioUnit {

@@ -38,6 +38,7 @@
 - [x] Browse by Album / Artist / Folder
 - [x] Search
 - [x] Simple playlists (local)
+- [x] M3U / M3U8 playlist import and export
 
 ### UI / UX
 - [x] SwiftUI multiplatform shell (Mac + iPhone; iPad adaptive)
@@ -49,7 +50,7 @@
 ### Settings (MVP-thin)
 - [x] Output device (Mac)
 - [x] Exclusive mode on/off
-- [x] DSD: DoP vs convert-to-PCM
+- [x] DSD: DoP in Output DoP, convert-to-PCM otherwise (no separate DSD setting)
 - [x] Library folders
 - [x] ReplayGain off / track / album (optional if low cost)
 

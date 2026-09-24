@@ -1,6 +1,7 @@
 import AudioToolbox
 import AVFoundation
 import Foundation
+import os
 
 #if os(macOS)
 import CoreAudio
@@ -31,6 +32,19 @@ final class HALAudioPlayer {
     var onReachedEnd: ((UInt64) -> Void)?
     var meterProbe: StereoMeterProbe?
     private var dsdSource: DSDStreamSource?
+    /// DSD→PCM output: decoded ahead on `prefetchQueue`; the IO thread only copies from here.
+    private var pcmRing: PCMRing?
+    private var prefetchTimer: DispatchSourceTimer?
+    private let prefetchQueue = DispatchQueue(label: "AudioHarbor.dsd.prefetch", qos: .userInitiated)
+
+    /// IO buffer target. The default 512 frames is ~3 ms at DoP 176.4 kHz — one late
+    /// callback breaks the DoP marker run and the DAC mutes while it re-locks.
+    private static let ioBufferSeconds = 0.05
+    /// How far ahead of the playhead DSD pages are kept resident.
+    private static let prefetchSeconds = 4.0
+    /// How much decoded DSD→PCM is kept ready ahead of the playhead.
+    private static let decodeAheadSeconds = 2.0
+    private static let decodeChunkFrames = 4096
 
     deinit {
         stop()
@@ -40,6 +54,7 @@ final class HALAudioPlayer {
     func load(_ buffer: RenderBuffer) {
         lock.lock()
         dsdSource = nil
+        pcmRing = nil
         self.buffer = buffer
         framePosition = 0
         didSignalEnd = false
@@ -50,6 +65,11 @@ final class HALAudioPlayer {
     func loadStream(_ source: DSDStreamSource) {
         lock.lock()
         dsdSource = source
+        // The lowpass decode is far too heavy for the IO thread (barely realtime in Debug).
+        pcmRing = source.isDoP ? nil : PCMRing(
+            capacityFrames: Int(source.sampleRate * Self.decodeAheadSeconds),
+            bytesPerFrame: 3 * source.channelCount
+        )
         buffer = source.makeRenderBuffer()
         framePosition = 0
         didSignalEnd = false
@@ -66,6 +86,7 @@ final class HALAudioPlayer {
     func seek(frame: Int) {
         lock.lock()
         framePosition = max(0, min(frame, buffer?.frameCount ?? 0))
+        pcmRing?.reset(at: framePosition)
         didSignalEnd = false
         lock.unlock()
     }
@@ -185,6 +206,8 @@ final class HALAudioPlayer {
             throw PlaybackEngineError.deviceUnavailable
         }
 
+        setIOBufferSize(unit: unit, device: deviceID, sampleRate: buffer.sampleRate)
+
         status = AudioUnitInitialize(unit)
         guard status == noErr else {
             AudioComponentInstanceDispose(unit)
@@ -195,8 +218,11 @@ final class HALAudioPlayer {
         didSignalEnd = false
         lock.unlock()
 
+        startPrefetch()
+
         status = AudioOutputUnitStart(unit)
         guard status == noErr else {
+            stopPrefetch()
             AudioComponentInstanceDispose(unit)
             throw PlaybackEngineError.deviceUnavailable
         }
@@ -204,13 +230,106 @@ final class HALAudioPlayer {
         audioUnit = unit
         isRunning = true
     }
+
+    private func setIOBufferSize(unit: AudioUnit, device: AudioDeviceID, sampleRate: Double) {
+        var frames = UInt32(sampleRate * Self.ioBufferSeconds)
+        var range = AudioValueRange()
+        var rangeSize = UInt32(MemoryLayout<AudioValueRange>.size)
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyBufferFrameSizeRange,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        if AudioObjectGetPropertyData(device, &address, 0, nil, &rangeSize, &range) == noErr, range.mMaximum > 0 {
+            frames = min(max(frames, UInt32(range.mMinimum)), UInt32(range.mMaximum))
+        }
+        _ = AudioUnitSetProperty(
+            unit,
+            kAudioDevicePropertyBufferFrameSize,
+            kAudioUnitScope_Global,
+            0,
+            &frames,
+            UInt32(MemoryLayout<UInt32>.size)
+        )
+        var maxSlice = max(frames, 4096)
+        _ = AudioUnitSetProperty(
+            unit,
+            kAudioUnitProperty_MaximumFramesPerSlice,
+            kAudioUnitScope_Global,
+            0,
+            &maxSlice,
+            UInt32(MemoryLayout<UInt32>.size)
+        )
+    }
     #endif
 
     func stop() {
+        stopPrefetch()
         if let audioUnit {
             AudioOutputUnitStop(audioUnit)
         }
         isRunning = false
+    }
+
+    /// Keeps the mapped DSD file resident ahead of the playhead so the IO thread never waits on disk,
+    /// and for DSD→PCM decodes ahead into `pcmRing`.
+    private func startPrefetch() {
+        stopPrefetch()
+        lock.lock()
+        let source = dsdSource
+        let ring = pcmRing
+        let position = framePosition
+        lock.unlock()
+        guard let source else { return }
+
+        let ahead = Int(source.sampleRate * Self.prefetchSeconds)
+        source.prefetch(from: position, count: ahead)
+        if let ring {
+            // Enough to start; the timer tops up the rest.
+            prefetchQueue.sync {
+                Self.fill(ring, from: source, limit: Int(source.sampleRate * 0.25))
+            }
+        }
+
+        let timer = DispatchSource.makeTimerSource(queue: prefetchQueue)
+        timer.schedule(deadline: .now() + 0.05, repeating: 0.05, leeway: .milliseconds(10))
+        var lastPrefetch = DispatchTime.now()
+        timer.setEventHandler { [weak self, weak source, weak ring] in
+            guard let self, let source else { return }
+            let playhead = self.currentFrame
+            if let ring {
+                Self.fill(ring, from: source, limit: nil)
+            }
+            if DispatchTime.now().uptimeNanoseconds - lastPrefetch.uptimeNanoseconds > 250_000_000 {
+                lastPrefetch = .now()
+                source.prefetch(from: playhead, count: ahead)
+            }
+        }
+        prefetchTimer = timer
+        timer.resume()
+    }
+
+    private func stopPrefetch() {
+        prefetchTimer?.cancel()
+        prefetchTimer = nil
+    }
+
+    /// Decode DSD→PCM into the ring until it is full (or `limit` frames were added).
+    private static func fill(_ ring: PCMRing, from source: DSDStreamSource, limit: Int?) {
+        var added = 0
+        var scratch = [UInt8](repeating: 0, count: decodeChunkFrames * ring.bytesPerFrame)
+        while true {
+            let (frame, room) = ring.nextWrite()
+            let count = min(decodeChunkFrames, room, source.frameCount - frame)
+            guard count > 0 else { return }
+            if let limit, added >= limit { return }
+            scratch.withUnsafeMutableBytes { raw in
+                guard let base = raw.baseAddress else { return }
+                let decoded = source.copyPacked24(at: frame, count: count, into: base)
+                ring.append(at: frame, frames: decoded, from: base)
+            }
+            added += count
+        }
     }
 
     /// Stop IO without disposing — used for pause / soft seek.
@@ -219,6 +338,7 @@ final class HALAudioPlayer {
     }
 
     private func disposeUnit() {
+        stopPrefetch()
         if let audioUnit {
             AudioOutputUnitStop(audioUnit)
             AudioUnitUninitialize(audioUnit)
@@ -235,6 +355,7 @@ final class HALAudioPlayer {
 
         lock.lock()
         let source = dsdSource
+        let ring = pcmRing
         let packed = buffer
         let position = framePosition
         lock.unlock()
@@ -246,13 +367,16 @@ final class HALAudioPlayer {
 
         let bytesPerFrame = 3 * packed.channelCount
         let framesAvailable = max(0, packed.frameCount - position)
-        let framesToCopy = min(frames, framesAvailable)
-        let byteCount = framesToCopy * bytesPerFrame
+        var framesToCopy = min(frames, framesAvailable)
         let srcOffset = position * bytesPerFrame
 
-        if let source, framesToCopy > 0 {
+        if let ring, framesToCopy > 0 {
+            // Underrun plays silence and holds the playhead until the decoder catches up.
+            framesToCopy = ring.read(at: position, count: framesToCopy, into: dst)
+        } else if let source, framesToCopy > 0 {
             _ = source.copyPacked24(at: position, count: framesToCopy, into: dst)
         } else {
+            let byteCount = framesToCopy * bytesPerFrame
             packed.packed24.withUnsafeBytes { raw in
                 if let base = raw.baseAddress, byteCount > 0, srcOffset + byteCount <= raw.count {
                     memcpy(dst, base.advanced(by: srcOffset), byteCount)
@@ -270,6 +394,7 @@ final class HALAudioPlayer {
             }
         }
 
+        let byteCount = framesToCopy * bytesPerFrame
         let totalBytes = Int(first.mDataByteSize)
         if byteCount < totalBytes {
             memset(dst.advanced(by: byteCount), 0, totalBytes - byteCount)
@@ -291,6 +416,85 @@ final class HALAudioPlayer {
             }
         }
         return noErr
+    }
+}
+
+/// Fixed-size ring of packed 24-bit frames addressed by absolute frame index.
+/// Written by the decode queue, read by the IO thread; the lock only guards short memcpys.
+final class PCMRing: @unchecked Sendable {
+    let capacity: Int
+    let bytesPerFrame: Int
+    private let storage: UnsafeMutablePointer<UInt8>
+    private let lock = OSAllocatedUnfairLock()
+    /// Absolute frame index of the oldest buffered frame.
+    private var start = 0
+    private var count = 0
+
+    init(capacityFrames: Int, bytesPerFrame: Int) {
+        capacity = max(1, capacityFrames)
+        self.bytesPerFrame = bytesPerFrame
+        storage = .allocate(capacity: capacity * bytesPerFrame)
+    }
+
+    deinit {
+        storage.deallocate()
+    }
+
+    /// Where the producer writes next and how much room is left.
+    func nextWrite() -> (frame: Int, room: Int) {
+        lock.lock()
+        defer { lock.unlock() }
+        return (start + count, capacity - count)
+    }
+
+    /// Drop everything and continue from `frame` (seek). Only the seek path may call this:
+    /// a playhead sampled by the producer is stale by the time it decodes.
+    func reset(at frame: Int) {
+        lock.lock()
+        defer { lock.unlock() }
+        start = frame
+        count = 0
+    }
+
+    func append(at frame: Int, frames: Int, from src: UnsafeRawPointer) {
+        lock.lock()
+        defer { lock.unlock() }
+        // A seek reset the window while this chunk was decoding — drop it.
+        guard frame == start + count else { return }
+        let n = min(frames, capacity - count)
+        copy(frames: n, ringFrame: frame, from: UnsafeMutablePointer(mutating: src.assumingMemoryBound(to: UInt8.self)), toRing: true)
+        count += n
+    }
+
+    /// Copies up to `frames` starting at `frame`; returns how many were available.
+    func read(at frame: Int, count frames: Int, into dst: UnsafeMutableRawPointer) -> Int {
+        lock.lock()
+        defer { lock.unlock() }
+        guard frame >= start, frame < start + count else { return 0 }
+        let skip = frame - start
+        start = frame
+        count -= skip
+        let n = min(frames, count)
+        copy(frames: n, ringFrame: frame, from: dst.assumingMemoryBound(to: UInt8.self), toRing: false)
+        start += n
+        count -= n
+        return n
+    }
+
+    private func copy(frames: Int, ringFrame: Int, from external: UnsafeMutablePointer<UInt8>, toRing: Bool) {
+        var done = 0
+        while done < frames {
+            let slot = (ringFrame + done) % capacity
+            let run = min(frames - done, capacity - slot)
+            let ring = storage + slot * bytesPerFrame
+            let ext = external + done * bytesPerFrame
+            if toRing {
+                ring.update(from: ext, count: run * bytesPerFrame)
+            } else {
+                ext.update(from: ring, count: run * bytesPerFrame)
+            }
+            done += run
+        }
     }
 }
 

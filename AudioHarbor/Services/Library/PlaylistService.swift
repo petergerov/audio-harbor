@@ -144,6 +144,24 @@ final class PlaylistService {
         return playlist
     }
 
+    /// Adds a manual playlist from an import; a name clash gets " 2", " 3", … rather than merging.
+    @discardableResult
+    func importPlaylist(named name: String, trackPaths: [String]) -> Playlist {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let base = trimmed.isEmpty ? "Imported Playlist" : trimmed
+        let existing = Set(playlists.map(\.name))
+        var resolved = base
+        var index = 2
+        while existing.contains(resolved) {
+            resolved = "\(base) \(index)"
+            index += 1
+        }
+        let playlist = Playlist(name: resolved, trackPaths: trackPaths)
+        playlists.insert(playlist, at: 0)
+        save()
+        return playlist
+    }
+
     private func nextUntitledName() -> String {
         let existing = Set(playlists.map(\.name))
         if !existing.contains("Untitled Playlist") {

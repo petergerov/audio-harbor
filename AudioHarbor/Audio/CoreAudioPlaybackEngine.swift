@@ -32,7 +32,6 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
     private let effectHost: EffectHost
 
     private var outputMode: OutputMode = .shared
-    private var dsdStrategy: DSDStrategy = .preferDoP
     private var usingHAL = false
     private var activeRender: RenderBuffer?
     private var seekOffset: TimeInterval = 0
@@ -73,10 +72,6 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         outputMode = mode
     }
 
-    func setDSDStrategy(_ strategy: DSDStrategy) {
-        dsdStrategy = strategy
-    }
-
     func setTrackEndedHandler(_ handler: @escaping (Track) -> Void) {
         onTrackEnded = handler
     }
@@ -108,7 +103,9 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
             do {
                 try startExclusive(render: render)
                 state = .playing
-                pathLabel = render.isDoP ? "Exclusive · DoP" : "Exclusive · Bit-perfect"
+                pathLabel = render.isDoP
+                    ? "Exclusive · DoP"
+                    : (loadedTrack?.format.isDSD == true ? "Exclusive · DSD→PCM" : "Exclusive · Bit-perfect")
                 startTimer()
             } catch {
                 // Never fall back into AVAudioEngine.connect with a custom format (crashes).
@@ -129,7 +126,7 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
                     }
                 } else {
                     state = .failed(
-                        "Exclusive playback failed. Switch Output to Shared, or use Prefer DoP off / PCM for DSD."
+                        "Exclusive playback failed. Switch Output to Shared, or to Exclusive for DSD without DoP."
                     )
                 }
             }
@@ -217,7 +214,7 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         if resume {
             do {
                 if !sharedEngine.isRunning { try sharedEngine.start() }
-                sharedPlayer.play()
+                try playSharedPlayer()
                 armSharedAnchor(from: clamped)
                 state = .playing
                 startTimer()
@@ -328,15 +325,19 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
 
     private func loadDSD(_ track: Track) async throws {
         #if os(macOS)
-        let wantHAL = (outputMode == .exclusive || outputMode == .dop)
-            && !effectHost.hasChain
-            && (outputMode == .dop || dsdStrategy == .preferDoP)
-        if wantHAL {
+        let wantHAL = (outputMode == .exclusive || outputMode == .dop) && !effectHost.hasChain
+        // DoP sends real DSD; Exclusive converts DSD to PCM but keeps the DAC exclusive.
+        // DoP only goes to an external interface; a DoP rate the DAC cannot take falls back
+        // to exclusive PCM, then to Shared.
+        let device = try? deviceController.defaultOutputDeviceID()
+        let dopOK = outputMode == .dop && device.map { deviceController.canCarryDoP(device: $0) } == true
+        let strategies: [DSDStrategy] = dopOK ? [.preferDoP, .convertToPCM] : [.convertToPCM]
+        for strategy in strategies where wantHAL {
+            guard let device else { break }
             do {
                 let source = try await Task.detached(priority: .userInitiated) {
-                    try DSDPlayback.stream(for: track, strategy: .preferDoP)
+                    try DSDPlayback.stream(for: track, strategy: strategy)
                 }.value
-                let device = try deviceController.defaultOutputDeviceID()
                 if deviceController.supportsNominalRate(source.sampleRate, device: device) {
                     usingHAL = true
                     activeRender = source.makeRenderBuffer()
@@ -348,7 +349,7 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
                     seekOffset = 0
                     currentTime = 0
                     activeFormatLabel = "\(track.format.rawValue) · \(source.label)"
-                    pathLabel = "DoP"
+                    pathLabel = source.isDoP ? "DoP" : "Exclusive · DSD→PCM"
                     return
                 }
             } catch {
@@ -401,7 +402,7 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         }
         if !sharedPlayer.isPlaying {
             rescheduleShared()
-            sharedPlayer.play()
+            try playSharedPlayer()
         }
         armSharedAnchor(from: seekOffset)
         state = .playing
@@ -413,6 +414,20 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
             pathLabel = "Shared"
         }
         startTimer()
+    }
+
+    /// `AVAudioPlayerNode.play()` raises an ObjC exception ("player did not see an IO cycle")
+    /// when the engine produced no IO yet, e.g. right after an AU insert was wired in.
+    private func playSharedPlayer() throws {
+        var playError: NSError?
+        let ok = AHPerformWithExceptionHandling({
+            self.sharedPlayer.play()
+        }, &playError)
+        if !ok {
+            throw PlaybackEngineError.notImplemented(
+                "Playback could not start with the current plugin rack. Remove the last plugin and try again."
+            )
+        }
     }
 
     private func wireSharedGraph() {

@@ -116,7 +116,8 @@ actor BookmarkStore {
 
     private static var creationOptions: URL.BookmarkCreationOptions {
         #if os(macOS)
-        [.withSecurityScope]
+        // The app may write user-picked files (playlist export); the music tree stays read-only.
+        [.withSecurityScope, .securityScopeAllowOnlyReadAccess]
         #else
         []
         #endif

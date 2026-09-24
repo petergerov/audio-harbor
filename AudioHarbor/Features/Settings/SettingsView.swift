@@ -47,20 +47,6 @@ struct SettingsView: View {
                             .foregroundStyle(HarborColor.ivoryDim)
                     }
 
-                    panel(title: "DSD") {
-                        Picker("Strategy", selection: $playback.dsdStrategy) {
-                            ForEach(DSDStrategy.allCases) { strategy in
-                                Text(strategy.title).tag(strategy)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .tint(HarborColor.amber)
-
-                        Text(playback.dsdStrategy.detail)
-                            .font(HarborFont.body(13))
-                            .foregroundStyle(HarborColor.ivoryDim)
-                    }
-
                     panel(title: "License") {
                         UnlockPanel()
                     }
