@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Audio Harbor — Local audiophile player for Mac</title>
-  <meta name="description" content="A calm local player for your folders. Free to install, seven days full use, then €9.90 once — no subscription. Bit-perfect Exclusive and DoP on Mac, AUv3 plugins on the Deck." />
+  <meta name="description" content="A calm local player for your folders. Free to install, seven days full use, then €9.90 once — no subscription. Bit-perfect Exclusive and DoP on Mac, AU and AUv3 plugins on the Deck, M3U playlists in and out." />
   <meta name="keywords" content="audiophile, bit-perfect, DSD, FLAC, exclusive mode, DoP, AUv3, SACD, macOS, Mac, local music player" />
   <link rel="icon" href="images/web/icon-128.png" />
   <link rel="apple-touch-icon" href="images/web/icon-180.png" />
@@ -22,15 +22,16 @@
     "name": "Audio Harbor",
     "applicationCategory": "MusicApplication",
     "operatingSystem": "macOS",
-    "description": "Local audiophile player for Mac. Bit-perfect Exclusive and DoP. AUv3 inserts on the Deck.",
+    "description": "Local audiophile player for Mac. Bit-perfect Exclusive and DoP. AU and AUv3 inserts on the Deck.",
     "featureList": [
       "Local folders only — no streaming, no account",
-      "FLAC, ALAC, WAV, AIFF, AAC, MP3, DSF",
+      "FLAC, ALAC, WAV, AIFF, AAC, MP3, DSF, DFF, SACD ISO",
       "Shared output as the everyday default",
       "Exclusive hog mode and sample-rate match on Mac",
-      "DoP for DSD on capable Mac DACs, PCM fallback otherwise",
+      "DoP for DSD on DSD-capable Mac DACs; Exclusive converts DSD to PCM",
       "Catalogue by album, artist, folder, with search and playlists",
-      "AUv3 effect inserts on the Deck rack",
+      "Import and export M3U / M3U8 playlists",
+      "AUv3 and classic AU effect inserts on the Deck rack",
       "Optional plugin rack on Shared · FX; Exclusive stays bit-perfect with an empty rack",
       "Local library only — nothing leaves the Mac"
     ]
@@ -452,7 +453,7 @@
 <section class="hero">
   <span class="hero-eyebrow">Mac · AUv3 · Local files</span>
   <h1>Open a folder.<br>Hear the <em>file</em>.</h1>
-  <p>A quiet audiophile player for music you already own. Bit-perfect Exclusive and DoP on Mac. Load the <strong>AUv3</strong> plugins you already have — on the Deck, not in another host.</p>
+  <p>A quiet audiophile player for music you already own. Bit-perfect Exclusive and DoP on Mac. Load the <strong>AU and AUv3</strong> plugins you already have — on the Deck, not in another host.</p>
   <div class="hero-actions">
     <a href="https://github.com/petergerov/audio-harbor" class="btn-primary">
       View on GitHub
@@ -489,13 +490,13 @@
         <div class="step-num">Exclusive</div>
         <span class="step-icon">◎</span>
         <h3>Bit-perfect into a USB DAC</h3>
-        <p>Mac only. Audio Harbor takes over the DAC so the file’s sample rate stays as-is. Other apps go silent. Skip this for laptop speakers and Bluetooth.</p>
+        <p>Mac only. Audio Harbor takes over the DAC so the file’s sample rate stays as-is. Other apps go silent. DSD files are converted to PCM. Skip this for laptop speakers and Bluetooth.</p>
       </div>
       <div class="step">
         <div class="step-num">DoP</div>
         <span class="step-icon">☾</span>
-        <h3>DSD files on a DSD DAC</h3>
-        <p>Mac only. DSF, DFF, and SACD ISO (including DST) send DSD as DoP when the DAC understands it. If it cannot, Audio Harbor converts to ordinary PCM so the track still plays.</p>
+        <h3>Exclusive, plus real DSD</h3>
+        <p>Mac only. Everything Exclusive does — and DSF, DFF, and SACD ISO (including DST) reach the DAC as real DSD via DoP. Pick it only if your DAC plays DSD. No separate DSD setting: the output mode decides.</p>
       </div>
     </div>
     <p class="sound-note">Effects on the Deck rack switch you back to Shared until you clear them. Exclusive stays the empty-rack, bit-perfect path — we will not pretend otherwise.</p>
@@ -609,17 +610,17 @@
       <div class="feature">
         <span class="feature-icon">1</span>
         <h3>DSD without the drama</h3>
-        <p>DSF via DoP when the Mac DAC can take it. Otherwise a clean PCM conversion, labelled in the UI. No fake 1-bit into laptop speakers.</p>
+        <p>Output DoP sends DSD as DoP to a DSD DAC. Every other path gets a clean PCM conversion, labelled in the UI. No fake 1-bit into laptop speakers.</p>
       </div>
       <div class="feature">
         <span class="feature-icon">🎛</span>
-        <h3>AUv3 on the Deck</h3>
-        <p><strong>AUv3</strong> inserts on the Deck. The plugins you already own — EQ, room correction, headphone correction — sit on the player. See <a href="#plugins" style="color: var(--accent);">the rack</a>.</p>
+        <h3>AU and AUv3 on the Deck</h3>
+        <p><strong>AU and AUv3</strong> inserts on the Deck. The plugins you already own — EQ, room correction, headphone correction — sit on the player. See <a href="#plugins" style="color: var(--accent);">the rack</a>.</p>
       </div>
       <div class="feature">
         <span class="feature-icon">≡</span>
         <h3>Catalogue, not a feed</h3>
-        <p>Album, artist, folder, playlists, queue. Lock screen and media keys. The music is yours; we do not recommend a lifestyle.</p>
+        <p>Album, artist, folder, playlists, queue. M3U / M3U8 playlists in from foobar, VLC, Roon, or Music — and back out. Lock screen and media keys. The music is yours; we do not recommend a lifestyle.</p>
       </div>
       <div class="feature">
         <span class="feature-icon">○</span>
@@ -636,19 +637,19 @@
   <div class="container">
     <div class="features-header">
       <div class="section-eyebrow">Audio Units</div>
-      <h2 class="section-title">AUv3 plugins. In the player.</h2>
-      <p class="section-sub">Audio Harbor is a host. Load the AUv3 effects you already use in Logic, GarageBand, or AUM — as inserts on the Deck, while the record plays.</p>
+      <h2 class="section-title">AU plugins. In the player.</h2>
+      <p class="section-sub">Audio Harbor is a host. Load the AU and AUv3 effects you already use in Logic, GarageBand, or AUM — as inserts on the Deck, while the record plays.</p>
     </div>
     <div class="hosts-grid">
       <div class="host-card">
         <div class="lead">Mac</div>
-        <h3>AUv3</h3>
-        <p>Any stereo Audio Unit v3 effect. The same extensions other Apple hosts see. Add from the rack, open the plugin’s own editor, keep the settings after quit.</p>
+        <h3>AU and AUv3</h3>
+        <p>Any stereo Audio Unit effect — AUv3 extensions and classic AU components. The same units other Apple hosts see. Add from the rack, open the plugin’s own editor, keep the settings after quit.</p>
       </div>
       <div class="host-card">
         <div class="lead">Out of process</div>
         <h3>Crash-safe</h3>
-        <p>AUv3 effects run outside the player. A plugin that misbehaves takes itself down, not your listening. It is also why the rack is AUv3: the older in-process Audio Units cannot load inside an App Store sandbox.</p>
+        <p>AUv3 effects run outside the player. Classic AUs that are not sandbox-safe — most commercial ones — run in macOS’s own Audio Unit host, not inside Audio Harbor. A plugin that misbehaves takes itself down, not your listening.</p>
       </div>
       <div class="host-card">
         <div class="lead">Honest path</div>
@@ -691,7 +692,7 @@
       </div>
       <div class="preset">
         <h3>DSD, with a label</h3>
-        <p>DSF, DFF, and SACD ISO stereo — including DST-compressed discs. DoP when the DAC understands it; otherwise DSD→PCM. The path says which one you are on.</p>
+        <p>DSF, DFF, and SACD ISO stereo — including DST-compressed discs. Output DoP sends real DSD; Shared and Exclusive convert to PCM. The path says which one you are on.</p>
       </div>
       <div class="preset">
         <h3>Not in the main path</h3>

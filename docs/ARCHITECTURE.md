@@ -77,9 +77,10 @@ File → Decoder → (optional DSD→DoP pack) → HAL Output Unit
 Rules:
 1. **Default = bit-perfect** for PCM when exclusive mode is on.
 2. **Never silently resample** on the audiophile path; show a clear badge if conversion is active.
-3. **DSD:** Prefer DoP to DAC; if unsupported → high-quality PCM conversion with UI disclosure.
+3. **DSD:** The output mode decides — Output DoP sends DoP (falls back to exclusive PCM, then Shared, if the DAC rejects the rate); Exclusive converts DSD to PCM on the exclusive HAL path; Shared converts to PCM. No separate DSD setting. DoP payload: oldest DSD bit in bit 15 (first byte high). The HAL IO buffer is ~50 ms and the mapped DSD file is prefetched ahead of the playhead — a missed cycle breaks the DoP marker run and the DAC mutes while it re-locks.
 4. **DST:** MPEG-4 DST (Scarlet Book / DST-DFF) is lossless DSD compression. Harbor decodes each 1/75 s frame to raw DSD, caches an uncompressed DFF, then uses the normal DoP / PCM path. Do not play DST bytes as DSD.
 5. **iOS:** Use `AVAudioEngine` / `AVAudioPlayerNode` + `AVAudioSession` category `.playback`; document that true exclusive HAL mode is a Mac strength.
+6. **Plugins:** The rack runs on Shared only. The app is sandboxed, so AUv2 components without `sandboxSafe` (UAD, Valhalla, bx, Kilohearts, …) are instantiated with `.loadOutOfProcess`; sandbox-safe AUv2 and AUv3 load normally. `AVAudioPlayerNode.play()` after a graph rewire is wrapped in the ObjC exception catcher.
 
 ### Decoders
 
@@ -162,7 +163,7 @@ Relative paths from each folder root, not absolute paths and not UUIDs. `/Volume
 
 ### Optional export into the tree
 
-Writing M3U8/XSPF *into* an added folder is a feature so foobar/VLC see the same list. It is a copy, not the source of truth. Needs read-write access the MAS sandbox does not grant today — ask only for that export.
+Writing M3U8/XSPF *into* an added folder is a feature so foobar/VLC see the same list. It is a copy, not the source of truth. Needs write access to the target folder. The app has `user-selected.read-write` since the playlist export (save panel); folder bookmarks for the collection are still created read-only.
 
 ### New Mac / reinstall
 
@@ -184,7 +185,7 @@ Do not iCloud-sync `catalogue.sqlite` or bookmarks. Do not invent a Harbor accou
 
 ### MAS sandbox
 
-Keep `user-selected.read-only` + app-scope bookmarks for the collection. The portable library file is user-selected or in the app’s own container until they pick a folder. Do not require write access to the music tree for Harbor to work.
+`user-selected.read-write` (only so the save panel can write a playlist export) + app-scope bookmarks for the collection, created with `securityScopeAllowOnlyReadAccess`. The portable library file is user-selected or in the app’s own container until they pick a folder. Do not require write access to the music tree for Harbor to work.
 
 ---
 
