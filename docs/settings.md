@@ -10,7 +10,14 @@
 | **Exclusive** | USB-DAC, hochauflösende Dateien | Die App übernimmt den DAC allein und stellt ihn auf die Abtastrate der Datei. Die Musik kommt **bit-perfect** an, also unverändert. Andere Apps sind stumm. DSD-Dateien werden in PCM umgerechnet. |
 | **DoP** | USB-DAC, **der DSD kann** | Wie Exclusive. Zusätzlich gehen DSD-Dateien (DSF, DFF, SACD ISO) als echtes DSD an den DAC. |
 
-Exclusive und DoP gibt es nur auf dem Mac und nur mit einem externen USB-DAC.
+Exclusive und DoP gibt es nur auf dem Mac und nur mit einem externen DAC (USB, Thunderbolt, FireWire, PCI).
+An eingebauten Lautsprechern und Kopfhörern, virtuellen Geräten (z. B. VB-Cable), Bluetooth und AirPlay
+spielt die App automatisch über Shared. Auf dem Deck steht dann „Shared · No external DAC“.
+Ohne externen DAC sind Exclusive und DoP in den Settings ausgegraut, und **Shared** ist ausgewählt.
+Steckst du den DAC wieder an, wählt die App automatisch wieder deine vorherige DAC-Einstellung (Exclusive oder DoP).
+
+**Lautstärke:** In Exclusive und DoP regelst du die Lautstärke am DAC oder Verstärker.
+Die Lautstärketasten des Mac wirken dann nicht, weil die App das Gerät allein nutzt.
 
 ## DSD: Was ist DoP?
 
@@ -22,8 +29,6 @@ Der DAC erkennt die Markierung, packt die Daten aus und spielt echtes DSD.
 - **Dein DAC kann kein DSD** → Output **Exclusive** wählen. DSD wird dann in PCM umgerechnet.
   Wichtig: Ein DAC ohne DSD macht aus DoP lautes Rauschen.
 - Kann der DAC die DoP-Rate nicht annehmen, wechselt die App automatisch zu PCM.
-- DoP geht nur an externe Geräte (USB, Thunderbolt, FireWire, PCI). Eingebaute Lautsprecher,
-  virtuelle Geräte (z. B. VB-Cable, BlackHole), Bluetooth und AirPlay bekommen immer PCM.
 
 Eine eigene DSD-Einstellung gibt es nicht mehr. Der Output-Modus entscheidet.
 
@@ -52,3 +57,5 @@ Hier fügst du die Ordner mit deiner Musik hinzu. Die App liest nur. Sie verschi
 
 7 Tage kostenlos ab der ersten Installation, danach einmalig freischalten.
 Nach einer Neuinstallation oder auf einem neuen Mac stellst du den Kauf mit „Restore Purchases“ wieder her.
+
+Mehr Fragen und Antworten (englisch): [FAQ](https://petergerov.github.io/audio-harbor/faq.html)

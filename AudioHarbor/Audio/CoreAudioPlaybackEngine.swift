@@ -34,6 +34,8 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
 
     private var outputMode: OutputMode = .shared
     private let logger = Logger(subsystem: "com.gerov.audioharbor.player", category: "Playback")
+    private var externalDACAvailable = false
+    private var externalDACHandler: ((Bool) -> Void)?
     private var usingHAL = false
     private var activeRender: RenderBuffer?
     private var seekOffset: TimeInterval = 0
@@ -59,6 +61,12 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         effectHost.onChainChanged = { [weak self] in
             self?.handleEffectChainChanged()
         }
+        refreshExternalDAC()
+        deviceController.observeOutputChanges { [weak self] in
+            MainActor.assumeIsolated {
+                self?.refreshExternalDAC()
+            }
+        }
         halPlayer.onReachedEnd = { [weak self] generation in
             Task { @MainActor in
                 guard let self else { return }
@@ -72,6 +80,19 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
 
     func setOutputMode(_ mode: OutputMode) {
         outputMode = mode
+    }
+
+    func setExternalDACHandler(_ handler: @escaping (Bool) -> Void) {
+        externalDACHandler = handler
+        handler(externalDACAvailable)
+    }
+
+    private func refreshExternalDAC() {
+        let available = exclusiveTargetIsExternal
+        guard available != externalDACAvailable || externalDACHandler == nil else { return }
+        externalDACAvailable = available
+        logger.info("External DAC available: \(available)")
+        externalDACHandler?(available)
     }
 
     func setTrackEndedHandler(_ handler: @escaping (Track) -> Void) {
@@ -95,6 +116,9 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
             }
             if !usingHAL {
                 releaseExclusiveSession()
+                if outputMode != .shared, !effectHost.hasChain, !exclusiveTargetIsExternal {
+                    pathLabel += " · No external DAC"
+                }
             }
             state = .paused
         } catch {
@@ -295,6 +319,17 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
 
     // MARK: - Loaders
 
+    #if os(macOS)
+    /// Exclusive / DoP only take over an external DAC; anything else plays Shared.
+    private var exclusiveTargetIsExternal: Bool {
+        // While we hog the DAC, macOS reports another default output — ask about the DAC.
+        guard let device = try? deviceController.exclusiveTargetDevice() else { return false }
+        return deviceController.isExternalInterface(device: device)
+    }
+    #else
+    private var exclusiveTargetIsExternal: Bool { false }
+    #endif
+
     private func shouldUseHAL(for track: Track) -> Bool {
         // Plugins need the Shared float graph — never hog Exclusive/DoP with inserts.
         if effectHost.hasActiveEffects || effectHost.hasChain {
@@ -303,7 +338,7 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         #if os(macOS)
         switch outputMode {
         case .exclusive, .dop:
-            return true
+            return exclusiveTargetIsExternal
         case .shared:
             return false
         }
@@ -355,13 +390,14 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
 
     private func loadDSD(_ track: Track) async throws {
         #if os(macOS)
-        let wantHAL = (outputMode == .exclusive || outputMode == .dop) && !effectHost.hasChain
         // DoP sends real DSD; Exclusive converts DSD to PCM but keeps the DAC exclusive.
-        // DoP only goes to an external interface; a DoP rate the DAC cannot take falls back
+        // Both need an external interface; a DoP rate the DAC cannot take falls back
         // to exclusive PCM, then to Shared.
-        // While we hog the DAC, macOS reports another default output — decide against the DAC.
+        let wantHAL = (outputMode == .exclusive || outputMode == .dop)
+            && !effectHost.hasChain
+            && exclusiveTargetIsExternal
         let device = try? deviceController.exclusiveTargetDevice()
-        let dopOK = outputMode == .dop && device.map { deviceController.canCarryDoP(device: $0) } == true
+        let dopOK = outputMode == .dop && wantHAL
         let strategies: [DSDStrategy] = dopOK ? [.preferDoP, .convertToPCM] : [.convertToPCM]
         logger.info("DSD load \(track.url.lastPathComponent, privacy: .public): output \(self.outputMode.rawValue, privacy: .public), hal \(wantHAL), dopOK \(dopOK)")
         for strategy in strategies where wantHAL {
@@ -444,8 +480,8 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         state = .playing
         if effectHost.hasActiveEffects {
             pathLabel = "Shared · FX"
-        } else if pathLabel.contains("DSD") || pathLabel.contains("fallback") {
-            // Keep the DSD / fallback caption.
+        } else if pathLabel.contains("DSD") || pathLabel.contains("fallback") || pathLabel.contains("external") {
+            // Keep the DSD / fallback / no-DAC caption.
         } else {
             pathLabel = "Shared"
         }

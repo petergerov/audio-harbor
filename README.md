@@ -27,7 +27,7 @@ Select the **AudioHarbor** scheme → **My Mac** or an iPhone simulator → Run.
 - Catalogue: directories, albums, artists; playlists and labels
 - M3U / M3U8 playlist import and export
 - Real metadata + artwork via AVFoundation / DSD probe
-- Mac exclusive mode: hog + sample-rate match + HAL 24-bit path
+- Mac exclusive mode: hog + sample-rate match + HAL 24-bit path, external DACs only (USB / Thunderbolt / FireWire / PCI); Exclusive and DoP grey out without one and the choice returns when the DAC is plugged in
 - DSF / DFF → DoP in Output DoP; DSD→PCM in Shared and Exclusive
 - SACD ISO stereo tracks, including MPEG-4 DST → cached DFF → same DSD path
 - Shared AVAudioEngine path as default/stable playback
@@ -36,3 +36,9 @@ Select the **AudioHarbor** scheme → **My Mac** or an iPhone simulator → Run.
 ## Formats
 
 FLAC · ALAC · WAV · AIFF · AAC · MP3 · DSF · DFF · SACD ISO (stereo, including DST)
+
+## Docs
+
+- [FAQ](https://petergerov.github.io/audio-harbor/faq.html) — output modes, DAC, DSD, plugins, playlists
+- [Settings explained (German)](docs/settings.md)
+- [Architecture](docs/ARCHITECTURE.md) · [Product](docs/PRODUCT.md)

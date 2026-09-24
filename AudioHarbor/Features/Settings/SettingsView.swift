@@ -33,7 +33,7 @@ struct SettingsView: View {
                         }
 
                         #if os(macOS)
-                        Text("Exclusive and DoP need a USB DAC. Built-in speakers and Bluetooth stay on Shared.")
+                        Text(outputFootnote)
                             .font(HarborFont.body(12))
                             .foregroundStyle(HarborColor.ivoryDim)
                         #else
@@ -82,16 +82,25 @@ struct SettingsView: View {
         #endif
     }
 
+    private var outputFootnote: String {
+        if appModel.playback.externalDACAvailable {
+            return "External DAC connected — Exclusive and DoP are available."
+        }
+        if appModel.playback.outputMode != .shared {
+            return "No external DAC connected — playing Shared. \(appModel.playback.outputMode.title) is selected again when you plug the DAC in."
+        }
+        return "Exclusive and DoP need an external DAC (USB). Built-in speakers, headphones, Bluetooth, and AirPlay stay on Shared."
+    }
+
     @ViewBuilder
     private func outputChoice(_ mode: OutputMode) -> some View {
-        let selected = appModel.playback.outputMode == mode
-        #if os(iOS)
-        let available = !mode.isMacOnly
-        #else
-        let available = true
-        #endif
+        let selected = appModel.playback.effectiveOutputMode == mode
+        // Exclusive / DoP only when an external DAC is the output (never on iOS).
+        let available = !mode.isMacOnly || appModel.playback.externalDACAvailable
 
         Button {
+            // Tapping the Shared that stands in for an unplugged DAC must not forget Exclusive / DoP.
+            guard !selected else { return }
             appModel.playback.outputMode = mode
         } label: {
             HStack(alignment: .top, spacing: 12) {

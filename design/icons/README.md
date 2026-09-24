@@ -1,19 +1,21 @@
 # App-Icon
 
-Gewählt: **Entwurf 6 — Typenschild**. Die Übersicht aller sechs Entwürfe liegt in `uebersicht.html`.
+Aktuell: **Kopfhörer über Wellen, Gold auf Schwarz** (PNG-Master, September 2026).
 
 ## Quellen
 
 | Datei | Zweck |
 | --- | --- |
-| `icon-6-typenschild.svg` | Vollversion mit Wortmarke — ab 64 px |
-| `icon-6-typenschild-klein.svg` | Monogramm „AH“ — bis 32 px, dort verschmelzen zwei Zeilen Versalien |
-| `icon-6-typenschild-ios.svg` | randlos quadratisch, ohne Squircle — iOS maskiert selbst |
+| `icon.png` | Kachel mit Wortmarke „AUDIO HARBOR“ — App-Icon ab 64 px, iOS 1024 |
+| `icon_no_text.png` | nur das Symbol — App-Icon bei 16 / 32 px (dort ist die Schrift unlesbar) und alle Homepage-Icons |
 
-Die Entwürfe 1 bis 5 bleiben als SVG liegen; Entwurf 1 hat noch seine drei Master
-(`icon-1-plattenteller*.svg`), falls die Richtung doch wieder gewechselt wird.
+Beide Master bringen ihre eigene, goldumrandete Kachel auf dunklem Grund mit.
+Der Renderer findet den Goldrahmen über die Helligkeit, liest den Eckradius an der
+45°-Diagonale ab und verwirft alles außerhalb des Rahmens.
 
-Farben stammen aus `HarborTheme.swift`, nicht aus einer eigenen Palette.
+Die früheren SVG-Entwürfe (1 bis 6, zuletzt „Typenschild“) bleiben liegen;
+`render.swift` rendert sie weiterhin, falls die Richtung zurückwechselt.
+Die Übersicht dazu liegt in `uebersicht.html`.
 
 ## Neu bauen
 
@@ -21,13 +23,12 @@ Farben stammen aus `HarborTheme.swift`, nicht aus einer eigenen Palette.
 design/icons/tools/build-appicon.sh
 ```
 
-Rendert `AppIcon.appiconset` neu. `render.swift` zeichnet das SVG über AppKit
-vektor-scharf in jeder Zielgröße:
+Rendert `AppIcon.appiconset` sowie `docs/images/web/icon-128.png`, `icon-180.png`
+und `docs/AppIcon.png` (Link-Vorschau) neu. `render-png.swift` kennt drei Modi:
 
-- **mac** — auf Apples Raster eingerückt (824 von 1024), mit Schlagschatten, transparenter Rand
-- **bleed** — deckend ohne Alphakanal, den lehnt der App Store bei iOS-Icons ab
+- **mac** — Kachel auf ihre eigene Rundung zugeschnitten, auf Apples Raster (824 von 1024), mit Schlagschatten, transparenter Rand
+- **web** — Kachel formatfüllend, transparente Ecken (Homepage, Favicon)
+- **bleed** — deckend ohne Alphakanal, den lehnt der App Store bei iOS-Icons ab; iOS maskiert selbst
 
-Zwei Fallstricke, die hier schon zugeschlagen haben: `qlmanage` taugt nicht als
-Renderer, es legt die Grafik auf einen deckenden Grund. Und AppKit versteht
-`clip-path="inset(…)"` nicht — Zuschnitte brauchen ein echtes `<clipPath>`,
-sonst laufen sie im Icon aus, während der Browser sie korrekt zeigt.
+Nach einem neuen Icon zeigt das Dock manchmal noch das alte — macOS cached Icons.
+Clean Build (⇧⌘K) und die App neu starten hilft.

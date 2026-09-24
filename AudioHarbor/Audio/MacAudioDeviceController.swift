@@ -157,9 +157,26 @@ final class MacAudioDeviceController: @unchecked Sendable {
         }
     }
 
-    /// Only a real external interface can carry DoP to a DSD decoder. Built-in speakers, virtual
-    /// devices (VB-Cable, BlackHole), aggregates, Bluetooth, and AirPlay would play the DoP words as noise.
-    func canCarryDoP(device: AudioDeviceID) -> Bool {
+    /// Calls `handler` on the main queue when the default output or the device list changes
+    /// (a DAC plugged in or out, another output picked in System Settings).
+    func observeOutputChanges(_ handler: @escaping () -> Void) {
+        for selector in [kAudioHardwarePropertyDefaultOutputDevice, kAudioHardwarePropertyDevices] {
+            var address = AudioObjectPropertyAddress(
+                mSelector: selector,
+                mScope: kAudioObjectPropertyScopeGlobal,
+                mElement: kAudioObjectPropertyElementMain
+            )
+            AudioObjectAddPropertyListenerBlock(AudioObjectID(kAudioObjectSystemObject), &address, .main) { _, _ in
+                handler()
+            }
+        }
+    }
+
+    /// Exclusive and DoP are for a real external interface (USB, Thunderbolt, FireWire, PCI).
+    /// Built-in speakers and headphones, virtual devices (VB-Cable, BlackHole), aggregates,
+    /// Bluetooth, and AirPlay stay Shared: DoP would be noise there, and hogging them takes
+    /// the volume keys away (macOS moves the default output to another device).
+    func isExternalInterface(device: AudioDeviceID) -> Bool {
         var transport: UInt32 = 0
         var size = UInt32(MemoryLayout<UInt32>.size)
         var address = AudioObjectPropertyAddress(
@@ -284,7 +301,8 @@ final class MacAudioDeviceController: @unchecked Sendable {
     func releaseExclusive() {}
     func currentSampleRate(device: UInt32) throws -> Float64 { 0 }
     func supportsNominalRate(_ rate: Double, device: UInt32) -> Bool { false }
-    func canCarryDoP(device: UInt32) -> Bool { false }
+    func isExternalInterface(device: UInt32) -> Bool { false }
+    func observeOutputChanges(_ handler: @escaping () -> Void) {}
     func exclusiveTargetDevice() throws -> UInt32 { 0 }
     func isAlive(_ device: UInt32) -> Bool { false }
     func switchExclusiveRate(to rate: Double) throws {}

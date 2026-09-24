@@ -50,6 +50,15 @@ final class PlaybackService {
         }
     }
 
+    /// An external DAC is the output, so Exclusive and DoP can be picked. Always false on iOS.
+    private(set) var externalDACAvailable = false
+
+    /// What actually plays: the stored choice with a DAC, Shared without one. `outputMode`
+    /// keeps Exclusive / DoP while the DAC is unplugged, so it comes back when it is plugged in.
+    var effectiveOutputMode: OutputMode {
+        outputMode.isMacOnly && !externalDACAvailable ? .shared : outputMode
+    }
+
     var state: PlaybackState { playbackState }
     var isPlaying: Bool { playbackState == .playing }
 
@@ -78,6 +87,9 @@ final class PlaybackService {
         }
         isShuffled = UserDefaults.standard.bool(forKey: Self.shuffleKey)
         engine.setOutputMode(outputMode)
+        engine.setExternalDACHandler { [weak self] available in
+            self?.externalDACAvailable = available
+        }
         engine.setTrackEndedHandler { [weak self] endedTrack in
             self?.advanceAfterTrackEnd(after: endedTrack)
         }

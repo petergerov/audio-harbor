@@ -268,7 +268,7 @@ enum OutputMode: String, CaseIterable, Identifiable, Sendable {
         case .shared:
             "Plays like any other app. Other sound still works (calls, YouTube, notifications). Fine for built-in speakers, Bluetooth, AirPlay, and headphones. If you are not sure, stay here."
         case .exclusive:
-            "Audio Harbor takes over a USB DAC so the file plays unchanged — same sample rate, nothing mixed in. Other apps go silent. DSD files are converted to PCM. Skip this for Mac speakers, Bluetooth, or AirPlay; they cannot do exclusive."
+            "Audio Harbor takes over a USB DAC so the file plays unchanged — same sample rate, nothing mixed in. Other apps go silent. DSD files are converted to PCM. Needs an external DAC — on Mac speakers, headphones, Bluetooth, or AirPlay Audio Harbor plays Shared, so the volume keys keep working."
         case .dop:
             "Everything Exclusive does, and DSD files (DSF, DFF, SACD ISO) reach the DAC as real DSD via DoP. Only pick this if your DAC plays DSD — a DAC without DSD turns DoP into loud noise. If the DAC cannot take the rate, Audio Harbor converts to PCM."
         }
