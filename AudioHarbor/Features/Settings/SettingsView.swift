@@ -46,7 +46,7 @@ struct SettingsView: View {
                             .foregroundStyle(HarborColor.ivoryDim)
                         #endif
 
-                        Text("Effects on the Deck switch you back to Shared until you clear the rack.")
+                        Text("With effects in the rack, Exclusive and DoP keep the DAC but send processed PCM — not bit-perfect, and DSD as PCM. Clear the rack for bit-perfect and DoP.")
                             .font(HarborFont.body(12))
                             .foregroundStyle(HarborColor.ivoryDim)
                     }

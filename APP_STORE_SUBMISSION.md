@@ -2,7 +2,7 @@
 
 Erste Veröffentlichung: **Mac App Store only**. iPhone/iPad bleiben im Xcode-Projekt, gehen aber noch nicht live.
 
-Stand der App im Repo: Bundle `com.gerov.audioharbor.player`, Version **1.0.0 (13)**, App Sandbox aktiv, StoreKit 2 (Trial + Unlock) eingebaut. Archiviert wird von einem Release-Branch, der aus `develop` erstellt wird. Offen sind vor allem Sandbox-Tests, Verträge und App Store Connect.
+Stand der App im Repo: Bundle `com.gerov.audioharbor.player`, Version **1.0.0 (15)**, App Sandbox aktiv, StoreKit 2 (Trial + Unlock) eingebaut. Archiviert wird von einem Release-Branch, der aus `develop` erstellt wird. Offen sind vor allem Sandbox-Tests, Verträge und App Store Connect.
 
 ---
 

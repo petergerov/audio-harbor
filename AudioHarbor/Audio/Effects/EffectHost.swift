@@ -41,7 +41,8 @@ final class EffectHost {
         return folder.appendingPathComponent("effect-chain.json")
     }
 
-    /// True when any insert is present and not bypassed — forces Shared output.
+    /// True when any insert is present and not bypassed — playback runs the float plugin graph
+    /// (Exclusive · FX on an external DAC, else Shared · FX).
     var hasActiveEffects: Bool {
         chain.contains { !$0.bypassed && loadedUnits[$0.id] != nil }
     }
