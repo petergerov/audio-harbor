@@ -202,7 +202,7 @@ struct LibraryView: View {
             emptyState
         } else if appModel.library.isFolderSearchActive {
             folderSearchResults
-        } else if appModel.library.folderRootID == nil {
+        } else if appModel.library.folderNavigation.rootID == nil {
             folderRootsList
         } else {
             folderContentsList
@@ -213,7 +213,7 @@ struct LibraryView: View {
         VStack(spacing: 0) {
             HStack {
                 Text(
-                    appModel.library.folderRootID == nil
+                    appModel.library.folderNavigation.rootID == nil
                         ? "Search across directories"
                         : "Search in \(appModel.library.folderBreadcrumb)"
                 )
@@ -454,7 +454,7 @@ struct LibraryView: View {
 
     private var folderBreadcrumbs: some View {
         let rootName = appModel.library.selectedFolderRoot?.name ?? "Directory"
-        let components = appModel.library.folderPathComponents
+        let components = appModel.library.folderNavigation.pathComponents
         let currentDepth = components.count
 
         return ScrollView(.horizontal, showsIndicators: false) {
