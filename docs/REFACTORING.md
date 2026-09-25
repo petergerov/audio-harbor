@@ -66,11 +66,21 @@ still resets when the macOS sidebar switches screens (as before).
 - `ExpandableTrackGroup` renders the album and artist lists (header, play button, expanded
   tracks); the two list views only supply titles, thumbnail and actions.
 
-## 6. Split `CoreAudioPlaybackEngine.swift` (1,053 lines) ☐
+## 6. Tidy `CoreAudioPlaybackEngine.swift` (1,053 → 978 lines) ☑
 
-- Break `play()` into exclusive start / shared fallback / shared start.
-- Move `StereoMeterProbe` and VU maths to `Meters.swift`.
-- `PathLabel` enum for the "Exclusive · DoP" family of strings; one error-logging helper.
+Behaviour-preserving only: this is the audio path.
+
+- `StereoMeterProbe` and the needle maths (`VUNeedle`) live in `StereoMeter.swift`.
+- `play()` reads as: exclusive → `startExclusivePlayback()` → on failure
+  `fallBackToShared(after:)`; else shared. `exclusivePathLabel(for:)` names the caption.
+- One `logFailure(_:_:)` for the five "domain code description" error logs.
+- `pause()` shares its tail; `showFXPathLabelIfActive()` and `pathLabelDescribesLoad`
+  replace four copies of the FX-caption rule and the substring test.
+- `resetSharedGraphIfNeeded()` → `rebuildSharedGraph()` (it always rebuilt), also used by
+  `handleEffectChainChanged()` instead of a copy. `MARK` sections throughout.
+- Not done: a typed `PathLabel`. The engine decides things by substring of the caption
+  (`"DSD"`, `"fallback"`, `"external"`), so typing it is a logic change. Worth doing with
+  a DAC on the desk to test every path.
 
 ## 7. Small cleanups ☐
 
