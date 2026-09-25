@@ -270,8 +270,7 @@ struct LibraryView: View {
                 onPlay: { playDirectory(hit.entry.url, name: hit.entry.name) }
             )
 
-        case .audioFile:
-            let track = appModel.library.trackForPlayback(at: hit.entry.url, identity: hit.entry.id)
+        case .audioFile(let track):
             let folderName = hit.entry.url.deletingLastPathComponent().lastPathComponent
             HStack(spacing: 10) {
                 Button {
@@ -497,8 +496,7 @@ struct LibraryView: View {
                 Button("Play") { playDirectory(entry.url, name: entry.name) }
             }
 
-        case .audioFile:
-            let track = appModel.library.trackForPlayback(at: entry.url, identity: entry.id)
+        case .audioFile(let track):
             TrackRow(
                 track: track,
                 playlists: appModel.playlists.playlists,

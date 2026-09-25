@@ -5,32 +5,33 @@ import Foundation
 enum FolderDiskScanner {
     private static let audioExtensions = CatalogueIndexer.audioExtensions
 
-    /// Subfolders that hold audio, then audio files, each sorted by name.
-    static func listContents(at url: URL) -> [FolderBrowseEntry] {
+    /// Subfolders that hold audio, and audio files, each sorted by name.
+    static func listContents(at url: URL) -> (directories: [URL], audioFiles: [URL]) {
         guard let items = try? FileManager.default.contentsOfDirectory(
             at: url,
             includingPropertiesForKeys: [.isDirectoryKey, .isRegularFileKey],
             options: [.skipsPackageDescendants]
-        ) else { return [] }
+        ) else { return ([], []) }
 
-        var directories: [FolderBrowseEntry] = []
-        var files: [FolderBrowseEntry] = []
+        var directories: [URL] = []
+        var files: [URL] = []
 
         for item in items {
             if ICloudItem.isHiddenJunk(item) { continue }
             let values = try? item.resourceValues(forKeys: [.isDirectoryKey, .isRegularFileKey])
             if values?.isDirectory == true {
                 if containsAudio(item) {
-                    directories.append(FolderBrowseEntry(name: item.lastPathComponent, url: item, kind: .directory))
+                    directories.append(item)
                 }
             } else if let audioURL = ICloudItem.resolvedAudioURL(from: item, extensions: audioExtensions) {
-                files.append(FolderBrowseEntry(name: audioURL.lastPathComponent, url: audioURL, kind: .audioFile))
+                files.append(audioURL)
             }
         }
 
-        directories.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-        files.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-        return directories + files
+        let byName = { (lhs: URL, rhs: URL) in
+            lhs.lastPathComponent.localizedStandardCompare(rhs.lastPathComponent) == .orderedAscending
+        }
+        return (directories.sorted(by: byName), files.sorted(by: byName))
     }
 
     /// True if any file below `url`, at any depth, is supported audio.

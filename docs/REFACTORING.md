@@ -33,12 +33,16 @@ with `sourceKind` as a raw string. Now `AppModel.play(_:startingAt:from:)` takes
 `QueueSource` (`.album`, `.artist`, `.folder`, `.playlist`, `.label`); `PlaybackService` stores
 it, and the Deck rail matches `.playlist` instead of comparing `"Playlist"`.
 
-## 3. Keep expensive work out of `body` ☐
+## 3. Keep expensive work out of `body` ☑
 
-- `LibraryService.folderListing` scans all tracks (and maybe the disk) and is read twice per
-  render. Make it stored state refreshed when the folder location or catalogue changes.
-- `trackForPlayback(at:)` runs per row in `body`.
-- `NowPlayingView.artworkImage(_:)` decodes an image on every render — cache per track.
+- `LibraryService.folderListing` is stored state, rebuilt by `refreshQueryResults()` whenever
+  the search query, folder location or catalogue changes (was: rescanned on every read, twice
+  per render). Trade-off: a folder listed from disk mid-scan refreshes when the scan lands,
+  not on every redraw.
+- `FolderBrowseEntry.Kind.audioFile` carries its `Track`, resolved once when the listing is
+  built; rows no longer call `trackForPlayback` (now private).
+- The Deck decodes cover art once per track in `.task(id:)`; it used to decode on every
+  playback tick. `Image(artworkData:)` is shared with `HarborArtwork`.
 
 ## 4. View models for Catalogue and Playlists ☐
 

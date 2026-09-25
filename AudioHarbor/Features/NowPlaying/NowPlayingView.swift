@@ -9,6 +9,7 @@ import UIKit
 struct NowPlayingView: View {
     @Environment(AppModel.self) private var appModel
     @State private var scrubRatio: Double?
+    @State private var artwork: Image?
     @AppStorage("audioharbor.deckStyle") private var deckStyleRaw: String = DeckStyle.turntable.rawValue
     @AppStorage("audioharbor.deck.contextRailVisible") private var contextRailVisible = true
     #if os(macOS)
@@ -160,7 +161,7 @@ struct NowPlayingView: View {
                     VStack(spacing: compact ? 12 : 22) {
                         DeckStage(
                             style: deckStyle,
-                            artwork: artworkImage(track),
+                            artwork: artwork,
                             isPlaying: playback.isPlaying,
                             progress: progress,
                             heroHeight: heroHeight,
@@ -194,6 +195,10 @@ struct NowPlayingView: View {
             #if os(iOS)
             .scrollBounceBehavior(.basedOnSize)
             #endif
+        }
+        // The deck redraws on every playback tick; decode the cover once per track.
+        .task(id: track?.cataloguePath) {
+            artwork = track.flatMap(ArtworkCache.data(for:)).flatMap(Image.init(artworkData:))
         }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
@@ -453,16 +458,6 @@ struct NowPlayingView: View {
         .padding(.bottom, compact ? 2 : 8)
         .scaleEffect(compact ? 0.86 : 1, anchor: .center)
         .padding(.vertical, compact ? -6 : 0)
-    }
-
-    private func artworkImage(_ track: Track?) -> Image? {
-        guard let data = track.flatMap({ ArtworkCache.data(for: $0) }) else { return nil }
-        #if os(macOS)
-        if let ns = NSImage(data: data) { return Image(nsImage: ns) }
-        #else
-        if let ui = UIImage(data: data) { return Image(uiImage: ui) }
-        #endif
-        return nil
     }
 
     #if os(macOS)

@@ -16,7 +16,7 @@ final class LibraryService {
     var searchQuery = "" {
         didSet {
             guard oldValue != searchQuery else { return }
-            refreshSearchHits()
+            refreshQueryResults()
         }
     }
     var showsDemoLibrary = true
@@ -45,7 +45,7 @@ final class LibraryService {
     private(set) var folderNavigation = FolderNavigation() {
         didSet {
             guard oldValue != folderNavigation else { return }
-            refreshSearchHits()
+            refreshQueryResults()
         }
     }
 
@@ -134,13 +134,9 @@ final class LibraryService {
         }
     }
 
-    var folderListing: [FolderBrowseEntry] {
-        guard let url = folderBrowseURL else { return [] }
-        let listing = listFolderContents(at: url)
-        let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty else { return listing }
-        return listing.filter { $0.name.localizedCaseInsensitiveContains(q) }
-    }
+    /// Contents of `folderBrowseURL`, filtered by the search query. Kept up to date by
+    /// `refreshQueryResults()` so views never list a folder while rendering.
+    private(set) var folderListing: [FolderBrowseEntry] = []
 
     var isFolderSearchActive: Bool {
         !searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -183,7 +179,7 @@ final class LibraryService {
     }
 
     func enterFolder(_ entry: FolderBrowseEntry) {
-        guard entry.kind == .directory else { return }
+        guard entry.isDirectory else { return }
         folderNavigation.enter(entry.name)
     }
 
@@ -232,7 +228,7 @@ final class LibraryService {
     // MARK: - Playback queues
 
     /// Prefer indexed metadata; fall back to a lightweight file-based track.
-    func trackForPlayback(at url: URL, identity: String? = nil) -> Track {
+    private func trackForPlayback(at url: URL, identity: String? = nil) -> Track {
         if let identity, let existing = tracksByPath[identity] {
             return existing
         }
@@ -266,9 +262,7 @@ final class LibraryService {
             return (track, container)
         }
         let directory = url.deletingLastPathComponent()
-        let files = listFolderContents(at: directory)
-            .filter { $0.kind == .audioFile }
-        let queue = files.map { trackForPlayback(at: $0.url, identity: $0.id) }
+        let queue = listFolderContents(at: directory).compactMap(\.track)
         let track = identity.flatMap { id in queue.first { $0.cataloguePath == id } }
             ?? queue.first(where: { $0.url.path == url.path })
             ?? trackForPlayback(at: url, identity: identity)
@@ -414,14 +408,21 @@ final class LibraryService {
                     FolderBrowseEntry(
                         name: track.folderDisplayName,
                         url: track.url,
-                        kind: .audioFile,
+                        kind: .audioFile(track),
                         id: track.cataloguePath
                     )
                 }
             return directories + files
         }
 
-        return FolderDiskScanner.listContents(at: url)
+        let onDisk = FolderDiskScanner.listContents(at: url)
+        let directories = onDisk.directories.map {
+            FolderBrowseEntry(name: $0.lastPathComponent, url: $0, kind: .directory)
+        }
+        let files = onDisk.audioFiles.map {
+            FolderBrowseEntry(name: $0.lastPathComponent, url: $0, kind: .audioFile(trackForPlayback(at: $0)))
+        }
+        return directories + files
     }
 
     /// Names of immediate subfolders of `parent` that contain supported audio somewhere below.
@@ -550,7 +551,7 @@ final class LibraryService {
             LibraryService.makeAlbums(from: snapshot)
         }.value
         rebuildFacets()
-        refreshSearchHits()
+        refreshQueryResults()
     }
 
     // MARK: - Derived state
@@ -560,7 +561,7 @@ final class LibraryService {
         reindexLookups()
         rebuildAlbums()
         rebuildFacets()
-        refreshSearchHits()
+        refreshQueryResults()
     }
 
     private func reindexLookups() {
@@ -675,6 +676,22 @@ final class LibraryService {
 
     // MARK: - Search
 
+    /// Recompute everything that depends on the search query, folder location or catalogue.
+    private func refreshQueryResults() {
+        refreshSearchHits()
+        refreshFolderListing()
+    }
+
+    private func refreshFolderListing() {
+        guard let url = folderBrowseURL else {
+            folderListing = []
+            return
+        }
+        let listing = listFolderContents(at: url)
+        let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        folderListing = q.isEmpty ? listing : listing.filter { $0.name.localizedCaseInsensitiveContains(q) }
+    }
+
     private func refreshSearchHits() {
         let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else {
@@ -719,7 +736,7 @@ final class LibraryService {
                         entry: FolderBrowseEntry(
                             name: track.folderDisplayName,
                             url: track.url,
-                            kind: .audioFile,
+                            kind: .audioFile(track),
                             id: track.cataloguePath
                         ),
                         relativePath: relativePath(for: track.url, under: root)
