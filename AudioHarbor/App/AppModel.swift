@@ -18,6 +18,13 @@ final class AppModel {
         isRebuildWarningPresented = true
     }
 
+    /// Queue `tracks`, start at `track` (default: the first) and switch to the Deck.
+    func play(_ tracks: [Track], startingAt track: Track? = nil, from source: QueueSource) {
+        guard let start = track ?? tracks.first else { return }
+        playback.play(track: start, in: tracks, from: source)
+        selectedTab = .nowPlaying
+    }
+
     init() {
         let effects = EffectHost()
         let engine = CoreAudioPlaybackEngine(effectHost: effects)

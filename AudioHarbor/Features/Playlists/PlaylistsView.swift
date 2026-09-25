@@ -47,6 +47,13 @@ private enum PlaylistBrowserItem: Hashable, Identifiable {
         case .label: "Label"
         }
     }
+
+    func queueSource(named name: String) -> QueueSource {
+        switch self {
+        case .playlist: .playlist(name)
+        case .label: .label(name)
+        }
+    }
 }
 
 struct PlaylistsView: View {
@@ -379,13 +386,11 @@ struct PlaylistsView: View {
                                 track: track,
                                 playlists: playlists,
                                 onPlay: {
-                                    appModel.playback.play(
-                                        track: track,
-                                        in: tracks,
-                                        sourceName: detailTitle(for: selection),
-                                        sourceKind: selection.kindLabel
+                                    appModel.play(
+                                        tracks,
+                                        startingAt: track,
+                                        from: selection.queueSource(named: detailTitle(for: selection))
                                     )
-                                    appModel.selectedTab = .nowPlaying
                                 },
                                 onAddToPlaylist: { playlist in
                                     appModel.playlists.add(track, to: playlist)
@@ -471,15 +476,7 @@ struct PlaylistsView: View {
     }
 
     private func play(item: PlaylistBrowserItem) {
-        let tracks = tracks(for: item)
-        guard let first = tracks.first else { return }
-        appModel.playback.play(
-            track: first,
-            in: tracks,
-            sourceName: detailTitle(for: item),
-            sourceKind: item.kindLabel
-        )
-        appModel.selectedTab = .nowPlaying
+        appModel.play(tracks(for: item), from: item.queueSource(named: detailTitle(for: item)))
     }
 
     private var newPlaylistSheet: some View {

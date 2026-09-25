@@ -19,6 +19,7 @@
 		22B5B5A591CFB5033382EC3E /* HarborTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA07B3758CAB9B2E18996EDE /* HarborTheme.swift */; };
 		2E6EEF2214B20646F6C97B99 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 093F0AE98C88F16FEB7AF75A /* Models.swift */; };
 		2FC801E8754C2241E956439F /* HarborChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68579D8D9972759EF8D48E1A /* HarborChrome.swift */; };
+		31337B7EE46FCBAA64140F94 /* QueueSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5FBEABA8DE3390B649C226A /* QueueSource.swift */; };
 		360EAFE4CB051EF08FB7413D /* CatalogueIndexStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C69056BD4AB5A360D4A15C0A /* CatalogueIndexStore.swift */; };
 		3A6F62480B2FB5FA4768A615 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2FB99AAF30D0FD2BC810C67 /* LibraryView.swift */; };
 		421C5622F95862C6D870443C /* DSDDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE0277F8E124960C06139C61 /* DSDDecoder.swift */; };
@@ -87,6 +88,7 @@
 		A078F55C2BF424F0E7140213 /* DemoLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoLibrary.swift; sourceTree = "<group>"; };
 		A0F7DBDF1C501787E7BA88A4 /* AudioHarbor-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "AudioHarbor-Bridging-Header.h"; sourceTree = "<group>"; };
 		A2F79E705295934168D2B714 /* PlaylistService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistService.swift; sourceTree = "<group>"; };
+		A5FBEABA8DE3390B649C226A /* QueueSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueueSource.swift; sourceTree = "<group>"; };
 		B46479C25FC8808DAFFF49F9 /* ListeningRig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListeningRig.swift; sourceTree = "<group>"; };
 		B4A41324040AB2B247A6E4AF /* AudioHarbor.storekit */ = {isa = PBXFileReference; path = AudioHarbor.storekit; sourceTree = "<group>"; };
 		BA07B3758CAB9B2E18996EDE /* HarborTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HarborTheme.swift; sourceTree = "<group>"; };
@@ -121,6 +123,7 @@
 			isa = PBXGroup;
 			children = (
 				093F0AE98C88F16FEB7AF75A /* Models.swift */,
+				A5FBEABA8DE3390B649C226A /* QueueSource.swift */,
 			);
 			path = Domain;
 			sourceTree = "<group>";
@@ -406,6 +409,7 @@
 				A692674AF7B4415B48E15E8B /* PlaylistsView.swift in Sources */,
 				2050F12D8FED62593D617D61 /* PluginEditorPresenter.swift in Sources */,
 				84FB1B82B04EC42053D29986 /* PluginModels.swift in Sources */,
+				31337B7EE46FCBAA64140F94 /* QueueSource.swift in Sources */,
 				F25714D3F82281FBF48EF86F /* ReceiverVURig.swift in Sources */,
 				E7B419AAC9F68C0C95416D42 /* ReelToReelRig.swift in Sources */,
 				B1ABBE0CD9CC54DC22612982 /* RootView.swift in Sources */,

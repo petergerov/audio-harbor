@@ -10,10 +10,11 @@ final class PlaybackService {
     private(set) var currentTrack: Track?
     private(set) var queue: [Track] = []
     private(set) var queueIndex: Int = 0
-    /// Display name for the active queue source (playlist name, album, folder…).
-    private(set) var queueSourceName: String?
+    /// Where the active queue came from (playlist, album, folder…); `nil` for a loose queue.
+    private(set) var queueSource: QueueSource?
+    var queueSourceName: String? { queueSource?.name }
     /// Short label for the context rail header (e.g. "Playlist", "Album").
-    private(set) var queueSourceKind: String = "Queue"
+    var queueSourceKind: String { queueSource?.kindLabel ?? "Queue" }
     /// True once the last queue entry has played to its end.
     private(set) var queueEnded = false
 
@@ -146,12 +147,7 @@ final class PlaybackService {
         syncFromEngine()
     }
 
-    func play(
-        track: Track,
-        in queueTracks: [Track]? = nil,
-        sourceName: String? = nil,
-        sourceKind: String? = nil
-    ) {
+    func play(track: Track, in queueTracks: [Track]? = nil, from source: QueueSource? = nil) {
         guard allowPlayback() else { return }
 
         if let queueTracks {
@@ -163,15 +159,12 @@ final class PlaybackService {
         }
         rebuildPlayOrder(anchoredTo: queueIndex)
 
-        if let sourceName, !sourceName.isEmpty {
-            queueSourceName = sourceName
-            queueSourceKind = sourceKind ?? "Queue"
+        if let source, !source.name.isEmpty {
+            queueSource = source
         } else if queueTracks != nil, !track.album.isEmpty {
-            queueSourceName = track.album
-            queueSourceKind = sourceKind ?? "Album"
+            queueSource = .album(track.album)
         } else {
-            queueSourceName = nil
-            queueSourceKind = "Queue"
+            queueSource = nil
         }
 
         Task { await loadAndPlay(track) }

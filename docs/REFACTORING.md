@@ -26,11 +26,12 @@ index, the indexer and an `Array` helper.
 Found while doing this (not fixed, behaviour kept): `revealInFolders` matches a root by plain
 string prefix, so `/Music` also claims `/Music2/...`.
 
-## 2. Shared play entry point ☐
+## 2. Shared play entry point ☑
 
-`playback.play(track:in:sourceName:sourceKind:)` + `selectedTab = .nowPlaying` appears 10 times,
-with `sourceKind` as a raw string in 7. Add `enum QueueSource` and
-`AppModel.play(_:startingAt:from:)`.
+`playback.play(track:in:sourceName:sourceKind:)` + `selectedTab = .nowPlaying` appeared 9 times,
+with `sourceKind` as a raw string. Now `AppModel.play(_:startingAt:from:)` takes a
+`QueueSource` (`.album`, `.artist`, `.folder`, `.playlist`, `.label`); `PlaybackService` stores
+it, and the Deck rail matches `.playlist` instead of comparing `"Playlist"`.
 
 ## 3. Keep expensive work out of `body` ☐
 

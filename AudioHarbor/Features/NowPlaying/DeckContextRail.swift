@@ -63,7 +63,7 @@ struct DeckContextRail: View {
     }
 
     private var contextSubtitle: String? {
-        if playback.queueSourceKind == "Playlist" {
+        if case .playlist = playback.queueSource {
             return "\(playback.queue.count) tracks"
         }
         guard let artist = playback.currentTrack?.artist, !artist.isEmpty else {

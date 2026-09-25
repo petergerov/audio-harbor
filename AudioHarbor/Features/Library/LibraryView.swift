@@ -348,14 +348,11 @@ struct LibraryView: View {
             startingAt: hit.entry.url,
             identity: hit.entry.id
         )
-        guard let start = startingAtHit ? playback.track : playback.queue.first else { return }
-        appModel.playback.play(
-            track: start,
-            in: playback.queue,
-            sourceName: hit.entry.url.deletingLastPathComponent().lastPathComponent,
-            sourceKind: "Folder"
+        appModel.play(
+            playback.queue,
+            startingAt: startingAtHit ? playback.track : nil,
+            from: .folder(hit.entry.url.deletingLastPathComponent().lastPathComponent)
         )
-        appModel.selectedTab = .nowPlaying
     }
 
     private var folderRootsList: some View {
@@ -508,13 +505,7 @@ struct LibraryView: View {
                 onPlay: {
                     let playback = appModel.library.folderPlaybackQueue(startingAt: entry.url, identity: entry.id)
                     let folderName = entry.url.deletingLastPathComponent().lastPathComponent
-                    appModel.playback.play(
-                        track: playback.track,
-                        in: playback.queue,
-                        sourceName: folderName,
-                        sourceKind: "Folder"
-                    )
-                    appModel.selectedTab = .nowPlaying
+                    appModel.play(playback.queue, startingAt: playback.track, from: .folder(folderName))
                 },
                 onAddToPlaylist: { playlist in
                     appModel.playlists.add(track, to: playlist)
@@ -570,13 +561,7 @@ struct LibraryView: View {
 
     private func playDirectory(_ url: URL, name: String) {
         guard let playback = appModel.library.directoryPlaybackQueue(at: url) else { return }
-        appModel.playback.play(
-            track: playback.track,
-            in: playback.queue,
-            sourceName: name,
-            sourceKind: "Folder"
-        )
-        appModel.selectedTab = .nowPlaying
+        appModel.play(playback.queue, startingAt: playback.track, from: .folder(name))
     }
 
     private var emptyState: some View {
@@ -639,13 +624,7 @@ private struct CatalogueAlbumList: View {
                             track: track,
                             playlists: playlists,
                             onPlay: {
-                                appModel.playback.play(
-                                    track: track,
-                                    in: album.tracks,
-                                    sourceName: album.title,
-                                    sourceKind: "Album"
-                                )
-                                appModel.selectedTab = .nowPlaying
+                                appModel.play(album.tracks, startingAt: track, from: .album(album.title))
                             },
                             onAddToPlaylist: { playlist in
                                 appModel.playlists.add(track, to: playlist)
@@ -701,14 +680,7 @@ private struct CatalogueAlbumList: View {
             .buttonStyle(.plain)
 
             HarborIconButton(systemName: "play.fill", help: "Play album") {
-                guard let first = album.tracks.first else { return }
-                appModel.playback.play(
-                    track: first,
-                    in: album.tracks,
-                    sourceName: album.title,
-                    sourceKind: "Album"
-                )
-                appModel.selectedTab = .nowPlaying
+                appModel.play(album.tracks, from: .album(album.title))
             }
         }
         .padding(.vertical, 4)
@@ -735,13 +707,7 @@ private struct CatalogueArtistList: View {
                             track: track,
                             playlists: playlists,
                             onPlay: {
-                                appModel.playback.play(
-                                    track: track,
-                                    in: tracks,
-                                    sourceName: facet.name,
-                                    sourceKind: "Artist"
-                                )
-                                appModel.selectedTab = .nowPlaying
+                                appModel.play(tracks, startingAt: track, from: .artist(facet.name))
                             },
                             onAddToPlaylist: { playlist in
                                 appModel.playlists.add(track, to: playlist)
@@ -799,15 +765,7 @@ private struct CatalogueArtistList: View {
             .buttonStyle(.plain)
 
             HarborIconButton(systemName: "play.fill", help: "Play artist") {
-                let tracks = appModel.library.visibleTracks(forArtist: facet.name)
-                guard let first = tracks.first else { return }
-                appModel.playback.play(
-                    track: first,
-                    in: tracks,
-                    sourceName: facet.name,
-                    sourceKind: "Artist"
-                )
-                appModel.selectedTab = .nowPlaying
+                appModel.play(appModel.library.visibleTracks(forArtist: facet.name), from: .artist(facet.name))
             }
         }
         .padding(.vertical, 4)
