@@ -17,7 +17,7 @@ Stand der App im Repo: Bundle `com.gerov.audioharbor.player`, Version **1.0.0 (1
 | Trial | **7 Tage voll nutzbar** ab der **ersten Installation** auf diesem Mac |
 | Danach | Playback gesperrt, bis Unlock gekauft oder wiederhergestellt ist |
 | IAP | Einmalig, nicht verbrauchbar (**Non-Consumable**) |
-| Unlock-Preis | **9,90 €** (Deutschland / Euro-Storefront) |
+| Unlock-Preis | **9,90 €** Launch-Preis (Deutschland / Euro-Storefront); danach 14,99 €, dann 19,99 € — siehe [`marketing/COMPETITIVE.md`](marketing/COMPETITIVE.md#price-plan) |
 | Abo | Nein — kein Auto-Renew, kein Account |
 
 App Store Connect: **Pricing and Availability → Price Schedule → Free.** Die 9,90 € sitzen nur am IAP `unlock`, nicht an der App.
