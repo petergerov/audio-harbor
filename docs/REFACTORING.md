@@ -56,11 +56,15 @@ still resets when the macOS sidebar switches screens (as before).
   `selection`, `tracks(for:)` / titles, create / rename / delete, track removal, M3U import
   with its summary, and M3U8 writing. The save panel stays in the view.
 
-## 5. De-duplicate catalogue rows ☐
+## 5. De-duplicate catalogue rows ☑
 
-- One configured track row instead of four identical closure sets around `TrackRow`.
-- `ExpandableTrackSection` shared by the album and artist lists.
-- One "Add to Playlist" menu.
+- `TrackRow(track:onPlay:)` in its own file. Its right-click menu comes from
+  `.trackContextMenu(for:includesLabels:leading:)`, which owns Add to Playlist, Labels and
+  the "New Playlist…" / "New Label…" prompts. Folder search hits use the same modifier
+  with their own leading items (and no Labels menu, as before), which removed the
+  screen-level "New Playlist" alert and `pendingPlaylistTrack`.
+- `ExpandableTrackGroup` renders the album and artist lists (header, play button, expanded
+  tracks); the two list views only supply titles, thumbnail and actions.
 
 ## 6. Split `CoreAudioPlaybackEngine.swift` (1,053 lines) ☐
 

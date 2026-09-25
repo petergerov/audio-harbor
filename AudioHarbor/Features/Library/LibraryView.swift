@@ -10,7 +10,6 @@ import UIKit
 struct LibraryView: View {
     @Environment(AppModel.self) private var appModel
     @State private var model: LibraryViewModel
-    @State private var newPlaylistName = ""
 
     init(appModel: AppModel) {
         _model = State(initialValue: LibraryViewModel(app: appModel))
@@ -53,19 +52,6 @@ struct LibraryView: View {
         ) { result in
             if case .success(let urls) = result {
                 model.addDirectories(urls)
-            }
-        }
-        .alert("New Playlist", isPresented: Binding(
-            get: { model.pendingPlaylistTrack != nil },
-            set: { if !$0 { model.pendingPlaylistTrack = nil } }
-        )) {
-            TextField("Name", text: $newPlaylistName)
-            Button("Cancel", role: .cancel) {
-                model.pendingPlaylistTrack = nil
-            }
-            Button("Create") {
-                model.createPlaylistForPendingTrack(named: newPlaylistName)
-                newPlaylistName = ""
             }
         }
         #if os(iOS)
@@ -263,7 +249,7 @@ struct LibraryView: View {
                     model.playFolder(containing: hit.entry, startingAtEntry: false)
                 }
             }
-            .contextMenu {
+            .trackContextMenu(for: track, includesLabels: false) {
                 Button("Play This Track First") {
                     model.playFolder(containing: hit.entry)
                 }
@@ -273,21 +259,6 @@ struct LibraryView: View {
                 Divider()
                 Button("Reveal in Folders") {
                     model.reveal(hit.entry.url)
-                }
-                Menu("Add to Playlist") {
-                    Button("New Playlist…") {
-                        newPlaylistName = ""
-                        model.pendingPlaylistTrack = track
-                    }
-                    let manuals = appModel.playlists.playlists.filter { !$0.isSmart }
-                    if !manuals.isEmpty {
-                        Divider()
-                        ForEach(manuals) { playlist in
-                            Button(playlist.name) {
-                                model.add(track, to: playlist)
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -428,21 +399,7 @@ struct LibraryView: View {
             }
 
         case .audioFile(let track):
-            TrackRow(
-                track: track,
-                playlists: appModel.playlists.playlists,
-                onPlay: { model.playFolder(containing: entry) },
-                onAddToPlaylist: { playlist in
-                    model.add(track, to: playlist)
-                },
-                onAddLabel: { label in
-                    appModel.library.addLabel(label, to: track)
-                },
-                onRemoveLabel: { label in
-                    appModel.library.removeLabel(label, from: track)
-                },
-                knownLabels: appModel.library.allLabels
-            )
+            TrackRow(track: track) { model.playFolder(containing: entry) }
         }
     }
 
@@ -529,81 +486,23 @@ private struct CatalogueAlbumList: View {
     let model: LibraryViewModel
 
     var body: some View {
-        let playlists = appModel.playlists.playlists
-        let labels = appModel.library.allLabels
         List {
             ForEach(appModel.library.filteredAlbums) { album in
-                let isExpanded = model.expandedAlbumID == album.id
-                let tracks = appModel.library.visibleTracks(in: album)
-                albumHeader(album, trackCount: tracks.count, isExpanded: isExpanded)
-                    .listRowBackground(HarborColor.faceplate)
-                    .listRowSeparatorTint(HarborColor.aluminumDark.opacity(0.5))
-                if isExpanded {
-                    ForEach(tracks) { track in
-                        TrackRow(
-                            track: track,
-                            playlists: playlists,
-                            onPlay: {
-                                model.playAlbum(album, startingAt: track)
-                            },
-                            onAddToPlaylist: { playlist in
-                                model.add(track, to: playlist)
-                            },
-                            onAddLabel: { label in
-                                appModel.library.addLabel(label, to: track)
-                            },
-                            onRemoveLabel: { label in
-                                appModel.library.removeLabel(label, from: track)
-                            },
-                            knownLabels: labels
-                        )
-                        .listRowBackground(HarborColor.faceplate)
-                        .listRowSeparatorTint(HarborColor.aluminumDark.opacity(0.5))
-                        .padding(.leading, 12)
-                    }
+                ExpandableTrackGroup(
+                    title: album.title,
+                    subtitle: album.artist,
+                    tracks: appModel.library.visibleTracks(in: album),
+                    isExpanded: model.expandedAlbumID == album.id,
+                    playHelp: "Play album",
+                    onToggle: { model.toggleAlbum(album) },
+                    onPlay: { model.playAlbum(album, startingAt: $0) }
+                ) {
+                    HarborArtwork(hash: album.artworkHash, data: album.artworkData, size: 56, corner: 8)
                 }
             }
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-    }
-
-    private func albumHeader(_ album: Album, trackCount: Int, isExpanded: Bool) -> some View {
-        HStack(spacing: 12) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    model.toggleAlbum(album)
-                }
-            } label: {
-                HStack(spacing: 12) {
-                    HarborArtwork(hash: album.artworkHash, data: album.artworkData, size: 56, corner: 8)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(album.title)
-                            .font(HarborFont.title(15))
-                            .foregroundStyle(HarborColor.ivory)
-                            .lineLimit(1)
-                        Text(album.artist)
-                            .font(HarborFont.body(12))
-                            .foregroundStyle(HarborColor.brass)
-                        Text(trackCount == 1 ? "1 track" : "\(trackCount) tracks")
-                            .font(HarborFont.body(11))
-                            .foregroundStyle(HarborColor.ivoryDim)
-                    }
-                    Spacer(minLength: 8)
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(HarborColor.ivoryDim)
-                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
-            HarborIconButton(systemName: "play.fill", help: "Play album") {
-                model.playAlbum(album)
-            }
-        }
-        .padding(.vertical, 4)
     }
 }
 
@@ -612,214 +511,26 @@ private struct CatalogueArtistList: View {
     let model: LibraryViewModel
 
     var body: some View {
-        let playlists = appModel.playlists.playlists
-        let labels = appModel.library.allLabels
         List {
             ForEach(appModel.library.filteredArtistFacets) { facet in
-                let isExpanded = model.expandedArtistName == facet.name
-                let tracks = appModel.library.visibleTracks(forArtist: facet.name)
-                artistHeader(facet, trackCount: tracks.count, isExpanded: isExpanded)
-                    .listRowBackground(HarborColor.faceplate)
-                    .listRowSeparatorTint(HarborColor.aluminumDark.opacity(0.5))
-                if isExpanded {
-                    ForEach(tracks) { track in
-                        TrackRow(
-                            track: track,
-                            playlists: playlists,
-                            onPlay: {
-                                model.playArtist(facet.name, startingAt: track)
-                            },
-                            onAddToPlaylist: { playlist in
-                                model.add(track, to: playlist)
-                            },
-                            onAddLabel: { label in
-                                appModel.library.addLabel(label, to: track)
-                            },
-                            onRemoveLabel: { label in
-                                appModel.library.removeLabel(label, from: track)
-                            },
-                            knownLabels: labels
-                        )
-                        .listRowBackground(HarborColor.faceplate)
-                        .listRowSeparatorTint(HarborColor.aluminumDark.opacity(0.5))
-                        .padding(.leading, 12)
-                    }
-                }
-            }
-        }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-    }
-
-    private func artistHeader(_ facet: LibraryFacet, trackCount: Int, isExpanded: Bool) -> some View {
-        HStack(spacing: 12) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    model.toggleArtist(facet.name)
-                }
-            } label: {
-                HStack(spacing: 12) {
+                ExpandableTrackGroup(
+                    title: facet.name,
+                    tracks: appModel.library.visibleTracks(forArtist: facet.name),
+                    isExpanded: model.expandedArtistName == facet.name,
+                    playHelp: "Play artist",
+                    onToggle: { model.toggleArtist(facet.name) },
+                    onPlay: { model.playArtist(facet.name, startingAt: $0) }
+                ) {
                     Image(systemName: "person.wave.2")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(HarborColor.amber)
                         .frame(width: 56, height: 56)
                         .background(HarborColor.faceplateLift)
                         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(facet.name)
-                            .font(HarborFont.title(15))
-                            .foregroundStyle(HarborColor.ivory)
-                            .lineLimit(1)
-                        Text(trackCount == 1 ? "1 track" : "\(trackCount) tracks")
-                            .font(HarborFont.body(11))
-                            .foregroundStyle(HarborColor.ivoryDim)
-                    }
-                    Spacer(minLength: 8)
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(HarborColor.ivoryDim)
-                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
-            HarborIconButton(systemName: "play.fill", help: "Play artist") {
-                model.playArtist(facet.name)
-            }
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-struct TrackRow: View {
-    @Environment(AppModel.self) private var appModel
-    let track: Track
-    var playlists: [Playlist] = []
-    let onPlay: () -> Void
-    var onAddToPlaylist: ((Playlist) -> Void)?
-    var onAddLabel: ((String) -> Void)?
-    var onRemoveLabel: ((String) -> Void)?
-    var knownLabels: [String] = []
-    @State private var newLabelDraft = ""
-    @State private var showNewLabelAlert = false
-    @State private var newPlaylistDraft = ""
-    @State private var showNewPlaylistAlert = false
-
-    var body: some View {
-        Button(action: onPlay) {
-            HStack(spacing: 14) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(track.title)
-                        .font(HarborFont.title(14))
-                        .foregroundStyle(HarborColor.ivory)
-                        .lineLimit(1)
-                    Text(durationArtistLine)
-                        .font(HarborFont.body(12))
-                        .foregroundStyle(HarborColor.ivoryDim)
-                        .lineLimit(1)
-                    if !track.labels.isEmpty {
-                        Text(track.labels.joined(separator: " · "))
-                            .font(HarborFont.panel(10))
-                            .foregroundStyle(HarborColor.amber.opacity(0.85))
-                            .lineLimit(1)
-                    }
-                }
-                Spacer()
-                FormatBadge(
-                    format: track.format,
-                    sampleRateHz: track.sampleRateHz,
-                    bitDepth: track.bitDepth
-                )
-            }
-            .padding(.vertical, 7)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .contextMenu {
-            if let onAddToPlaylist {
-                let manual = playlists.filter { !$0.isSmart }
-                Menu("Add to Playlist") {
-                    Button("New Playlist…") {
-                        newPlaylistDraft = ""
-                        showNewPlaylistAlert = true
-                    }
-                    if !manual.isEmpty {
-                        Divider()
-                        ForEach(manual) { playlist in
-                            Button(playlist.name) {
-                                onAddToPlaylist(playlist)
-                            }
-                        }
-                    }
-                }
-            }
-            if onAddLabel != nil || onRemoveLabel != nil {
-                Menu("Labels") {
-                    Button("New Label…") {
-                        newLabelDraft = ""
-                        showNewLabelAlert = true
-                    }
-                    if !mergedLabelSuggestions.isEmpty {
-                        Divider()
-                        ForEach(mergedLabelSuggestions, id: \.self) { label in
-                            let hasLabel = track.labels.contains {
-                                $0.caseInsensitiveCompare(label) == .orderedSame
-                            }
-                            Button {
-                                if hasLabel {
-                                    onRemoveLabel?(label)
-                                } else {
-                                    onAddLabel?(label)
-                                }
-                            } label: {
-                                if hasLabel {
-                                    Label(label, systemImage: "checkmark")
-                                } else {
-                                    Text(label)
-                                }
-                            }
-                        }
-                    }
                 }
             }
         }
-        .alert("New Playlist", isPresented: $showNewPlaylistAlert) {
-            TextField("Name", text: $newPlaylistDraft)
-            Button("Cancel", role: .cancel) {}
-            Button("Create") {
-                onCreatePlaylistFromContext()
-            }
-        }
-        .alert("New Label", isPresented: $showNewLabelAlert) {
-            TextField("Label", text: $newLabelDraft)
-            Button("Cancel", role: .cancel) {}
-            Button("Add") {
-                onAddLabel?(newLabelDraft)
-            }
-        }
-    }
-
-    private var mergedLabelSuggestions: [String] {
-        Array(Set(knownLabels + track.labels))
-            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
-    }
-
-    private var durationArtistLine: String {
-        var parts: [String] = [track.artist]
-        if let year = track.year {
-            parts.append(String(year))
-        }
-        if track.duration > 0 {
-            let total = Int(track.duration)
-            parts.append("\(total / 60):\(String(format: "%02d", total % 60))")
-        }
-        return parts.joined(separator: " · ")
-    }
-
-    private func onCreatePlaylistFromContext() {
-        guard let playlist = appModel.playlists.createPlaylist(named: newPlaylistDraft) else { return }
-        onAddToPlaylist?(playlist)
-        newPlaylistDraft = ""
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
     }
 }

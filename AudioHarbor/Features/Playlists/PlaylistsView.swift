@@ -309,27 +309,11 @@ struct PlaylistsView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    let playlists = model.manualPlaylists
-                    let labels = appModel.library.allLabels
                     List {
                         ForEach(tracks) { track in
-                            TrackRow(
-                                track: track,
-                                playlists: playlists,
-                                onPlay: { model.play(selection, startingAt: track) },
-                                onAddToPlaylist: { playlist in
-                                    appModel.playlists.add(track, to: playlist)
-                                },
-                                onAddLabel: { label in
-                                    appModel.library.addLabel(label, to: track)
-                                },
-                                onRemoveLabel: { label in
-                                    appModel.library.removeLabel(label, from: track)
-                                },
-                                knownLabels: labels
-                            )
-                            .listRowBackground(HarborColor.faceplate)
-                            .listRowSeparatorTint(HarborColor.aluminumDark.opacity(0.5))
+                            TrackRow(track: track) { model.play(selection, startingAt: track) }
+                                .listRowBackground(HarborColor.faceplate)
+                                .listRowSeparatorTint(HarborColor.aluminumDark.opacity(0.5))
                         }
                         .onDelete(perform: model.canRemoveTracks(from: selection)
                             ? { model.removeTracks(at: $0, of: tracks, from: selection) }

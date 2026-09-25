@@ -18,8 +18,6 @@ final class LibraryViewModel {
     }
     var expandedAlbumID: UUID?
     var expandedArtistName: String?
-    /// The track waiting for a name in the "New Playlist" alert.
-    var pendingPlaylistTrack: Track?
     /// iOS: the folder picker is showing.
     var isDirectoryImporterPresented = false
 
@@ -122,20 +120,5 @@ final class LibraryViewModel {
             startingAt: startingAtEntry ? playback.track : nil,
             from: .folder(entry.url.deletingLastPathComponent().lastPathComponent)
         )
-    }
-
-    // MARK: - Playlists
-
-    func add(_ track: Track, to playlist: Playlist) {
-        app.playlists.add(track, to: playlist)
-    }
-
-    /// Creates a playlist named `name` holding `pendingPlaylistTrack`.
-    func createPlaylistForPendingTrack(named name: String) {
-        defer { pendingPlaylistTrack = nil }
-        guard let track = pendingPlaylistTrack,
-              let playlist = app.playlists.createPlaylist(named: name)
-        else { return }
-        app.playlists.add(track, to: playlist)
     }
 }
