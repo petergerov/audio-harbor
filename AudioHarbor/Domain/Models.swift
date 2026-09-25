@@ -282,6 +282,39 @@ enum OutputMode: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+/// An output Audio Harbor can play to. `uid` survives unplugging and reboots; the numeric
+/// Core Audio device ID does not, so the user's pick is stored by `uid`.
+struct OutputDevice: Identifiable, Hashable, Sendable {
+    var uid: String
+    var name: String
+    /// A real external interface (USB, Thunderbolt, FireWire, PCI) — Exclusive can take it over.
+    var supportsExclusive: Bool
+    /// External and takes 176.4 kHz, the rate DSD64 needs as DoP.
+    var supportsDoP: Bool
+
+    var id: String { uid }
+
+    var capabilityLabel: String {
+        if supportsDoP { return "Exclusive · DoP" }
+        if supportsExclusive { return "Exclusive" }
+        return "Shared only"
+    }
+}
+
+/// The outputs on this Mac and what the one Audio Harbor plays to can do.
+struct OutputStatus: Equatable, Sendable {
+    var devices: [OutputDevice] = []
+    /// The device playback goes to right now: the picked one, or the system output.
+    var activeUID: String?
+
+    var activeDevice: OutputDevice? {
+        devices.first { $0.uid == activeUID }
+    }
+
+    var canExclusive: Bool { activeDevice?.supportsExclusive ?? false }
+    var canDoP: Bool { activeDevice?.supportsDoP ?? false }
+}
+
 /// How a DSD stream is encoded for output. Chosen by the engine from `OutputMode`, not by the user.
 enum DSDStrategy: String, Sendable {
     case preferDoP

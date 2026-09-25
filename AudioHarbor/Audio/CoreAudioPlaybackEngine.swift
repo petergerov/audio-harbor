@@ -34,8 +34,10 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
 
     private var outputMode: OutputMode = .shared
     private let logger = Logger(subsystem: "com.gerov.audioharbor.player", category: "Playback")
-    private var externalDACAvailable = false
-    private var externalDACHandler: ((Bool) -> Void)?
+    /// The picked output by UID; nil follows the system output.
+    private var preferredOutputUID: String?
+    private var outputStatus = OutputStatus()
+    private var outputStatusHandler: ((OutputStatus) -> Void)?
     private var usingHAL = false
     private var activeRender: RenderBuffer?
     private var seekOffset: TimeInterval = 0
@@ -61,10 +63,9 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         effectHost.onChainChanged = { [weak self] in
             self?.handleEffectChainChanged()
         }
-        refreshExternalDAC()
         deviceController.observeOutputChanges { [weak self] in
             MainActor.assumeIsolated {
-                self?.refreshExternalDAC()
+                self?.refreshOutputStatus()
             }
         }
         halPlayer.onReachedEnd = { [weak self] generation in
@@ -82,17 +83,35 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         outputMode = mode
     }
 
-    func setExternalDACHandler(_ handler: @escaping (Bool) -> Void) {
-        externalDACHandler = handler
-        handler(externalDACAvailable)
+    func setOutputDevice(uid: String?) {
+        guard uid != preferredOutputUID else { return }
+        preferredOutputUID = uid
+        // Let go of the old device now — its hog and its graph. The next load opens the new one.
+        stopPlayback(releaseDevice: true)
+        refreshOutputStatus()
     }
 
-    private func refreshExternalDAC() {
-        let available = exclusiveTargetIsExternal
-        guard available != externalDACAvailable || externalDACHandler == nil else { return }
-        externalDACAvailable = available
-        logger.info("External DAC available: \(available)")
-        externalDACHandler?(available)
+    func setOutputStatusHandler(_ handler: @escaping (OutputStatus) -> Void) {
+        outputStatusHandler = handler
+        outputStatus = currentOutputStatus()
+        handler(outputStatus)
+    }
+
+    private func refreshOutputStatus() {
+        let status = currentOutputStatus()
+        guard status != outputStatus else { return }
+        outputStatus = status
+        logger.info("Output: \(status.activeDevice?.name ?? "none", privacy: .public), exclusive \(status.canExclusive), DoP \(status.canDoP)")
+        outputStatusHandler?(status)
+    }
+
+    private func currentOutputStatus() -> OutputStatus {
+        #if os(macOS)
+        let active = exclusiveTargetDevice.flatMap { deviceController.deviceUID($0) }
+        return OutputStatus(devices: deviceController.listOutputDevices(), activeUID: active)
+        #else
+        return OutputStatus()
+        #endif
     }
 
     func setTrackEndedHandler(_ handler: @escaping (Track) -> Void) {
@@ -256,8 +275,9 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         dsdQueuedChunks = 0
         sharedPlayer.stop()
         clearSharedAnchor()
-        rescheduleShared()
         if resume {
+            // Paused: play() schedules from `seekOffset` — scheduling here too would queue it twice.
+            rescheduleShared()
             do {
                 if !sharedEngine.isRunning { try sharedEngine.start() }
                 try playSharedPlayer()
@@ -289,7 +309,10 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
                 logger.info("Exclusive device gone — re-acquiring")
                 releaseExclusiveSession()
             }
-            device = try deviceController.prepareExclusive(sampleRate: render.sampleRate)
+            device = try deviceController.prepareExclusive(
+                sampleRate: render.sampleRate,
+                deviceID: deviceController.outputDevice(preferredUID: preferredOutputUID)
+            )
             exclusiveDeviceID = device
         }
         var nsError: NSError?
@@ -320,11 +343,34 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
     // MARK: - Loaders
 
     #if os(macOS)
+    /// While we hog the DAC, macOS reports another default output — this still names the DAC.
+    private var exclusiveTargetDevice: AudioDeviceID? {
+        try? deviceController.exclusiveTargetDevice(preferredUID: preferredOutputUID)
+    }
+
     /// Exclusive / DoP only take over an external DAC; anything else plays Shared.
     private var exclusiveTargetIsExternal: Bool {
-        // While we hog the DAC, macOS reports another default output — ask about the DAC.
-        guard let device = try? deviceController.exclusiveTargetDevice() else { return false }
+        guard let device = exclusiveTargetDevice else { return false }
         return deviceController.isExternalInterface(device: device)
+    }
+
+    /// Point the Shared graph at the picked output. Without a pick (or while it is unplugged)
+    /// AVAudioEngine follows the system output on its own.
+    private func applySharedOutputDevice() {
+        guard let uid = preferredOutputUID,
+              var device = deviceController.deviceID(forUID: uid),
+              let unit = sharedEngine.outputNode.audioUnit else { return }
+        let status = AudioUnitSetProperty(
+            unit,
+            kAudioOutputUnitProperty_CurrentDevice,
+            kAudioUnitScope_Global,
+            0,
+            &device,
+            UInt32(MemoryLayout<AudioDeviceID>.size)
+        )
+        if status != noErr {
+            logger.error("Shared output device \(uid, privacy: .public) rejected: \(status)")
+        }
     }
     #else
     private var exclusiveTargetIsExternal: Bool { false }
@@ -396,8 +442,10 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         let wantHAL = (outputMode == .exclusive || outputMode == .dop)
             && !effectHost.hasChain
             && exclusiveTargetIsExternal
-        let device = try? deviceController.exclusiveTargetDevice()
+        let device = exclusiveTargetDevice
+        // An output that cannot run 176.4 kHz gets Exclusive DSD→PCM, never DoP.
         let dopOK = outputMode == .dop && wantHAL
+            && device.map { deviceController.supportsDoP(device: $0) } == true
         let strategies: [DSDStrategy] = dopOK ? [.preferDoP, .convertToPCM] : [.convertToPCM]
         logger.info("DSD load \(track.url.lastPathComponent, privacy: .public): output \(self.outputMode.rawValue, privacy: .public), hal \(wantHAL), dopOK \(dopOK)")
         for strategy in strategies where wantHAL {
@@ -503,6 +551,10 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
     }
 
     private func wireSharedGraph() {
+        #if os(macOS)
+        // Before anything reads the output format: it comes from the device.
+        applySharedOutputDevice()
+        #endif
         sharedEngine.attach(sharedPlayer)
 
         let format = sharedConnectionFormat()
