@@ -30,7 +30,13 @@ final class PlaybackService {
         didSet {
             guard outputMode != oldValue else { return }
             UserDefaults.standard.set(outputMode.rawValue, forKey: Self.outputModeKey)
-            engine.setOutputMode(outputMode)
+            let wasPlayingAs = effectiveMode(for: oldValue)
+            guard pathChanges(from: wasPlayingAs, to: effectiveOutputMode) else {
+                engine.setOutputMode(outputMode)
+                return
+            }
+            // Move the current track over now instead of from the next one on.
+            reloadCurrentTrack { engine.setOutputMode(outputMode) }
         }
     }
 
@@ -50,13 +56,50 @@ final class PlaybackService {
         }
     }
 
-    /// An external DAC is the output, so Exclusive and DoP can be picked. Always false on iOS.
-    private(set) var externalDACAvailable = false
+    /// The picked output by Core Audio UID; nil follows the system output. Changing it moves
+    /// the current track over at the same position.
+    var outputDeviceUID: String? {
+        didSet {
+            guard outputDeviceUID != oldValue else { return }
+            UserDefaults.standard.set(outputDeviceUID, forKey: Self.outputDeviceKey)
+            rememberOutputDeviceName()
+            moveToOutputDevice()
+        }
+    }
 
-    /// What actually plays: the stored choice with a DAC, Shared without one. `outputMode`
-    /// keeps Exclusive / DoP while the DAC is unplugged, so it comes back when it is plugged in.
+    /// Name of the picked output, kept so it can be shown while the device is unplugged.
+    private(set) var outputDeviceName: String?
+
+    /// The outputs on this Mac and what the active one can do. Empty on iOS.
+    private(set) var outputStatus = OutputStatus()
+
+    /// The picked output is not plugged in, so playback goes to the system output.
+    var isOutputDeviceMissing: Bool {
+        guard let outputDeviceUID else { return false }
+        return !outputStatus.devices.contains { $0.uid == outputDeviceUID }
+    }
+
+    /// What actually plays: the stored choice where the output can take it, else the next step
+    /// down (DoP → Exclusive → Shared). `outputMode` keeps the choice, so it comes back when a
+    /// capable DAC is the output again.
     var effectiveOutputMode: OutputMode {
-        outputMode.isMacOnly && !externalDACAvailable ? .shared : outputMode
+        effectiveMode(for: outputMode)
+    }
+
+    private func effectiveMode(for mode: OutputMode) -> OutputMode {
+        switch mode {
+        case .dop where outputStatus.canDoP: .dop
+        case .dop, .exclusive: outputStatus.canExclusive ? .exclusive : .shared
+        case .shared: .shared
+        }
+    }
+
+    func isAvailable(_ mode: OutputMode) -> Bool {
+        switch mode {
+        case .shared: true
+        case .exclusive: outputStatus.canExclusive
+        case .dop: outputStatus.canDoP
+        }
     }
 
     var state: PlaybackState { playbackState }
@@ -70,6 +113,8 @@ final class PlaybackService {
     private var orderPosition: Int = 0
 
     private static let outputModeKey = "audioharbor.outputMode"
+    private static let outputDeviceKey = "audioharbor.outputDevice"
+    private static let outputDeviceNameKey = "audioharbor.outputDeviceName"
     private static let repeatModeKey = "audioharbor.repeatMode"
     private static let shuffleKey = "audioharbor.shuffle"
 
@@ -87,8 +132,13 @@ final class PlaybackService {
         }
         isShuffled = UserDefaults.standard.bool(forKey: Self.shuffleKey)
         engine.setOutputMode(outputMode)
-        engine.setExternalDACHandler { [weak self] available in
-            self?.externalDACAvailable = available
+        // Assigned in init, so didSet does not run — hand the engine the pick directly.
+        outputDeviceName = UserDefaults.standard.string(forKey: Self.outputDeviceNameKey)
+        outputDeviceUID = UserDefaults.standard.string(forKey: Self.outputDeviceKey)
+        engine.setOutputDevice(uid: outputDeviceUID)
+        engine.setOutputStatusHandler { [weak self] status in
+            self?.outputStatus = status
+            self?.rememberOutputDeviceName()
         }
         engine.setTrackEndedHandler { [weak self] endedTrack in
             self?.advanceAfterTrackEnd(after: endedTrack)
@@ -277,7 +327,49 @@ final class PlaybackService {
         }
     }
 
-    private func loadAndPlay(_ track: Track) async {
+    /// Keeps the last known name of the picked output; an unplugged device keeps its old one.
+    private func rememberOutputDeviceName() {
+        let name: String?
+        if let outputDeviceUID {
+            guard let device = outputStatus.devices.first(where: { $0.uid == outputDeviceUID }) else { return }
+            name = device.name
+        } else {
+            name = nil
+        }
+        guard name != outputDeviceName else { return }
+        outputDeviceName = name
+        UserDefaults.standard.set(name, forKey: Self.outputDeviceNameKey)
+    }
+
+    /// Whether the current track sounds different on the new path. Exclusive and DoP only
+    /// differ for DSD — a PCM track keeps playing untouched.
+    private func pathChanges(from old: OutputMode, to new: OutputMode) -> Bool {
+        guard old != new else { return false }
+        if old != .shared, new != .shared {
+            return currentTrack?.format.isDSD == true
+        }
+        return true
+    }
+
+    private func moveToOutputDevice() {
+        reloadCurrentTrack { engine.setOutputDevice(uid: outputDeviceUID) }
+    }
+
+    /// Applies an output change and reloads the current track so it takes the new path,
+    /// at the same position and in the same play/pause state.
+    private func reloadCurrentTrack(applying change: () -> Void) {
+        let hadTrack = !engineIsEmpty
+        let resume = isPlaying
+        let position = engine.currentTime
+        change()
+        guard hadTrack, let track = currentTrack else {
+            syncFromEngine()
+            return
+        }
+        Task { await loadAndPlay(track, at: position, autoplay: resume) }
+    }
+
+    private func loadAndPlay(_ track: Track, at position: TimeInterval = 0, autoplay: Bool = true) async {
         guard allowPlayback() else { return }
         loadGeneration &+= 1
         let generation = loadGeneration
@@ -290,9 +382,15 @@ final class PlaybackService {
             guard generation == loadGeneration else { return }
             try await engine.load(track)
             guard generation == loadGeneration else { return }
-            engine.play()
-            syncFromEngine()
-            startSyncing()
+            if autoplay {
+                engine.play()
+                if position > 0 { engine.seek(to: position) }
+                syncFromEngine()
+                startSyncing()
+            } else {
+                if position > 0 { engine.seek(to: position) }
+                syncFromEngine()
+            }
         } catch {
             guard generation == loadGeneration else { return }
             syncFromEngine()

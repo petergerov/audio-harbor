@@ -12,12 +12,21 @@ struct DeckRackPanel: View {
     #endif
     @State private var search = ""
 
+    /// Plugins keep Exclusive / DoP on an external DAC (processed PCM, not bit-perfect).
+    private var rackPathCaption: String {
+        let exclusive = appModel.playback.effectiveOutputMode != .shared
+        if appModel.effects.hasActiveEffects {
+            return exclusive ? "Exclusive · FX" : "Shared · FX"
+        }
+        return exclusive ? "Bit-perfect while the rack is off" : "Shared"
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
                     EngravedLabel(text: "Rack")
-                    Text(appModel.effects.hasActiveEffects ? "Shared · FX" : "Exclusive / DoP available")
+                    Text(rackPathCaption)
                         .font(HarborFont.mono(11))
                         .foregroundStyle(appModel.effects.hasActiveEffects ? HarborColor.amber : HarborColor.ivoryDim)
                 }

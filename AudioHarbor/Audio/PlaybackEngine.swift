@@ -20,8 +20,11 @@ protocol PlaybackEngine: AnyObject {
     func stop()
     func seek(to seconds: TimeInterval)
     func setOutputMode(_ mode: OutputMode)
-    /// Called now and whenever an external DAC (Exclusive / DoP target) appears or goes away.
-    func setExternalDACHandler(_ handler: @escaping (Bool) -> Void)
+    /// The output to play to by UID; nil follows the system output. Stops playback on a change —
+    /// the caller reloads the track so it opens the new device.
+    func setOutputDevice(uid: String?)
+    /// Called now and whenever outputs come and go or the active output changes.
+    func setOutputStatusHandler(_ handler: @escaping (OutputStatus) -> Void)
     /// Called once when the loaded track reaches its end (not on pause/stop/seek),
     /// with the track that ended so late signals can be matched against it.
     func setTrackEndedHandler(_ handler: @escaping (Track) -> Void)

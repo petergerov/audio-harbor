@@ -2,7 +2,7 @@
 
 Erste Veröffentlichung: **Mac App Store only**. iPhone/iPad bleiben im Xcode-Projekt, gehen aber noch nicht live.
 
-Stand der App im Repo: Bundle `com.gerov.audioharbor.player`, Version **1.0.0 (13)**, App Sandbox aktiv, StoreKit 2 (Trial + Unlock) eingebaut. Archiviert wird von einem Release-Branch, der aus `develop` erstellt wird. Offen sind vor allem Sandbox-Tests, Verträge und App Store Connect.
+Stand der App im Repo: Bundle `com.gerov.audioharbor.player`, Version **1.0.0 (15)**, App Sandbox aktiv, StoreKit 2 (Trial + Unlock) eingebaut. Archiviert wird von einem Release-Branch, der aus `develop` erstellt wird. Offen sind vor allem Sandbox-Tests, Verträge und App Store Connect.
 
 ---
 
@@ -81,7 +81,7 @@ Ordnerzugriff läuft über `NSOpenPanel` / `fileImporter` + security-scoped Book
 
 ### 1.3 Version, Signing, Privacy-URL
 
-- [x] Marketing-Version **1.0.0** — in `project.yml` gesetzt, landet über XcodeGen im Projekt. Aktueller Build **13** (`CURRENT_PROJECT_VERSION`), jeder Upload +1
+- [x] Marketing-Version **1.0.0** — in `project.yml` gesetzt, landet über XcodeGen im Projekt. Aktueller Build **15** (`CURRENT_PROJECT_VERSION`), jeder Upload +1
 - [ ] Team: Apple Developer Program, Signing **Apple Distribution** / Mac App Store (nicht Developer ID)
 - [x] Privacy Policy **live per HTTPS**: <https://petergerov.github.io/audio-harbor/privacy.html>
       (GitHub Pages, Quelle `main` + `/docs`). Geprüft: 200, HTTP wird auf HTTPS umgeleitet, Inhalt identisch mit `main`.

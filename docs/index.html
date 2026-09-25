@@ -33,7 +33,8 @@
       "Catalogue by album, artist, folder, with search and playlists",
       "Import and export M3U / M3U8 playlists",
       "AUv3 and classic AU effect inserts on the Deck rack",
-      "Optional plugin rack on Shared · FX; Exclusive stays bit-perfect with an empty rack",
+      "Plugin rack keeps the DAC exclusive at the file's sample rate (Exclusive · FX); bit-perfect with an empty rack",
+      "Pick the output device for music; system sounds can stay on the Mac speakers",
       "Local library only — nothing leaves the Mac"
     ]
   }
@@ -501,7 +502,7 @@
         <p>Mac only. Everything Exclusive does — and DSF, DFF, and SACD ISO (including DST) reach the DAC as real DSD via DoP. Pick it only if your DAC plays DSD. No separate DSD setting: the output mode decides.</p>
       </div>
     </div>
-    <p class="sound-note">No external DAC connected? Exclusive and DoP grey out and Shared takes over — plug the DAC back in and your choice returns on its own. Effects on the Deck rack switch you back to Shared until you clear them. Exclusive stays the empty-rack, bit-perfect path — we will not pretend otherwise. More in the <a href="faq.html" style="color: var(--accent);">FAQ</a>.</p>
+    <p class="sound-note">No external DAC connected? Exclusive and DoP grey out and Shared takes over — plug the DAC back in and your choice returns on its own. Pick the device in Settings — music to the DAC, system sounds stay on the Mac speakers — and switch device or mode while the song plays. Effects on the rack keep the DAC exclusive at the file’s rate (Exclusive · FX), but processed sound is not bit-perfect — only the empty rack is, and we will not pretend otherwise. More in the <a href="faq.html" style="color: var(--accent);">FAQ</a>.</p>
   </div>
 </section>
 
@@ -655,8 +656,8 @@
       </div>
       <div class="host-card">
         <div class="lead">Honest path</div>
-        <h3>Shared · FX</h3>
-        <p>A loaded rack uses the system mixer so plugins can run. Exclusive and DoP stay bit-perfect with an <em>empty</em> rack. Clear the inserts when you want the DAC raw.</p>
+        <h3>Exclusive · FX</h3>
+        <p>With Exclusive or DoP on a DAC, a loaded rack keeps the DAC to itself at the file’s sample rate — no system mixer, no macOS resampling. Only the plugin changes the sound. Clear the inserts when you want the DAC bit-perfect or DSD via DoP again.</p>
       </div>
     </div>
     <div class="features-grid" style="margin-top: 2px; border-radius: 0 0 var(--radius-lg) var(--radius-lg);">
@@ -702,7 +703,7 @@
       </div>
       <div class="preset">
         <h3>What the badge is for</h3>
-        <p>The Deck shows the format and the path — Shared, Exclusive, DoP, or Shared · FX — so you are never guessing what left the app.</p>
+        <p>The Deck shows the format and the path — Shared, Exclusive, DoP, Exclusive · FX, or Shared · FX — so you are never guessing what left the app.</p>
       </div>
     </div>
   </div>

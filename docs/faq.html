@@ -111,6 +111,14 @@
     </details>
 
     <details>
+      <summary>Can music go to my DAC while system sounds stay on the Mac speakers?</summary>
+      <div class="answer">
+        <p>Yes. In Settings → Output → <strong>Device</strong>, pick your DAC instead of <strong>System Output</strong>. Music then always goes to the DAC, whatever macOS uses for everything else. Each device shows what it can do: <strong>Exclusive · DoP</strong>, <strong>Exclusive</strong>, or <strong>Shared only</strong> — modes the device cannot do are greyed out.</p>
+        <p>You can switch device or output mode while a song plays; it continues at the same spot. If the picked DAC is unplugged, Audio Harbor plays on System Output and goes back to the DAC from the next song after you plug it in.</p>
+      </div>
+    </details>
+
+    <details>
       <summary>Why are Exclusive and DoP greyed out?</summary>
       <div class="answer">
         <p>They need an <strong>external DAC</strong> — connected over USB, Thunderbolt, FireWire, or PCI. On built-in speakers and headphones, virtual devices (VB-Cable, BlackHole), Bluetooth, and AirPlay there is nothing to gain, so Audio Harbor plays Shared and greys the other two out.</p>
@@ -144,11 +152,12 @@
       <summary>What does the path on the Deck mean?</summary>
       <div class="answer">
         <ul>
-          <li><strong>Exclusive · Bit-perfect</strong> — PCM straight to the DAC, unchanged.</li>
-          <li><strong>Exclusive · DoP</strong> — DSD as DoP to the DAC.</li>
-          <li><strong>Exclusive · DSD→PCM</strong> — DSD converted to PCM, still exclusive.</li>
+          <li><strong>Exclusive · Bit-perfect</strong> — PCM straight to the DAC, unchanged (Exclusive or DoP mode).</li>
+          <li><strong>Exclusive · DoP</strong> — DSD as DoP to the DAC. Only in DoP mode: DoP holds the DAC exclusively too, hence the name.</li>
+          <li><strong>Exclusive · DSD→PCM</strong> — DSD converted to PCM, still exclusive. In Exclusive mode, or in DoP mode when the DAC cannot take the DoP rate.</li>
           <li><strong>Shared</strong> — through macOS like any other app.</li>
-          <li><strong>Shared · FX</strong> — the plugin rack is in use.</li>
+          <li><strong>Exclusive · FX</strong> — the plugin rack is in use; Audio Harbor still holds the DAC at the file’s rate, but the sound is processed.</li>
+          <li><strong>Shared · FX</strong> — the plugin rack is in use, through macOS.</li>
           <li><strong>Shared · No external DAC</strong> — Exclusive or DoP is chosen, but no DAC is connected.</li>
         </ul>
       </div>
@@ -205,9 +214,9 @@
     </details>
 
     <details>
-      <summary>Why does the rack switch me to Shared?</summary>
+      <summary>What happens to Exclusive and DoP when I use the rack?</summary>
       <div class="answer">
-        <p>Plugins process the sound, so the result cannot be bit-perfect, and they need the system mixer to run. While a plugin is in the rack, playback uses <strong>Shared · FX</strong>. Clear the rack and Exclusive or DoP apply again.</p>
+        <p>Plugins process the sound, so the result cannot be bit-perfect, and they work on PCM. With Exclusive or DoP on an external DAC, Audio Harbor still holds the DAC and sets it to the file’s sample rate — <strong>Exclusive · FX</strong>: no system mixer, no macOS resampling, but processed PCM. DSD is converted to PCM for the plugins, so DoP pauses. Without an external DAC, the rack plays <strong>Shared · FX</strong>. Clear the rack for bit-perfect and DoP again.</p>
       </div>
     </details>
 

@@ -3,12 +3,6 @@ import Foundation
 
 #if os(macOS)
 
-struct AudioOutputDevice: Identifiable, Hashable, Sendable {
-    var id: AudioDeviceID
-    var name: String
-    var nominalSampleRate: Double
-}
-
 /// Manages hog mode + nominal sample-rate switching for bit-perfect Mac output.
 final class MacAudioDeviceController: @unchecked Sendable {
     private var hoggedDevice: AudioDeviceID?
@@ -37,7 +31,7 @@ final class MacAudioDeviceController: @unchecked Sendable {
         return deviceID
     }
 
-    func listOutputDevices() -> [AudioOutputDevice] {
+    func listOutputDevices() -> [OutputDevice] {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyDevices,
             mScope: kAudioObjectPropertyScopeGlobal,
@@ -54,17 +48,55 @@ final class MacAudioDeviceController: @unchecked Sendable {
         }
 
         return deviceIDs.compactMap { id in
-            guard outputChannelCount(device: id) > 0 else { return nil }
-            return AudioOutputDevice(
-                id: id,
+            guard outputChannelCount(device: id) > 0, let uid = deviceUID(id) else { return nil }
+            let external = isExternalInterface(device: id)
+            return OutputDevice(
+                uid: uid,
                 name: deviceName(id) ?? "Device \(id)",
-                nominalSampleRate: (try? currentSampleRate(device: id)) ?? 0
+                supportsExclusive: external,
+                supportsDoP: external && supportsDoP(device: id)
             )
         }
     }
 
-    func prepareExclusive(sampleRate: Double, deviceID: AudioDeviceID? = nil) throws -> AudioDeviceID {
-        let device = try deviceID ?? defaultOutputDeviceID()
+    /// The live device for a stored UID, or nil while it is unplugged.
+    func deviceID(forUID uid: String) -> AudioDeviceID? {
+        var cfUID = uid as CFString
+        var device = AudioDeviceID(kAudioObjectUnknown)
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyTranslateUIDToDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        let status = withUnsafeMutablePointer(to: &cfUID) { ptr in
+            AudioObjectGetPropertyData(
+                AudioObjectID(kAudioObjectSystemObject),
+                &address,
+                UInt32(MemoryLayout<CFString>.size),
+                ptr,
+                &size,
+                &device
+            )
+        }
+        guard status == noErr, device != kAudioObjectUnknown, isAlive(device) else { return nil }
+        return device
+    }
+
+    func deviceUID(_ id: AudioDeviceID) -> String? {
+        stringProperty(kAudioDevicePropertyDeviceUID, of: id)
+    }
+
+    /// Where playback goes: the picked device while it is plugged in, otherwise the system output.
+    func outputDevice(preferredUID: String?) throws -> AudioDeviceID {
+        if let preferredUID, let device = deviceID(forUID: preferredUID) {
+            return device
+        }
+        return try defaultOutputDeviceID()
+    }
+
+    func prepareExclusive(sampleRate: Double, deviceID: AudioDeviceID) throws -> AudioDeviceID {
+        let device = deviceID
         previousSampleRate = try? currentSampleRate(device: device)
         try setHogMode(device: device, enabled: true)
         hoggedDevice = device
@@ -73,12 +105,12 @@ final class MacAudioDeviceController: @unchecked Sendable {
     }
 
     /// The device exclusive playback targets: the one we hog while it is alive — macOS moves the
-    /// system default elsewhere as soon as we hog it — otherwise the current default output.
-    func exclusiveTargetDevice() throws -> AudioDeviceID {
+    /// system default elsewhere as soon as we hog it — otherwise the picked or default output.
+    func exclusiveTargetDevice(preferredUID: String?) throws -> AudioDeviceID {
         if let hoggedDevice, isAlive(hoggedDevice) {
             return hoggedDevice
         }
-        return try defaultOutputDeviceID()
+        return try outputDevice(preferredUID: preferredUID)
     }
 
     /// False once the device was unplugged or reset (its ID is then stale).
@@ -198,6 +230,11 @@ final class MacAudioDeviceController: @unchecked Sendable {
         }
     }
 
+    /// DoP carries DSD64 in 176.4 kHz PCM frames; a DAC that cannot run at that rate cannot take DoP.
+    func supportsDoP(device: AudioDeviceID) -> Bool {
+        supportsNominalRate(176_400, device: device)
+    }
+
     func supportsNominalRate(_ rate: Double, device: AudioDeviceID) -> Bool {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioDevicePropertyAvailableNominalSampleRates,
@@ -249,8 +286,12 @@ final class MacAudioDeviceController: @unchecked Sendable {
     }
 
     private func deviceName(_ id: AudioDeviceID) -> String? {
+        stringProperty(kAudioObjectPropertyName, of: id)
+    }
+
+    private func stringProperty(_ selector: AudioObjectPropertySelector, of id: AudioDeviceID) -> String? {
         var address = AudioObjectPropertyAddress(
-            mSelector: kAudioObjectPropertyName,
+            mSelector: selector,
             mScope: kAudioObjectPropertyScopeGlobal,
             mElement: kAudioObjectPropertyElementMain
         )
@@ -289,21 +330,19 @@ final class MacAudioDeviceController: @unchecked Sendable {
 #else
 
 final class MacAudioDeviceController: @unchecked Sendable {
-    struct AudioOutputDevice: Identifiable, Hashable, Sendable {
-        var id: UInt32
-        var name: String
-        var nominalSampleRate: Double
-    }
-
     func defaultOutputDeviceID() throws -> UInt32 { 0 }
-    func listOutputDevices() -> [AudioOutputDevice] { [] }
-    func prepareExclusive(sampleRate: Double, deviceID: UInt32? = nil) throws -> UInt32 { 0 }
+    func listOutputDevices() -> [OutputDevice] { [] }
+    func deviceID(forUID uid: String) -> UInt32? { nil }
+    func deviceUID(_ id: UInt32) -> String? { nil }
+    func outputDevice(preferredUID: String?) throws -> UInt32 { 0 }
+    func supportsDoP(device: UInt32) -> Bool { false }
+    func prepareExclusive(sampleRate: Double, deviceID: UInt32) throws -> UInt32 { 0 }
     func releaseExclusive() {}
     func currentSampleRate(device: UInt32) throws -> Float64 { 0 }
     func supportsNominalRate(_ rate: Double, device: UInt32) -> Bool { false }
     func isExternalInterface(device: UInt32) -> Bool { false }
     func observeOutputChanges(_ handler: @escaping () -> Void) {}
-    func exclusiveTargetDevice() throws -> UInt32 { 0 }
+    func exclusiveTargetDevice(preferredUID: String?) throws -> UInt32 { 0 }
     func isAlive(_ device: UInt32) -> Bool { false }
     func switchExclusiveRate(to rate: Double) throws {}
 }

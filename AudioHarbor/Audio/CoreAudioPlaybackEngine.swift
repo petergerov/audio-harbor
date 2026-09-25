@@ -34,8 +34,10 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
 
     private var outputMode: OutputMode = .shared
     private let logger = Logger(subsystem: "com.gerov.audioharbor.player", category: "Playback")
-    private var externalDACAvailable = false
-    private var externalDACHandler: ((Bool) -> Void)?
+    /// The picked output by UID; nil follows the system output.
+    private var preferredOutputUID: String?
+    private var outputStatus = OutputStatus()
+    private var outputStatusHandler: ((OutputStatus) -> Void)?
     private var usingHAL = false
     private var activeRender: RenderBuffer?
     private var seekOffset: TimeInterval = 0
@@ -53,6 +55,8 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
     #if os(macOS)
     private var exclusiveDeviceID: AudioDeviceID?
     #endif
+    /// Exclusive · FX: the plugin graph plays into the hogged DAC at the file's rate.
+    private var exclusiveFX = false
 
     init(effectHost: EffectHost) {
         self.effectHost = effectHost
@@ -61,10 +65,9 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         effectHost.onChainChanged = { [weak self] in
             self?.handleEffectChainChanged()
         }
-        refreshExternalDAC()
         deviceController.observeOutputChanges { [weak self] in
             MainActor.assumeIsolated {
-                self?.refreshExternalDAC()
+                self?.refreshOutputStatus()
             }
         }
         halPlayer.onReachedEnd = { [weak self] generation in
@@ -82,17 +85,35 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         outputMode = mode
     }
 
-    func setExternalDACHandler(_ handler: @escaping (Bool) -> Void) {
-        externalDACHandler = handler
-        handler(externalDACAvailable)
+    func setOutputDevice(uid: String?) {
+        guard uid != preferredOutputUID else { return }
+        preferredOutputUID = uid
+        // Let go of the old device now — its hog and its graph. The next load opens the new one.
+        stopPlayback(releaseDevice: true)
+        refreshOutputStatus()
     }
 
-    private func refreshExternalDAC() {
-        let available = exclusiveTargetIsExternal
-        guard available != externalDACAvailable || externalDACHandler == nil else { return }
-        externalDACAvailable = available
-        logger.info("External DAC available: \(available)")
-        externalDACHandler?(available)
+    func setOutputStatusHandler(_ handler: @escaping (OutputStatus) -> Void) {
+        outputStatusHandler = handler
+        outputStatus = currentOutputStatus()
+        handler(outputStatus)
+    }
+
+    private func refreshOutputStatus() {
+        let status = currentOutputStatus()
+        guard status != outputStatus else { return }
+        outputStatus = status
+        logger.info("Output: \(status.activeDevice?.name ?? "none", privacy: .public), exclusive \(status.canExclusive), DoP \(status.canDoP)")
+        outputStatusHandler?(status)
+    }
+
+    private func currentOutputStatus() -> OutputStatus {
+        #if os(macOS)
+        let active = exclusiveTargetDevice.flatMap { deviceController.deviceUID($0) }
+        return OutputStatus(devices: deviceController.listOutputDevices(), activeUID: active)
+        #else
+        return OutputStatus()
+        #endif
     }
 
     func setTrackEndedHandler(_ handler: @escaping (Track) -> Void) {
@@ -115,8 +136,7 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
                 try loadSharedPCM(track)
             }
             if !usingHAL {
-                releaseExclusiveSession()
-                if outputMode != .shared, !effectHost.hasChain, !exclusiveTargetIsExternal {
+                if outputMode != .shared, !exclusiveFX, !exclusiveTargetIsExternal {
                     pathLabel += " · No external DAC"
                 }
             }
@@ -256,8 +276,9 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         dsdQueuedChunks = 0
         sharedPlayer.stop()
         clearSharedAnchor()
-        rescheduleShared()
         if resume {
+            // Paused: play() schedules from `seekOffset` — scheduling here too would queue it twice.
+            rescheduleShared()
             do {
                 if !sharedEngine.isRunning { try sharedEngine.start() }
                 try playSharedPlayer()
@@ -289,7 +310,10 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
                 logger.info("Exclusive device gone — re-acquiring")
                 releaseExclusiveSession()
             }
-            device = try deviceController.prepareExclusive(sampleRate: render.sampleRate)
+            device = try deviceController.prepareExclusive(
+                sampleRate: render.sampleRate,
+                deviceID: deviceController.outputDevice(preferredUID: preferredOutputUID)
+            )
             exclusiveDeviceID = device
         }
         var nsError: NSError?
@@ -315,23 +339,89 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         deviceController.releaseExclusive()
         exclusiveDeviceID = nil
         #endif
+        exclusiveFX = false
+    }
+
+    /// Before a Shared graph is built: with plugins in the rack and Exclusive / DoP on an
+    /// external DAC, hog the DAC at the stream's rate so the graph plays straight into it —
+    /// no system mixer, no macOS resampling. Anything else lets go of the DAC.
+    private func claimOrReleaseDevice(forSharedRate rate: Double) {
+        #if os(macOS)
+        guard outputMode != .shared, effectHost.hasChain, exclusiveTargetIsExternal else {
+            releaseExclusiveSession()
+            return
+        }
+        do {
+            let device: AudioDeviceID
+            if let exclusiveDeviceID, deviceController.isAlive(exclusiveDeviceID) {
+                device = exclusiveDeviceID
+            } else {
+                if exclusiveDeviceID != nil { releaseExclusiveSession() }
+                device = try deviceController.outputDevice(preferredUID: preferredOutputUID)
+                let startRate = deviceController.supportsNominalRate(rate, device: device)
+                    ? rate
+                    : try deviceController.currentSampleRate(device: device)
+                exclusiveDeviceID = try deviceController.prepareExclusive(sampleRate: startRate, deviceID: device)
+            }
+            // A rate the DAC cannot run stays as it is; the mixer converts to it.
+            if deviceController.supportsNominalRate(rate, device: device) {
+                try deviceController.switchExclusiveRate(to: rate)
+            }
+            exclusiveFX = true
+        } catch {
+            let nsError = error as NSError
+            logger.error("Exclusive FX claim failed: \(nsError.localizedDescription, privacy: .public)")
+            releaseExclusiveSession()
+        }
+        #endif
+    }
+
+    /// Caption while the plugin graph plays.
+    private var fxPathLabel: String {
+        exclusiveFX ? "Exclusive · FX" : "Shared · FX"
     }
 
     // MARK: - Loaders
 
     #if os(macOS)
+    /// While we hog the DAC, macOS reports another default output — this still names the DAC.
+    private var exclusiveTargetDevice: AudioDeviceID? {
+        try? deviceController.exclusiveTargetDevice(preferredUID: preferredOutputUID)
+    }
+
     /// Exclusive / DoP only take over an external DAC; anything else plays Shared.
     private var exclusiveTargetIsExternal: Bool {
-        // While we hog the DAC, macOS reports another default output — ask about the DAC.
-        guard let device = try? deviceController.exclusiveTargetDevice() else { return false }
+        guard let device = exclusiveTargetDevice else { return false }
         return deviceController.isExternalInterface(device: device)
+    }
+
+    /// Point the Shared graph at the picked output. Without a pick (or while it is unplugged)
+    /// AVAudioEngine follows the system output on its own.
+    private func applySharedOutputDevice() {
+        // Exclusive · FX: the hogged DAC — macOS has already moved the system output away from it.
+        let target = exclusiveFX
+            ? exclusiveDeviceID
+            : preferredOutputUID.flatMap { deviceController.deviceID(forUID: $0) }
+        guard var device = target,
+              let unit = sharedEngine.outputNode.audioUnit else { return }
+        let status = AudioUnitSetProperty(
+            unit,
+            kAudioOutputUnitProperty_CurrentDevice,
+            kAudioUnitScope_Global,
+            0,
+            &device,
+            UInt32(MemoryLayout<AudioDeviceID>.size)
+        )
+        if status != noErr {
+            logger.error("Shared output device \(device) rejected: \(status)")
+        }
     }
     #else
     private var exclusiveTargetIsExternal: Bool { false }
     #endif
 
     private func shouldUseHAL(for track: Track) -> Bool {
-        // Plugins need the Shared float graph — never hog Exclusive/DoP with inserts.
+        // Plugins need the float graph — with inserts, Exclusive / DoP become Exclusive · FX.
         if effectHost.hasActiveEffects || effectHost.hasChain {
             return false
         }
@@ -358,12 +448,13 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         let file = try AVAudioFile(forReading: track.url)
         // Assign before rewiring so inserts negotiate against a real stream format.
         sharedFile = file
+        claimOrReleaseDevice(forSharedRate: file.processingFormat.sampleRate)
         resetSharedGraphIfNeeded()
         duration = Double(file.length) / file.processingFormat.sampleRate
         seekOffset = 0
         currentTime = 0
         activeFormatLabel = "\(track.format.rawValue) · \(Int(file.processingFormat.sampleRate)) Hz"
-        pathLabel = "Shared"
+        pathLabel = exclusiveFX ? fxPathLabel : "Shared"
     }
 
     private func loadExclusivePCM(_ track: Track) async throws {
@@ -396,8 +487,10 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         let wantHAL = (outputMode == .exclusive || outputMode == .dop)
             && !effectHost.hasChain
             && exclusiveTargetIsExternal
-        let device = try? deviceController.exclusiveTargetDevice()
+        let device = exclusiveTargetDevice
+        // An output that cannot run 176.4 kHz gets Exclusive DSD→PCM, never DoP.
         let dopOK = outputMode == .dop && wantHAL
+            && device.map { deviceController.supportsDoP(device: $0) } == true
         let strategies: [DSDStrategy] = dopOK ? [.preferDoP, .convertToPCM] : [.convertToPCM]
         logger.info("DSD load \(track.url.lastPathComponent, privacy: .public): output \(self.outputMode.rawValue, privacy: .public), hal \(wantHAL), dopOK \(dopOK)")
         for strategy in strategies where wantHAL {
@@ -457,12 +550,13 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         sharedPCMFormat = format
         dsdPlayFrame = 0
         dsdQueuedChunks = 0
+        claimOrReleaseDevice(forSharedRate: source.sampleRate)
         resetSharedGraphIfNeeded()
         duration = Double(source.frameCount) / source.sampleRate
         seekOffset = 0
         currentTime = 0
-        activeFormatLabel = "\(track.format.rawValue) · \(source.label) · Shared"
-        pathLabel = "Shared · DSD→PCM"
+        activeFormatLabel = "\(track.format.rawValue) · \(source.label) · \(exclusiveFX ? "Exclusive" : "Shared")"
+        pathLabel = exclusiveFX ? "\(fxPathLabel) · DSD→PCM" : "Shared · DSD→PCM"
     }
 
     private func startSharedPlayback() throws {
@@ -478,12 +572,13 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         }
         armSharedAnchor(from: seekOffset)
         state = .playing
-        if effectHost.hasActiveEffects {
-            pathLabel = "Shared · FX"
+        if effectHost.hasActiveEffects, !pathLabel.contains("DSD") {
+            pathLabel = fxPathLabel
         } else if pathLabel.contains("DSD") || pathLabel.contains("fallback") || pathLabel.contains("external") {
             // Keep the DSD / fallback / no-DAC caption.
         } else {
-            pathLabel = "Shared"
+            // Rack bypassed or emptied mid-track: still on the hogged DAC until the next track.
+            pathLabel = exclusiveFX ? "Exclusive" : "Shared"
         }
         startTimer()
     }
@@ -503,6 +598,10 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
     }
 
     private func wireSharedGraph() {
+        #if os(macOS)
+        // Before anything reads the output format: it comes from the device.
+        applySharedOutputDevice()
+        #endif
         sharedEngine.attach(sharedPlayer)
 
         let format = sharedConnectionFormat()
@@ -566,8 +665,8 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
                 failedUnits,
                 message: "Dropped incompatible plugin(s): \(names). Many Waves AUs need a DAW host and reject Shared graph formats."
             )
-        } else if effectHost.hasActiveEffects {
-            pathLabel = "Shared · FX"
+        } else if effectHost.hasActiveEffects, !pathLabel.contains("DSD") {
+            pathLabel = fxPathLabel
         }
     }
 
@@ -625,9 +724,10 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         let time = currentTime
         let track = loadedTrack
 
-        // Adding FX while exclusive: tear down HAL and reload on Shared.
+        // Adding FX while exclusive: stop HAL and reload on the plugin graph. The DAC stays
+        // hogged when Exclusive · FX can take over (the loaders decide).
         if usingHAL, effectHost.hasChain {
-            releaseExclusiveSession()
+            halPlayer.stopIO()
             usingHAL = false
             if let track {
                 do {
@@ -638,7 +738,6 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
                     }
                     seek(to: time)
                     if resume { try startSharedPlayback() }
-                    pathLabel = "Shared · FX"
                 } catch {
                     state = .failed(error.localizedDescription)
                 }
@@ -662,8 +761,8 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
                     } catch {
                         state = .failed(error.localizedDescription)
                     }
-                } else if effectHost.hasActiveEffects {
-                    pathLabel = "Shared · FX"
+                } else if effectHost.hasActiveEffects, !pathLabel.contains("DSD") {
+                    pathLabel = fxPathLabel
                 }
             }
         }

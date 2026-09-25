@@ -23,6 +23,10 @@ struct SettingsView: View {
                             .font(HarborFont.body(13))
                             .foregroundStyle(HarborColor.ivoryDim)
 
+                        #if os(macOS)
+                        outputDevicePicker
+                        #endif
+
                         VStack(spacing: 0) {
                             ForEach(Array(OutputMode.allCases.enumerated()), id: \.element.id) { index, mode in
                                 if index > 0 {
@@ -42,7 +46,7 @@ struct SettingsView: View {
                             .foregroundStyle(HarborColor.ivoryDim)
                         #endif
 
-                        Text("Effects on the Deck switch you back to Shared until you clear the rack.")
+                        Text("With effects in the rack, Exclusive and DoP keep the DAC but send processed PCM — not bit-perfect, and DSD as PCM. Clear the rack for bit-perfect and DoP.")
                             .font(HarborFont.body(12))
                             .foregroundStyle(HarborColor.ivoryDim)
                     }
@@ -83,20 +87,131 @@ struct SettingsView: View {
     }
 
     private var outputFootnote: String {
-        if appModel.playback.externalDACAvailable {
-            return "External DAC connected — Exclusive and DoP are available."
+        let playback = appModel.playback
+        let status = playback.outputStatus
+        let name = status.activeDevice?.name ?? "This output"
+        if status.canDoP {
+            return "\(name) takes Exclusive and DoP."
         }
-        if appModel.playback.outputMode != .shared {
-            return "No external DAC connected — playing Shared. \(appModel.playback.outputMode.title) is selected again when you plug the DAC in."
+        if status.canExclusive {
+            if playback.outputMode == .dop {
+                return "\(name) cannot run 176.4 kHz, the rate DoP needs — playing Exclusive, DSD as PCM. DoP is selected again on a DSD DAC."
+            }
+            return "\(name) takes Exclusive. DoP is off: it cannot run 176.4 kHz, the rate DoP needs."
+        }
+        if playback.outputMode != .shared {
+            return "\(name) is not an external DAC — playing Shared. \(playback.outputMode.title) is selected again when a DAC is the output."
         }
         return "Exclusive and DoP need an external DAC (USB). Built-in speakers, headphones, Bluetooth, and AirPlay stay on Shared."
     }
 
+    #if os(macOS)
+    /// Which device Audio Harbor plays to — independent of the macOS system output, so alerts
+    /// and other apps can stay on the speakers while music goes to the DAC.
+    @ViewBuilder
+    private var outputDevicePicker: some View {
+        let playback = appModel.playback
+        let status = playback.outputStatus
+
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 12) {
+                Image(systemName: "hifispeaker.fill")
+                    .foregroundStyle(HarborColor.amber)
+                    .frame(width: 22)
+                Text("Device")
+                    .font(HarborFont.title(14))
+                    .foregroundStyle(HarborColor.ivory)
+                Spacer(minLength: 8)
+                Menu {
+                    Button {
+                        playback.outputDeviceUID = nil
+                    } label: {
+                        deviceMenuLabel("System Output", selected: playback.outputDeviceUID == nil)
+                    }
+                    if !status.devices.isEmpty {
+                        Divider()
+                    }
+                    ForEach(sortedDevices(status.devices)) { device in
+                        Button {
+                            playback.outputDeviceUID = device.uid
+                        } label: {
+                            deviceMenuLabel(
+                                "\(device.name) — \(device.capabilityLabel)",
+                                selected: playback.outputDeviceUID == device.uid
+                            )
+                        }
+                    }
+                    if playback.isOutputDeviceMissing, let uid = playback.outputDeviceUID {
+                        Divider()
+                        Button {} label: {
+                            deviceMenuLabel(
+                                "\(playback.outputDeviceName ?? uid) — not connected",
+                                selected: true
+                            )
+                        }
+                        .disabled(true)
+                    }
+                } label: {
+                    Text(deviceTitle)
+                        .font(HarborFont.body(13))
+                        .lineLimit(1)
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+                .help("The device Audio Harbor plays to. System Output follows macOS.")
+            }
+
+            Text(deviceCaption)
+                .font(HarborFont.body(12))
+                .foregroundStyle(playback.isOutputDeviceMissing ? HarborColor.amber : HarborColor.ivoryDim)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var deviceTitle: String {
+        let playback = appModel.playback
+        guard let uid = playback.outputDeviceUID else { return "System Output" }
+        return playback.outputDeviceName ?? uid
+    }
+
+    private var deviceCaption: String {
+        let playback = appModel.playback
+        let active = playback.outputStatus.activeDevice
+        let activeText = active.map { "\($0.name) · \($0.capabilityLabel)" } ?? "No output"
+        if playback.isOutputDeviceMissing {
+            let picked = playback.outputDeviceName ?? "The picked device"
+            return "\(picked) is not connected — playing on \(activeText). Plug it in and it is used from the next track."
+        }
+        if playback.outputDeviceUID == nil {
+            return "Follows macOS: \(activeText)."
+        }
+        return activeText
+    }
+
+    /// External DACs first — they are why the picker exists — then the rest, by name.
+    private func sortedDevices(_ devices: [OutputDevice]) -> [OutputDevice] {
+        devices.sorted {
+            if $0.supportsExclusive != $1.supportsExclusive { return $0.supportsExclusive }
+            return $0.name.localizedStandardCompare($1.name) == .orderedAscending
+        }
+    }
+
+    @ViewBuilder
+    private func deviceMenuLabel(_ title: String, selected: Bool) -> some View {
+        if selected {
+            Label(title, systemImage: "checkmark")
+        } else {
+            Text(title)
+        }
+    }
+    #endif
+
     @ViewBuilder
     private func outputChoice(_ mode: OutputMode) -> some View {
         let selected = appModel.playback.effectiveOutputMode == mode
-        // Exclusive / DoP only when an external DAC is the output (never on iOS).
-        let available = !mode.isMacOnly || appModel.playback.externalDACAvailable
+        // Exclusive needs an external DAC as the output, DoP one that runs 176.4 kHz (never on iOS).
+        let available = appModel.playback.isAvailable(mode)
 
         Button {
             // Tapping the Shared that stands in for an unplugged DAC must not forget Exclusive / DoP.
