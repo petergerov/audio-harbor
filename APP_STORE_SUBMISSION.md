@@ -297,7 +297,7 @@ Data Used to Track You: **No**.
 
 ## 10. Nach dem Live-Gang
 
-- [ ] Homepage-CTA von GitHub auf Mac App Store umbiegen (`docs/index.html`, `docs/MARKETING.md`)
+- [ ] Homepage-CTA von GitHub auf Mac App Store umbiegen (`docs/index.html`, `marketing/MARKETING.md`)
 - [x] Privacy-URL final — <https://petergerov.github.io/audio-harbor/privacy.html>
 - [ ] Support-URL final
 - [ ] Phased Release optional

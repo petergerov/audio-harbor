@@ -2,7 +2,7 @@
 
 How to stay competitive with other audiophile players on macOS without becoming them.
 
-Locked identity (see also [`PRODUCT.md`](PRODUCT.md)): local files, Shared as the everyday default, Exclusive + sample-rate match + DoP on Mac, AU / AUv3 on the Deck. Tagline: *Local. Bit-perfect. Calm.* Offer: free to install, 7-day trial, **€9.90** one-time unlock. No account, no subscription.
+Locked identity (see also [`PRODUCT.md`](../docs/PRODUCT.md)): local files, Shared as the everyday default, Exclusive + sample-rate match + DoP on Mac, AU / AUv3 on the Deck. Tagline: *Local. Bit-perfect. Calm.* Offer: free to install, 7-day trial, **€9.90** one-time unlock. No account, no subscription.
 
 This is a strategy memo, not a feature backlog. Ship only what sharpens the identity.
 
@@ -28,7 +28,7 @@ Roon wins metadata and multi-room. HQPlayer and Pine’s OSF win upsampling thea
 
 ## Pine Player
 
-[`PRODUCT.md`](PRODUCT.md) already names the gap: Pine is powerful and crowded; Harbor ships less surface and a cleaner path from library to DAC. That is still the right frame. Pine is not a footnote.
+[`PRODUCT.md`](../docs/PRODUCT.md) already names the gap: Pine is powerful and crowded; Harbor ships less surface and a cleaner path from library to DAC. That is still the right frame. Pine is not a footnote.
 
 ### What Pine actually is
 
@@ -47,7 +47,7 @@ Default playback is **dual audio tracks** so crossfade and on-the-fly format con
 
 ### Where Harbor must not become Pine
 
-Matching six DAC modes, 768 kHz OSF, a converter suite, internet radio, AirPlay 2, and dual-track-by-default is how Harbor dies. [`ARCHITECTURE.md`](ARCHITECTURE.md) already flags this: *scope creep (Pine clone)*. [`MARKETING.md`](MARKETING.md) says the same: no feature matrices that look like Pine.
+Matching six DAC modes, 768 kHz OSF, a converter suite, internet radio, AirPlay 2, and dual-track-by-default is how Harbor dies. [`ARCHITECTURE.md`](../docs/ARCHITECTURE.md) already flags this: *scope creep (Pine clone)*. [`MARKETING.md`](MARKETING.md) says the same: no feature matrices that look like Pine.
 
 Pine’s bit-perfect story is a mode buried under processing modes, and the bit-perfect track path is experimental. Harbor’s story is the reverse: **hear the file**; processing is an optional rack that *names* itself Shared · FX.
 
@@ -65,7 +65,7 @@ Pine’s bit-perfect story is a mode buried under processing modes, and the bit-
 
 Steal Pine users who are tired of the kitchen sink, not Pine users who want a Swiss Army converter. Against Pine, CUE and ISO-as-album still matter — those are collector basics, not Pine-cloning. Do not race their encoder blog posts.
 
-Success criterion already in [`PRODUCT.md`](PRODUCT.md): *UI feels simpler than Pine within the first session.* Keep that. Add: *the path label is understood in the first session.*
+Success criterion already in [`PRODUCT.md`](../docs/PRODUCT.md): *UI feels simpler than Pine within the first session.* Keep that. Add: *the path label is understood in the first session.*
 
 ---
 
@@ -89,7 +89,7 @@ Roon wins the listening chair. Audirvāna’s remote is weak. Harbor already has
 - iPhone steers queue, volume, album.
 - Mode: *Remote to this Mac* — no account, no Roon-class server.
 
-Largest product unlock that still fits the identity. [`PRODUCT.md`](PRODUCT.md) already lists this under Ecosystem; it should move forward once Exclusive is boringly reliable.
+Largest product unlock that still fits the identity. [`PRODUCT.md`](../docs/PRODUCT.md) already lists this under Ecosystem; it should move forward once Exclusive is boringly reliable.
 
 ### 3. The AU rack is the DSP story
 
@@ -151,7 +151,7 @@ These dilute *Local. Bit-perfect. Calm.* and drag Harbor into someone else’s c
 - Upsampling to 768 kHz as theatre
 - A second DSP product SKU next to Unlock
 
-Optional streaming is listed as “later, if it doesn’t dilute” in [`PRODUCT.md`](PRODUCT.md). Default answer remains **no**.
+Optional streaming is listed as “later, if it doesn’t dilute” in [`PRODUCT.md`](../docs/PRODUCT.md). Default answer remains **no**.
 
 ---
 

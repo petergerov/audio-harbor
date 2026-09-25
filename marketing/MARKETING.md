@@ -1,6 +1,6 @@
 # Audio Harbor — Marketing concept
 
-Positioning for **audiophiles**, not for a feature-max player. Homepage lives in [`index.html`](index.html) (same layout language as [jj-breeze](https://github.com/petergerov/jj-breeze-auv3/tree/main/docs): light paper, quiet type, three-up grids, one dark close).
+Positioning for **audiophiles**, not for a feature-max player. Homepage lives in [`docs/index.html`](../docs/index.html) (same layout language as [jj-breeze](https://github.com/petergerov/jj-breeze-auv3/tree/main/docs): light paper, quiet type, three-up grids, one dark close).
 
 **Lead platform: macOS.** iPad and iPhone are the same product, honest about DAC limits.
 

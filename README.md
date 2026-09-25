@@ -7,7 +7,7 @@ Optional AU / AUv3 inserts sit on the Deck rack when you want processing. No str
 ## Docs
 
 - [Homepage (marketing)](docs/index.html)
-- [Marketing concept](docs/MARKETING.md)
+- [Marketing concept](marketing/MARKETING.md)
 - [Product scope (MVP vs Pro)](docs/PRODUCT.md)
 - [Technical architecture](docs/ARCHITECTURE.md)
 - [Brand](docs/brand.md)
