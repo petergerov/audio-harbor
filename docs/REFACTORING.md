@@ -44,10 +44,17 @@ it, and the Deck rail matches `.playlist` instead of comparing `"Playlist"`.
 - The Deck decodes cover art once per track in `.task(id:)`; it used to decode on every
   playback tick. `Image(artworkData:)` is shared with `HarborArtwork`.
 
-## 4. View models for Catalogue and Playlists ☐
+## 4. View models for Catalogue and Playlists ☑
 
-- `LibraryViewModel`: search debounce, expanded album/artist, new-playlist alert, play actions.
-- `PlaylistsViewModel`: M3U import + summary, untitled-name logic, `tracks(for:)`, titles.
+Each screen owns its view model as `@State`, created in `init(appModel:)`, so screen state
+still resets when the macOS sidebar switches screens (as before).
+
+- `LibraryViewModel`: debounced `searchDraft`, expanded album / artist, the pending
+  "New Playlist" track, adding directories, subtitle, and every play action
+  (`playAlbum`, `playArtist`, `playDirectory`, `playRoot`, `playFolder(containing:)`).
+- `PlaylistsViewModel`: sidebar `scope` (persisted, drops an out-of-scope selection) and
+  `selection`, `tracks(for:)` / titles, create / rename / delete, track removal, M3U import
+  with its summary, and M3U8 writing. The save panel stays in the view.
 
 ## 5. De-duplicate catalogue rows ☐
 
@@ -67,7 +74,7 @@ it, and the Deck rail matches `.playlist` instead of comparing `"Playlist"`.
 - One m:ss formatter (three copies today).
 - `.harborListRow()` modifier (11 copies); `EmptyPanel(title:message:)`.
 - De-duplicate the macOS / iPad-regular split layout in `PlaylistsView`.
-- `LibraryView` `.onAppear` → `.task`.
+- ~~`LibraryView` `.onAppear` → `.task`~~ — gone with step 4.
 - Drop legacy migrations (`audioharbor.dsdStrategy`, `"cassette"` deck style) once safe.
 
 ## Out of scope

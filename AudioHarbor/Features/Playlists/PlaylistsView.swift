@@ -1,80 +1,20 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-private enum PlaylistBrowserScope: String, CaseIterable, Identifiable {
-    case playlists
-    case labels
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .playlists: "Playlists"
-        case .labels: "Labels"
-        }
-    }
-
-    func contains(_ item: PlaylistBrowserItem) -> Bool {
-        switch (self, item) {
-        case (.playlists, .playlist): true
-        case (.labels, .label): true
-        default: false
-        }
-    }
-}
-
-private enum PlaylistBrowserItem: Hashable, Identifiable {
-    case playlist(UUID)
-    case label(String)
-
-    var id: String {
-        switch self {
-        case .playlist(let id): "playlist-\(id.uuidString)"
-        case .label(let name): "label-\(name)"
-        }
-    }
-
-    var title: String {
-        switch self {
-        case .playlist: "Playlist"
-        case .label(let name): name
-        }
-    }
-
-    var kindLabel: String {
-        switch self {
-        case .playlist: "Playlist"
-        case .label: "Label"
-        }
-    }
-
-    func queueSource(named name: String) -> QueueSource {
-        switch self {
-        case .playlist: .playlist(name)
-        case .label: .label(name)
-        }
-    }
-}
-
 struct PlaylistsView: View {
     @Environment(AppModel.self) private var appModel
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
+    @State private var model: PlaylistsViewModel
     @State private var newName = ""
     @State private var isCreating = false
     @State private var renameDraft = ""
     @State private var renaming: Playlist?
-    @State private var selection: PlaylistBrowserItem?
     @State private var isImportingM3U = false
-    @State private var importReport: ImportReport?
-    @AppStorage("audioharbor.playlists.browserScope") private var browserScopeRaw: String = PlaylistBrowserScope.playlists.rawValue
 
-    private var browserScope: Binding<PlaylistBrowserScope> {
-        Binding(
-            get: { PlaylistBrowserScope(rawValue: browserScopeRaw) ?? .playlists },
-            set: { browserScopeRaw = $0.rawValue }
-        )
+    init(appModel: AppModel) {
+        _model = State(initialValue: PlaylistsViewModel(app: appModel))
     }
 
     var body: some View {
@@ -99,7 +39,7 @@ struct PlaylistsView: View {
                             detailPane
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                         }
-                    } else if selection != nil {
+                    } else if model.selection != nil {
                         detailPane
                     } else {
                         browserSidebar
@@ -110,20 +50,15 @@ struct PlaylistsView: View {
             }
         }
         #if os(iOS)
-        .navigationTitle(selection.map(navigationTitle(for:)) ?? "Playlists")
+        .navigationTitle(model.selection.map(model.title(for:)) ?? "Playlists")
         .toolbar {
-            if selection != nil, horizontalSizeClass == .compact {
+            if model.selection != nil, horizontalSizeClass == .compact {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Back") { selection = nil }
+                    Button("Back") { model.selection = nil }
                 }
             }
         }
         #endif
-        .onChange(of: browserScopeRaw) { _, _ in
-            if let selection, !browserScope.wrappedValue.contains(selection) {
-                self.selection = nil
-            }
-        }
         .sheet(isPresented: $isCreating) {
             newPlaylistSheet
         }
@@ -133,18 +68,18 @@ struct PlaylistsView: View {
             allowsMultipleSelection: true
         ) { result in
             if case .success(let urls) = result {
-                importM3U(urls: urls)
+                model.importM3U(from: urls)
             }
         }
         .alert(
-            importReport?.title ?? "",
+            model.report?.title ?? "",
             isPresented: Binding(
-                get: { importReport != nil },
-                set: { if !$0 { importReport = nil } }
+                get: { model.report != nil },
+                set: { if !$0 { model.report = nil } }
             ),
-            presenting: importReport
+            presenting: model.report
         ) { _ in
-            Button("OK", role: .cancel) { importReport = nil }
+            Button("OK", role: .cancel) { model.report = nil }
         } message: { report in
             Text(report.message)
         }
@@ -156,7 +91,7 @@ struct PlaylistsView: View {
             Button("Cancel", role: .cancel) { renaming = nil }
             Button("Save") {
                 if let renaming {
-                    appModel.playlists.rename(renaming, to: renameDraft)
+                    model.rename(renaming, to: renameDraft)
                 }
                 self.renaming = nil
             }
@@ -189,8 +124,8 @@ struct PlaylistsView: View {
     private var browserSidebar: some View {
         VStack(spacing: 10) {
             scopePicker
-            List(selection: $selection) {
-                switch browserScope.wrappedValue {
+            List(selection: $model.selection) {
+                switch model.scope {
                 case .playlists:
                     playlistsSection
                 case .labels:
@@ -207,9 +142,9 @@ struct PlaylistsView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
                 ForEach(PlaylistBrowserScope.allCases) { scope in
-                    let selected = browserScope.wrappedValue == scope
+                    let selected = model.scope == scope
                     Button {
-                        browserScope.wrappedValue = scope
+                        model.scope = scope
                     } label: {
                         Text(scope.title.uppercased())
                             .font(HarborFont.panel(9))
@@ -237,13 +172,13 @@ struct PlaylistsView: View {
 
     @ViewBuilder
     private var playlistsSection: some View {
-        if appModel.playlists.playlists.filter({ !$0.isSmart }).isEmpty {
+        if model.manualPlaylists.isEmpty {
             Text("No playlists yet")
                 .font(HarborFont.body(13))
                 .foregroundStyle(HarborColor.ivoryDim)
                 .listRowBackground(HarborColor.faceplate)
         } else {
-            ForEach(appModel.playlists.playlists.filter { !$0.isSmart }) { playlist in
+            ForEach(model.manualPlaylists) { playlist in
                 sidebarRow(
                     title: playlist.name,
                     subtitle: "\(playlist.trackPaths.count) tracks",
@@ -251,7 +186,7 @@ struct PlaylistsView: View {
                     item: .playlist(playlist.id)
                 )
                 .contextMenu {
-                    Button("Play") { play(item: .playlist(playlist.id)) }
+                    Button("Play") { model.play(.playlist(playlist.id)) }
                     #if os(macOS)
                     Button("Export M3U8…") { exportM3U8(item: .playlist(playlist.id)) }
                     #endif
@@ -260,15 +195,11 @@ struct PlaylistsView: View {
                         renaming = playlist
                     }
                     Button("Delete", role: .destructive) {
-                        if selection == .playlist(playlist.id) { selection = nil }
-                        appModel.playlists.delete(playlist)
+                        model.delete(playlist)
                     }
                 }
             }
-            .onDelete { offsets in
-                let manuals = appModel.playlists.playlists.filter { !$0.isSmart }
-                offsets.map { manuals[$0] }.forEach(appModel.playlists.delete)
-            }
+            .onDelete(perform: model.deleteManualPlaylists)
         }
     }
 
@@ -288,7 +219,7 @@ struct PlaylistsView: View {
                     item: .label(facet.name)
                 )
                 .contextMenu {
-                    Button("Play") { play(item: .label(facet.name)) }
+                    Button("Play") { model.play(.label(facet.name)) }
                 }
             }
         }
@@ -319,7 +250,7 @@ struct PlaylistsView: View {
         .contentShape(Rectangle())
         .tag(item)
         .listRowBackground(
-            selection == item
+            model.selection == item
                 ? HarborColor.amber.opacity(0.14)
                 : HarborColor.faceplate
         )
@@ -327,13 +258,13 @@ struct PlaylistsView: View {
 
     @ViewBuilder
     private var detailPane: some View {
-        if let selection {
-            let tracks = tracks(for: selection)
+        if let selection = model.selection {
+            let tracks = model.tracks(for: selection)
             VStack(spacing: 0) {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         EngravedLabel(text: selection.kindLabel)
-                        Text(detailTitle(for: selection))
+                        Text(model.title(for: selection))
                             .font(HarborFont.title(18))
                             .foregroundStyle(HarborColor.ivory)
                         Text("\(tracks.count) tracks")
@@ -352,7 +283,7 @@ struct PlaylistsView: View {
                         .buttonStyle(.plain)
                         .disabled(tracks.isEmpty)
                     #endif
-                    Button("Play All") { play(item: selection) }
+                    Button("Play All") { model.play(selection) }
                         .font(HarborFont.panel(11))
                         .foregroundStyle(HarborColor.faceplate)
                         .padding(.horizontal, 12)
@@ -370,7 +301,7 @@ struct PlaylistsView: View {
                         Text("No tracks")
                             .font(HarborFont.title(16))
                             .foregroundStyle(HarborColor.ivory)
-                        Text(emptyDetailMessage(for: selection))
+                        Text(model.emptyMessage(for: selection))
                             .font(HarborFont.body(13))
                             .foregroundStyle(HarborColor.ivoryDim)
                             .multilineTextAlignment(.center)
@@ -378,20 +309,14 @@ struct PlaylistsView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    let playlists = appModel.playlists.playlists.filter { !$0.isSmart }
+                    let playlists = model.manualPlaylists
                     let labels = appModel.library.allLabels
                     List {
                         ForEach(tracks) { track in
                             TrackRow(
                                 track: track,
                                 playlists: playlists,
-                                onPlay: {
-                                    appModel.play(
-                                        tracks,
-                                        startingAt: track,
-                                        from: selection.queueSource(named: detailTitle(for: selection))
-                                    )
-                                },
+                                onPlay: { model.play(selection, startingAt: track) },
                                 onAddToPlaylist: { playlist in
                                     appModel.playlists.add(track, to: playlist)
                                 },
@@ -406,7 +331,9 @@ struct PlaylistsView: View {
                             .listRowBackground(HarborColor.faceplate)
                             .listRowSeparatorTint(HarborColor.aluminumDark.opacity(0.5))
                         }
-                        .onDelete(perform: deleteHandler(for: selection, tracks: tracks))
+                        .onDelete(perform: model.canRemoveTracks(from: selection)
+                            ? { model.removeTracks(at: $0, of: tracks, from: selection) }
+                            : nil)
                     }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
@@ -426,57 +353,6 @@ struct PlaylistsView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(20)
         }
-    }
-
-    private func tracks(for item: PlaylistBrowserItem) -> [Track] {
-        switch item {
-        case .playlist(let id):
-            guard let playlist = appModel.playlists.playlists.first(where: { $0.id == id }) else { return [] }
-            return appModel.playlists.tracks(for: playlist, from: appModel.library.allTracks)
-        case .label(let name):
-            return appModel.library.tracks(forLabel: name)
-        }
-    }
-
-    private func detailTitle(for item: PlaylistBrowserItem) -> String {
-        switch item {
-        case .playlist(let id):
-            return appModel.playlists.playlists.first(where: { $0.id == id })?.name ?? "Playlist"
-        case .label(let name):
-            return name
-        }
-    }
-
-    private func navigationTitle(for item: PlaylistBrowserItem) -> String {
-        detailTitle(for: item)
-    }
-
-    private func emptyDetailMessage(for item: PlaylistBrowserItem) -> String {
-        switch item {
-        case .playlist:
-            return "Open Catalogue, right‑click a track, Add to Playlist."
-        case .label:
-            return "No tracks use this label yet."
-        }
-    }
-
-    private func deleteHandler(
-        for item: PlaylistBrowserItem,
-        tracks: [Track]
-    ) -> ((IndexSet) -> Void)? {
-        guard case .playlist(let id) = item,
-              let playlist = appModel.playlists.playlists.first(where: { $0.id == id }),
-              !playlist.isSmart
-        else { return nil }
-        return { offsets in
-            offsets.forEach { i in
-                appModel.playlists.removeTrack(tracks[i], from: playlist)
-            }
-        }
-    }
-
-    private func play(item: PlaylistBrowserItem) {
-        appModel.play(tracks(for: item), from: item.queueSource(named: detailTitle(for: item)))
     }
 
     private var newPlaylistSheet: some View {
@@ -518,36 +394,16 @@ struct PlaylistsView: View {
     }
 
     private func createManual() {
-        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let name = trimmed.isEmpty ? nextUntitledPlaylistName() : trimmed
-        appModel.playlists.createPlaylist(named: name)
-        browserScopeRaw = PlaylistBrowserScope.playlists.rawValue
-        if let created = appModel.playlists.playlists.first(where: { !$0.isSmart && $0.name == name }) {
-            selection = .playlist(created.id)
-        }
+        model.createPlaylist(named: newName)
         newName = ""
         isCreating = false
-    }
-
-    private func nextUntitledPlaylistName() -> String {
-        let existing = Set(appModel.playlists.playlists.map(\.name))
-        if !existing.contains("Untitled Playlist") {
-            return "Untitled Playlist"
-        }
-        var index = 2
-        while existing.contains("Untitled Playlist \(index)") {
-            index += 1
-        }
-        return "Untitled Playlist \(index)"
     }
 
     // MARK: - M3U8 export
 
     #if os(macOS)
     private func exportM3U8(item: PlaylistBrowserItem) {
-        let tracks = tracks(for: item)
-        guard !tracks.isEmpty else { return }
-        let name = detailTitle(for: item)
+        guard !model.tracks(for: item).isEmpty else { return }
 
         let panel = NSSavePanel()
         panel.title = "Export Playlist"
@@ -555,26 +411,13 @@ struct PlaylistsView: View {
         panel.prompt = "Export"
         // `.m3u8` is a tag of public.m3u-playlist; the panel keeps it instead of forcing `.m3u`.
         panel.allowedContentTypes = [.m3uPlaylist]
-        panel.nameFieldStringValue = "\(name.replacingOccurrences(of: "/", with: "-")).m3u8"
+        panel.nameFieldStringValue = model.exportFileName(for: item)
         guard panel.runModal() == .OK, let url = panel.url else { return }
-
-        do {
-            try Data(M3UWriter.render(name: name, tracks: tracks).utf8).write(to: url, options: .atomic)
-        } catch {
-            importReport = ImportReport(
-                title: "Export Failed",
-                message: "\(url.lastPathComponent) could not be written. \(error.localizedDescription)"
-            )
-        }
+        model.exportM3U8(item, to: url)
     }
     #endif
 
     // MARK: - M3U import
-
-    private struct ImportReport {
-        var title: String
-        var message: String
-    }
 
     private static let m3uContentTypes: [UTType] = {
         var types: [UTType] = [.m3uPlaylist]
@@ -585,68 +428,4 @@ struct PlaylistsView: View {
         }
         return types
     }()
-
-    private func importM3U(urls: [URL]) {
-        let libraryTracks = appModel.library.allTracks
-        guard !libraryTracks.isEmpty else {
-            importReport = ImportReport(
-                title: "Nothing to Match Yet",
-                message: "Add the folders with your music first. Playlists only point at files Harbor already knows."
-            )
-            return
-        }
-
-        let matcher = M3UMatcher(tracks: libraryTracks)
-        var lines: [String] = []
-        var lastImported: Playlist?
-        for url in urls {
-            // Picker URLs are security-scoped; read synchronously while access is open.
-            let started = url.startAccessingSecurityScopedResource()
-            let data = try? Data(contentsOf: url)
-            if started {
-                url.stopAccessingSecurityScopedResource()
-            }
-            guard let data, let text = M3UParser.decode(data) else {
-                lines.append("\(url.lastPathComponent): could not be read.")
-                continue
-            }
-
-            let result = matcher.resolve(M3UParser.parse(text), playlistURL: url)
-            guard !result.trackPaths.isEmpty else {
-                lines.append("“\(result.name)”: none of \(result.entryCount) entries found in your folders — not imported.")
-                continue
-            }
-
-            let playlist = appModel.playlists.importPlaylist(named: result.name, trackPaths: result.trackPaths)
-            lastImported = playlist
-            lines.append(summary(for: result, importedAs: playlist.name))
-        }
-
-        if let lastImported {
-            browserScopeRaw = PlaylistBrowserScope.playlists.rawValue
-            selection = .playlist(lastImported.id)
-        }
-        importReport = ImportReport(
-            title: lastImported == nil ? "Import Failed" : "Playlist Imported",
-            message: lines.joined(separator: "\n\n")
-        )
-    }
-
-    private func summary(for result: M3UImportResult, importedAs name: String) -> String {
-        let fileEntries = result.entryCount - result.skippedRemoteCount
-        var text = "“\(name)”: \(fileEntries - result.unmatched.count) of \(fileEntries) tracks."
-        if result.skippedRemoteCount > 0 {
-            text += " \(result.skippedRemoteCount) stream URLs skipped."
-        }
-        if !result.unmatched.isEmpty {
-            let names = result.unmatched.prefix(5).map { entry in
-                entry.displayName ?? URL(fileURLWithPath: entry.location.replacingOccurrences(of: "\\", with: "/")).lastPathComponent
-            }
-            text += "\nNot in your folders:\n" + names.map { "· \($0)" }.joined(separator: "\n")
-            if result.unmatched.count > names.count {
-                text += "\n· … and \(result.unmatched.count - names.count) more"
-            }
-        }
-        return text
-    }
 }

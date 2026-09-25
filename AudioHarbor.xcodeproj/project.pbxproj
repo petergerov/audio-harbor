@@ -30,11 +30,13 @@
 		59C959CD2CD6F92F99C9BDDA /* LibraryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D98ADE5F74A9FFD2F60000B /* LibraryService.swift */; };
 		5FC40BA03A1E8DC0E96BEC95 /* CoreAudioPlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2DCF3754E5DF184BE6DDD50 /* CoreAudioPlaybackEngine.swift */; };
 		616BE6BCE128C9B98DD385C1 /* CatalogueRecords.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E7F5C4FC1AA0BCED261047 /* CatalogueRecords.swift */; };
+		6C7F048533CE23F5A2620788 /* PlaylistsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9D1D098AE67C516C2C0C5E1 /* PlaylistsViewModel.swift */; };
 		72AC3D43010A0065825644E4 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB48620484188A3E79D0E5E8 /* AppModel.swift */; };
 		73A1610AE13FE6B475EA9F6A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 40A45E5B8213AE05D262F470 /* Assets.xcassets */; };
 		7E9EB22964905811D62EADDD /* UnlockPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4550215276AF6CABE7EDB5C9 /* UnlockPanel.swift */; };
 		849FCCD5716218D978F4C81D /* AudioHarbor.storekit in Resources */ = {isa = PBXBuildFile; fileRef = B4A41324040AB2B247A6E4AF /* AudioHarbor.storekit */; };
 		84FB1B82B04EC42053D29986 /* PluginModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 995ED09285F2DF7B44DADBB3 /* PluginModels.swift */; };
+		85B52BE7504A9BE03EDA6028 /* LibraryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C811141C1870BECD8C5723FB /* LibraryViewModel.swift */; };
 		8924E3092AEAEC3714A2AC9F /* MacAudioDeviceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5AC60844417CA335B0CDA96 /* MacAudioDeviceController.swift */; };
 		8931E4D855B90EE1DBB23A90 /* CatalogueIndexer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4A50CD9E599EEDB62B08B5C /* CatalogueIndexer.swift */; };
 		912BE7238ACA65FEF8FF38BC /* TrackLabelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1CB71911222F889379BD422 /* TrackLabelStore.swift */; };
@@ -94,6 +96,7 @@
 		BA07B3758CAB9B2E18996EDE /* HarborTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HarborTheme.swift; sourceTree = "<group>"; };
 		C4A50CD9E599EEDB62B08B5C /* CatalogueIndexer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogueIndexer.swift; sourceTree = "<group>"; };
 		C69056BD4AB5A360D4A15C0A /* CatalogueIndexStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogueIndexStore.swift; sourceTree = "<group>"; };
+		C811141C1870BECD8C5723FB /* LibraryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryViewModel.swift; sourceTree = "<group>"; };
 		C98A719353878C893B9C45EC /* MetadataReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataReader.swift; sourceTree = "<group>"; };
 		CE0277F8E124960C06139C61 /* DSDDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSDDecoder.swift; sourceTree = "<group>"; };
 		D22E8B496CA06FB91863AF9A /* M3UImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = M3UImport.swift; sourceTree = "<group>"; };
@@ -106,6 +109,7 @@
 		EB48620484188A3E79D0E5E8 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		F328E586292D545CCB771901 /* AHDSTDecoder.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = AHDSTDecoder.c; sourceTree = "<group>"; };
 		F5AC60844417CA335B0CDA96 /* MacAudioDeviceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacAudioDeviceController.swift; sourceTree = "<group>"; };
+		F9D1D098AE67C516C2C0C5E1 /* PlaylistsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistsViewModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -146,6 +150,7 @@
 			isa = PBXGroup;
 			children = (
 				E2FB99AAF30D0FD2BC810C67 /* LibraryView.swift */,
+				C811141C1870BECD8C5723FB /* LibraryViewModel.swift */,
 			);
 			path = Library;
 			sourceTree = "<group>";
@@ -154,6 +159,7 @@
 			isa = PBXGroup;
 			children = (
 				5BD0C6F97FBE4AFC33CFC218 /* PlaylistsView.swift */,
+				F9D1D098AE67C516C2C0C5E1 /* PlaylistsViewModel.swift */,
 			);
 			path = Playlists;
 			sourceTree = "<group>";
@@ -396,6 +402,7 @@
 				22B5B5A591CFB5033382EC3E /* HarborTheme.swift in Sources */,
 				59C959CD2CD6F92F99C9BDDA /* LibraryService.swift in Sources */,
 				3A6F62480B2FB5FA4768A615 /* LibraryView.swift in Sources */,
+				85B52BE7504A9BE03EDA6028 /* LibraryViewModel.swift in Sources */,
 				173894C86C37A8EA2CA7A056 /* LicenseService.swift in Sources */,
 				11F1015657E5FD73E02319C3 /* ListeningRig.swift in Sources */,
 				D025E4D56A194CE12BD800A7 /* M3UImport.swift in Sources */,
@@ -407,6 +414,7 @@
 				F1B40DCA41BE9ED20B03C3AB /* PlaybackService.swift in Sources */,
 				FBF3EECAC0BB2240010ABF1F /* PlaylistService.swift in Sources */,
 				A692674AF7B4415B48E15E8B /* PlaylistsView.swift in Sources */,
+				6C7F048533CE23F5A2620788 /* PlaylistsViewModel.swift in Sources */,
 				2050F12D8FED62593D617D61 /* PluginEditorPresenter.swift in Sources */,
 				84FB1B82B04EC42053D29986 /* PluginModels.swift in Sources */,
 				31337B7EE46FCBAA64140F94 /* QueueSource.swift in Sources */,

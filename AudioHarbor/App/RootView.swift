@@ -50,9 +50,9 @@ struct RootView: View {
     private var detail: some View {
         switch appModel.selectedTab {
         case .library:
-            LibraryView()
+            LibraryView(appModel: appModel)
         case .playlists:
-            PlaylistsView()
+            PlaylistsView(appModel: appModel)
         case .nowPlaying:
             NowPlayingView()
         case .settings:
@@ -64,9 +64,9 @@ struct RootView: View {
     private func tabRoot(_ tab: AppTab) -> some View {
         switch tab {
         case .library:
-            NavigationStack { LibraryView() }
+            NavigationStack { LibraryView(appModel: appModel) }
         case .playlists:
-            NavigationStack { PlaylistsView() }
+            NavigationStack { PlaylistsView(appModel: appModel) }
         case .nowPlaying:
             NavigationStack { NowPlayingView() }
         case .settings:
