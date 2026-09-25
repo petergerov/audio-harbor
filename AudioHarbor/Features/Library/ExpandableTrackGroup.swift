@@ -16,13 +16,11 @@ struct ExpandableTrackGroup<Thumbnail: View>: View {
 
     var body: some View {
         header
-            .listRowBackground(HarborColor.faceplate)
-            .listRowSeparatorTint(HarborColor.aluminumDark.opacity(0.5))
+            .harborListRow()
         if isExpanded {
             ForEach(tracks) { track in
                 TrackRow(track: track) { onPlay(track) }
-                    .listRowBackground(HarborColor.faceplate)
-                    .listRowSeparatorTint(HarborColor.aluminumDark.opacity(0.5))
+                    .harborListRow()
                     .padding(.leading, 12)
             }
         }

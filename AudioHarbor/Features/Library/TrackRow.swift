@@ -45,8 +45,7 @@ struct TrackRow: View {
             parts.append(String(year))
         }
         if track.duration > 0 {
-            let total = Int(track.duration)
-            parts.append("\(total / 60):\(String(format: "%02d", total % 60))")
+            parts.append(track.duration.clockText)
         }
         return parts.joined(separator: " · ")
     }

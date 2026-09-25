@@ -78,7 +78,7 @@ final class PlaylistsViewModel {
     /// Outcome of the last import or failed export, shown as an alert.
     var report: Report?
 
-    private static let scopeKey = "audioharbor.playlists.browserScope"
+    private static let scopeKey = DefaultsKey.playlistsBrowserScope
     private static let untitledName = "Untitled Playlist"
 
     init(app: AppModel) {

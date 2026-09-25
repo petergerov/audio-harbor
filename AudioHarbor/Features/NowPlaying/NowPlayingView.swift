@@ -10,10 +10,10 @@ struct NowPlayingView: View {
     @Environment(AppModel.self) private var appModel
     @State private var scrubRatio: Double?
     @State private var artwork: Image?
-    @AppStorage("audioharbor.deckStyle") private var deckStyleRaw: String = DeckStyle.turntable.rawValue
-    @AppStorage("audioharbor.deck.contextRailVisible") private var contextRailVisible = true
+    @AppStorage(DefaultsKey.deckStyle) private var deckStyleRaw: String = DeckStyle.turntable.rawValue
+    @AppStorage(DefaultsKey.deckContextRailVisible) private var contextRailVisible = true
     #if os(macOS)
-    @AppStorage("audioharbor.deck.contextRailWidth") private var contextRailWidth: Double = NowPlayingView.defaultRailWidth
+    @AppStorage(DefaultsKey.deckContextRailWidth) private var contextRailWidth: Double = NowPlayingView.defaultRailWidth
     /// Live offset while the divider is being dragged; folded into `contextRailWidth` on release.
     @State private var railDrag: CGFloat = 0
     static let defaultRailWidth: Double = 300
@@ -32,11 +32,7 @@ struct NowPlayingView: View {
 
     private var deckStyle: Binding<DeckStyle> {
         Binding(
-            get: {
-                let raw = deckStyleRaw
-                if raw == "cassette" { return .turntable }
-                return DeckStyle(rawValue: raw) ?? .turntable
-            },
+            get: { DeckStyle(rawValue: deckStyleRaw) ?? .turntable },
             set: { deckStyleRaw = $0.rawValue }
         )
     }
@@ -395,9 +391,9 @@ struct NowPlayingView: View {
             )
             ZStack {
                 HStack {
-                    Text(timeString(display))
+                    Text(display.clockText)
                     Spacer()
-                    Text(timeString(playback.duration))
+                    Text(playback.duration.clockText)
                 }
                 // Centred on the full width, so it stays put as the times change.
                 if let track {
@@ -472,11 +468,6 @@ struct NowPlayingView: View {
     }
     #endif
 
-    private func timeString(_ t: TimeInterval) -> String {
-        guard t.isFinite else { return "0:00" }
-        let total = Int(t)
-        return String(format: "%d:%02d", total / 60, total % 60)
-    }
 }
 
 #if os(iOS)

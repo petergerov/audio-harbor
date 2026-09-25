@@ -82,14 +82,17 @@ Behaviour-preserving only: this is the audio path.
   (`"DSD"`, `"fallback"`, `"external"`), so typing it is a logic change. Worth doing with
   a DAC on the desk to test every path.
 
-## 7. Small cleanups ☐
+## 7. Small cleanups ☑
 
-- One `DefaultsKey` namespace for the 16 `audioharbor.*` keys.
-- One m:ss formatter (three copies today).
-- `.harborListRow()` modifier (11 copies); `EmptyPanel(title:message:)`.
-- De-duplicate the macOS / iPad-regular split layout in `PlaylistsView`.
-- ~~`LibraryView` `.onAppear` → `.task`~~ — gone with step 4.
-- Drop legacy migrations (`audioharbor.dsdStrategy`, `"cassette"` deck style) once safe.
+- `DefaultsKey` (App/) lists all 15 `audioharbor.*` keys; services, the playlists view model
+  and `@AppStorage` in the Deck use it. Key strings are unchanged, so saved settings carry over.
+- `TimeInterval.clockText` replaces three m:ss formatters (the Deck rail one now also
+  survives NaN / infinity).
+- `.harborListRow()` for the faceplate row background + separator tint; `EmptyPanel`
+  for "No matches", "Empty folder" and "No tracks".
+- `PlaylistsView.sidebarAndDetail` is shared by macOS and iPad regular width.
+- Dropped legacy code: the `audioharbor.dsdStrategy` cleanup (the key is ignored anyway) and
+  the `"cassette"` deck-style check (an unknown raw value already falls back to turntable).
 
 ## Out of scope
 

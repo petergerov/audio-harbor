@@ -167,7 +167,7 @@ private struct DeckContextRow: View {
                 Spacer(minLength: 4)
 
                 if track.duration > 0 {
-                    Text(timeString(track.duration))
+                    Text(track.duration.clockText)
                         .font(HarborFont.mono(10))
                         .foregroundStyle(HarborColor.ivoryDim)
                 }
@@ -190,10 +190,5 @@ private struct DeckContextRow: View {
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 6)
-    }
-
-    private func timeString(_ t: TimeInterval) -> String {
-        let total = Int(t)
-        return String(format: "%d:%02d", total / 60, total % 60)
     }
 }

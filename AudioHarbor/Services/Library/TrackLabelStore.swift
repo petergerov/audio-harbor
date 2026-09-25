@@ -4,7 +4,7 @@ import Foundation
 /// Every change is written to UserDefaults straight away.
 struct TrackLabelStore {
     private(set) var labelsByPath: [String: [String]] = [:]
-    private let defaultsKey = "audioharbor.trackLabels"
+    private let defaultsKey = DefaultsKey.trackLabels
 
     init() {
         guard let data = UserDefaults.standard.data(forKey: defaultsKey),

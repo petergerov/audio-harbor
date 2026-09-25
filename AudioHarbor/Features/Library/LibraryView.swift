@@ -174,23 +174,12 @@ struct LibraryView: View {
             Divider().overlay(HarborColor.aluminumDark.opacity(0.5))
 
             if appModel.library.folderSearchHits.isEmpty {
-                VStack(spacing: 10) {
-                    Spacer()
-                    Text("No matches")
-                        .font(HarborFont.title(16))
-                        .foregroundStyle(HarborColor.ivory)
-                    Text("Try another name, artist, or album.")
-                        .font(HarborFont.body(13))
-                        .foregroundStyle(HarborColor.ivoryDim)
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                EmptyPanel(title: "No matches", message: "Try another name, artist, or album.")
             } else {
                 List {
                     ForEach(appModel.library.folderSearchHits) { hit in
                         folderSearchHitRow(hit)
-                            .listRowBackground(HarborColor.faceplate)
-                            .listRowSeparatorTint(HarborColor.aluminumDark.opacity(0.5))
+                            .harborListRow()
                     }
                 }
                 .listStyle(.plain)
@@ -325,23 +314,12 @@ struct LibraryView: View {
             Divider().overlay(HarborColor.aluminumDark.opacity(0.5))
 
             if appModel.library.folderListing.isEmpty {
-                VStack(spacing: 10) {
-                    Spacer()
-                    Text("Empty folder")
-                        .font(HarborFont.title(16))
-                        .foregroundStyle(HarborColor.ivory)
-                    Text("No subfolders or audio files here.")
-                        .font(HarborFont.body(13))
-                        .foregroundStyle(HarborColor.ivoryDim)
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                EmptyPanel(title: "Empty folder", message: "No subfolders or audio files here.")
             } else {
                 List {
                     ForEach(appModel.library.folderListing) { entry in
                         folderEntryRow(entry)
-                            .listRowBackground(HarborColor.faceplate)
-                            .listRowSeparatorTint(HarborColor.aluminumDark.opacity(0.5))
+                            .harborListRow()
                     }
                 }
                 .listStyle(.plain)

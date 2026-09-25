@@ -30,7 +30,7 @@ final class EffectHost {
     let pluginEditors = PluginEditorPresenter()
     #endif
 
-    private let defaultsKey = "audioharbor.effectChain"
+    private let defaultsKey = DefaultsKey.effectChain
     private var parameterTokens: [UUID: AUParameterObserverToken] = [:]
     private var persistTask: Task<Void, Never>?
 

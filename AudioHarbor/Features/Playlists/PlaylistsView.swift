@@ -23,22 +23,10 @@ struct PlaylistsView: View {
                 header
                 Group {
                     #if os(macOS)
-                    HStack(spacing: 0) {
-                        browserSidebar
-                            .frame(width: 280)
-                        Divider().overlay(HarborColor.aluminumDark.opacity(0.55))
-                        detailPane
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
+                    sidebarAndDetail
                     #else
                     if horizontalSizeClass == .regular {
-                        HStack(spacing: 0) {
-                            browserSidebar
-                                .frame(width: 280)
-                            Divider().overlay(HarborColor.aluminumDark.opacity(0.55))
-                            detailPane
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        }
+                        sidebarAndDetail
                     } else if model.selection != nil {
                         detailPane
                     } else {
@@ -95,6 +83,17 @@ struct PlaylistsView: View {
                 }
                 self.renaming = nil
             }
+        }
+    }
+
+    /// Mac and iPad (regular width): the list on the left, the selection on the right.
+    private var sidebarAndDetail: some View {
+        HStack(spacing: 0) {
+            browserSidebar
+                .frame(width: 280)
+            Divider().overlay(HarborColor.aluminumDark.opacity(0.55))
+            detailPane
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
@@ -296,24 +295,12 @@ struct PlaylistsView: View {
                 .padding(.bottom, 12)
 
                 if tracks.isEmpty {
-                    VStack(spacing: 10) {
-                        Spacer()
-                        Text("No tracks")
-                            .font(HarborFont.title(16))
-                            .foregroundStyle(HarborColor.ivory)
-                        Text(model.emptyMessage(for: selection))
-                            .font(HarborFont.body(13))
-                            .foregroundStyle(HarborColor.ivoryDim)
-                            .multilineTextAlignment(.center)
-                        Spacer()
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    EmptyPanel(title: "No tracks", message: model.emptyMessage(for: selection))
                 } else {
                     List {
                         ForEach(tracks) { track in
                             TrackRow(track: track) { model.play(selection, startingAt: track) }
-                                .listRowBackground(HarborColor.faceplate)
-                                .listRowSeparatorTint(HarborColor.aluminumDark.opacity(0.5))
+                                .harborListRow()
                         }
                         .onDelete(perform: model.canRemoveTracks(from: selection)
                             ? { model.removeTracks(at: $0, of: tracks, from: selection) }

@@ -30,7 +30,7 @@ final class PlaybackService {
     var outputMode: OutputMode = .shared {
         didSet {
             guard outputMode != oldValue else { return }
-            UserDefaults.standard.set(outputMode.rawValue, forKey: Self.outputModeKey)
+            UserDefaults.standard.set(outputMode.rawValue, forKey: DefaultsKey.outputMode)
             let wasPlayingAs = effectiveMode(for: oldValue)
             guard pathChanges(from: wasPlayingAs, to: effectiveOutputMode) else {
                 engine.setOutputMode(outputMode)
@@ -44,14 +44,14 @@ final class PlaybackService {
     var repeatMode: RepeatMode = .off {
         didSet {
             guard repeatMode != oldValue else { return }
-            UserDefaults.standard.set(repeatMode.rawValue, forKey: Self.repeatModeKey)
+            UserDefaults.standard.set(repeatMode.rawValue, forKey: DefaultsKey.repeatMode)
         }
     }
 
     var isShuffled: Bool = false {
         didSet {
             guard isShuffled != oldValue else { return }
-            UserDefaults.standard.set(isShuffled, forKey: Self.shuffleKey)
+            UserDefaults.standard.set(isShuffled, forKey: DefaultsKey.shuffle)
             // Keep the current track on the deck, redraw everything after it.
             rebuildPlayOrder(anchoredTo: queueIndex)
         }
@@ -62,7 +62,7 @@ final class PlaybackService {
     var outputDeviceUID: String? {
         didSet {
             guard outputDeviceUID != oldValue else { return }
-            UserDefaults.standard.set(outputDeviceUID, forKey: Self.outputDeviceKey)
+            UserDefaults.standard.set(outputDeviceUID, forKey: DefaultsKey.outputDevice)
             rememberOutputDeviceName()
             moveToOutputDevice()
         }
@@ -113,29 +113,23 @@ final class PlaybackService {
     private var playOrder: [Int] = []
     private var orderPosition: Int = 0
 
-    private static let outputModeKey = "audioharbor.outputMode"
-    private static let outputDeviceKey = "audioharbor.outputDevice"
-    private static let outputDeviceNameKey = "audioharbor.outputDeviceName"
-    private static let repeatModeKey = "audioharbor.repeatMode"
-    private static let shuffleKey = "audioharbor.shuffle"
 
     init(engine: any PlaybackEngine, license: LicenseService) {
         self.engine = engine
         self.license = license
-        if let raw = UserDefaults.standard.string(forKey: Self.outputModeKey),
+        if let raw = UserDefaults.standard.string(forKey: DefaultsKey.outputMode),
            let mode = OutputMode(rawValue: raw) {
             outputMode = mode
         }
-        UserDefaults.standard.removeObject(forKey: "audioharbor.dsdStrategy")
-        if let raw = UserDefaults.standard.string(forKey: Self.repeatModeKey),
+        if let raw = UserDefaults.standard.string(forKey: DefaultsKey.repeatMode),
            let mode = RepeatMode(rawValue: raw) {
             repeatMode = mode
         }
-        isShuffled = UserDefaults.standard.bool(forKey: Self.shuffleKey)
+        isShuffled = UserDefaults.standard.bool(forKey: DefaultsKey.shuffle)
         engine.setOutputMode(outputMode)
         // Assigned in init, so didSet does not run — hand the engine the pick directly.
-        outputDeviceName = UserDefaults.standard.string(forKey: Self.outputDeviceNameKey)
-        outputDeviceUID = UserDefaults.standard.string(forKey: Self.outputDeviceKey)
+        outputDeviceName = UserDefaults.standard.string(forKey: DefaultsKey.outputDeviceName)
+        outputDeviceUID = UserDefaults.standard.string(forKey: DefaultsKey.outputDevice)
         engine.setOutputDevice(uid: outputDeviceUID)
         engine.setOutputStatusHandler { [weak self] status in
             self?.outputStatus = status
@@ -331,7 +325,7 @@ final class PlaybackService {
         }
         guard name != outputDeviceName else { return }
         outputDeviceName = name
-        UserDefaults.standard.set(name, forKey: Self.outputDeviceNameKey)
+        UserDefaults.standard.set(name, forKey: DefaultsKey.outputDeviceName)
     }
 
     /// Whether the current track sounds different on the new path. Exclusive and DoP only

@@ -33,11 +33,11 @@ final class LibraryService {
 
     /// Catalogue tabs: Directories (`.folders`), Albums (`.smart`), Artists (`.artists`).
     var browseMode: CatalogueBrowseMode = {
-        let raw = UserDefaults.standard.string(forKey: "audioharbor.catalogue.browseMode") ?? ""
+        let raw = UserDefaults.standard.string(forKey: DefaultsKey.catalogueBrowseMode) ?? ""
         return CatalogueBrowseMode(rawValue: raw) ?? .folders
     }() {
         didSet {
-            UserDefaults.standard.set(browseMode.rawValue, forKey: "audioharbor.catalogue.browseMode")
+            UserDefaults.standard.set(browseMode.rawValue, forKey: DefaultsKey.catalogueBrowseMode)
         }
     }
 
