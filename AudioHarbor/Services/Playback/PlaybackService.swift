@@ -30,7 +30,13 @@ final class PlaybackService {
         didSet {
             guard outputMode != oldValue else { return }
             UserDefaults.standard.set(outputMode.rawValue, forKey: Self.outputModeKey)
-            engine.setOutputMode(outputMode)
+            let wasPlayingAs = effectiveMode(for: oldValue)
+            guard pathChanges(from: wasPlayingAs, to: effectiveOutputMode) else {
+                engine.setOutputMode(outputMode)
+                return
+            }
+            // Move the current track over now instead of from the next one on.
+            reloadCurrentTrack { engine.setOutputMode(outputMode) }
         }
     }
 
@@ -77,7 +83,11 @@ final class PlaybackService {
     /// down (DoP → Exclusive → Shared). `outputMode` keeps the choice, so it comes back when a
     /// capable DAC is the output again.
     var effectiveOutputMode: OutputMode {
-        switch outputMode {
+        effectiveMode(for: outputMode)
+    }
+
+    private func effectiveMode(for mode: OutputMode) -> OutputMode {
+        switch mode {
         case .dop where outputStatus.canDoP: .dop
         case .dop, .exclusive: outputStatus.canExclusive ? .exclusive : .shared
         case .shared: .shared
@@ -331,13 +341,27 @@ final class PlaybackService {
         UserDefaults.standard.set(name, forKey: Self.outputDeviceNameKey)
     }
 
-    /// The engine let go of the old output; reload the track so it opens the new one,
-    /// at the same position and in the same play/pause state.
+    /// Whether the current track sounds different on the new path. Exclusive and DoP only
+    /// differ for DSD — a PCM track keeps playing untouched.
+    private func pathChanges(from old: OutputMode, to new: OutputMode) -> Bool {
+        guard old != new else { return false }
+        if old != .shared, new != .shared {
+            return currentTrack?.format.isDSD == true
+        }
+        return true
+    }
+
     private func moveToOutputDevice() {
+        reloadCurrentTrack { engine.setOutputDevice(uid: outputDeviceUID) }
+    }
+
+    /// Applies an output change and reloads the current track so it takes the new path,
+    /// at the same position and in the same play/pause state.
+    private func reloadCurrentTrack(applying change: () -> Void) {
         let hadTrack = !engineIsEmpty
         let resume = isPlaying
-        let position = currentTime
-        engine.setOutputDevice(uid: outputDeviceUID)
+        let position = engine.currentTime
+        change()
         guard hadTrack, let track = currentTrack else {
             syncFromEngine()
             return
