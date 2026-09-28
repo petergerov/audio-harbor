@@ -159,13 +159,9 @@ struct LibraryView: View {
     private var folderSearchResults: some View {
         VStack(spacing: 0) {
             HStack {
-                Text(
-                    appModel.library.folderNavigation.rootID == nil
-                        ? "Search across directories"
-                        : "Search in \(appModel.library.folderBreadcrumb)"
-                )
-                .font(HarborFont.panel(10))
-                .foregroundStyle(HarborColor.ivoryDim)
+                Text("Search across directories")
+                    .font(HarborFont.panel(10))
+                    .foregroundStyle(HarborColor.ivoryDim)
                 Spacer()
                 Text("\(appModel.library.folderSearchHits.count)")
                     .font(HarborFont.mono(11))
