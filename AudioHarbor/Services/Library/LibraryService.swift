@@ -41,11 +41,11 @@ final class LibraryService {
         }
     }
 
-    /// Where the Directories tab is. Folder search is scoped to it.
+    /// Where the Directories tab is. Folder search ignores it and covers every directory.
     private(set) var folderNavigation = FolderNavigation() {
         didSet {
             guard oldValue != folderNavigation else { return }
-            refreshQueryResults()
+            refreshFolderListing()
         }
     }
 
@@ -707,15 +707,11 @@ final class LibraryService {
         folderSearchHits = computeFolderHits(query: q)
     }
 
+    /// Matches across every connected directory, wherever the Directories tab currently is.
     private func computeFolderHits(query: String) -> [FolderSearchHit] {
-        let scopes: [(root: FolderBookmark, base: URL)]
-        if let root = selectedFolderRoot, let base = folderBrowseURL {
-            scopes = [(root, base)]
-        } else {
-            scopes = folders.compactMap { bookmark in
-                guard let url = accessibleFolderURLs[bookmark.id] else { return nil }
-                return (bookmark, url)
-            }
+        let scopes: [(root: FolderBookmark, base: URL)] = folders.compactMap { bookmark in
+            guard let url = accessibleFolderURLs[bookmark.id] else { return nil }
+            return (bookmark, url)
         }
 
         var hits: [FolderSearchHit] = []

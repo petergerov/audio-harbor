@@ -42,6 +42,7 @@
 		85B52BE7504A9BE03EDA6028 /* LibraryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C811141C1870BECD8C5723FB /* LibraryViewModel.swift */; };
 		8924E3092AEAEC3714A2AC9F /* MacAudioDeviceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5AC60844417CA335B0CDA96 /* MacAudioDeviceController.swift */; };
 		8931E4D855B90EE1DBB23A90 /* CatalogueIndexer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4A50CD9E599EEDB62B08B5C /* CatalogueIndexer.swift */; };
+		8BA056ECF7589FBBFF83758C /* MiniPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 448B1EF5E4AB4488CBF7A8C7 /* MiniPlayer.swift */; };
 		912BE7238ACA65FEF8FF38BC /* TrackLabelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1CB71911222F889379BD422 /* TrackLabelStore.swift */; };
 		99450450F3D9268044E4C720 /* PlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53FFE55BC32CF1A7706C1FB8 /* PlaybackEngine.swift */; };
 		A692674AF7B4415B48E15E8B /* PlaylistsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BD0C6F97FBE4AFC33CFC218 /* PlaylistsView.swift */; };
@@ -78,6 +79,7 @@
 		39783E66128487305A0C7D56 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		40A45E5B8213AE05D262F470 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		41CD8B5C14348DDE0695FB45 /* TrackRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackRow.swift; sourceTree = "<group>"; };
+		448B1EF5E4AB4488CBF7A8C7 /* MiniPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniPlayer.swift; sourceTree = "<group>"; };
 		45322741794DE98AE488713F /* DefaultsKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultsKey.swift; sourceTree = "<group>"; };
 		4550215276AF6CABE7EDB5C9 /* UnlockPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnlockPanel.swift; sourceTree = "<group>"; };
 		53FFE55BC32CF1A7706C1FB8 /* PlaybackEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackEngine.swift; sourceTree = "<group>"; };
@@ -219,6 +221,7 @@
 			isa = PBXGroup;
 			children = (
 				DFE17E27CBA2B729358E1BD9 /* DeckContextRail.swift */,
+				448B1EF5E4AB4488CBF7A8C7 /* MiniPlayer.swift */,
 				DBA8EC8CD38B2C8BDB195995 /* NowPlayingView.swift */,
 			);
 			path = NowPlaying;
@@ -426,6 +429,7 @@
 				D025E4D56A194CE12BD800A7 /* M3UImport.swift in Sources */,
 				8924E3092AEAEC3714A2AC9F /* MacAudioDeviceController.swift in Sources */,
 				E9E467C8091B249C1755CD7F /* MetadataReader.swift in Sources */,
+				8BA056ECF7589FBBFF83758C /* MiniPlayer.swift in Sources */,
 				2E6EEF2214B20646F6C97B99 /* Models.swift in Sources */,
 				4E77DAD93A74C594DC36FDAE /* NowPlayingView.swift in Sources */,
 				99450450F3D9268044E4C720 /* PlaybackEngine.swift in Sources */,
@@ -485,7 +489,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -578,7 +582,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;

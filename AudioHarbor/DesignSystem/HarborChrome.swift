@@ -273,7 +273,6 @@ struct HarborSidebar: View {
 
             Spacer(minLength: 12)
 
-            miniPlayer
             PowerLamp(isOn: appModel.playback.isPlaying)
                 .padding(.horizontal, 8)
         }
@@ -310,53 +309,5 @@ struct HarborSidebar: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-    }
-
-    @ViewBuilder
-    private var miniPlayer: some View {
-        let track = appModel.playback.currentTrack
-        Button {
-            appModel.selectedTab = .nowPlaying
-        } label: {
-            HStack(spacing: 10) {
-                HarborArtwork(
-                    hash: track?.artworkHash,
-                    data: track?.artworkData,
-                    size: 44,
-                    corner: 8
-                )
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(track?.title ?? "Nothing playing")
-                        .font(HarborFont.title(12))
-                        .foregroundStyle(HarborColor.ivory)
-                        .lineLimit(1)
-                    Text(track?.artist ?? "Choose a record")
-                        .font(HarborFont.body(11))
-                        .foregroundStyle(HarborColor.ivoryDim)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: appModel.playback.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(HarborColor.amber)
-            }
-            .padding(8)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(HarborColor.faceplate)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(HarborColor.aluminumDark.opacity(0.55), lineWidth: 1)
-                    )
-            )
-        }
-        .buttonStyle(.plain)
-        .contextMenu {
-            if appModel.playback.currentTrack != nil {
-                Button(appModel.playback.isPlaying ? "Pause" : "Play") {
-                    appModel.playback.togglePlayPause()
-                }
-            }
-        }
     }
 }

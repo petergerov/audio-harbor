@@ -21,7 +21,12 @@ struct LibraryView: View {
         ReceiverChassis {
             VStack(spacing: 14) {
                 header
-                modePicker($library.browseMode)
+                HStack(spacing: 12) {
+                    modePicker($library.browseMode)
+                    Spacer(minLength: 8)
+                    MiniPlayer()
+                }
+                .padding(.horizontal, 4)
                 searchBar($model.searchDraft, mode: library.browseMode)
                 CatalogueScanBanner()
                 Group {
@@ -110,9 +115,7 @@ struct LibraryView: View {
                 }
                 .buttonStyle(.plain)
             }
-            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 4)
         .accessibilityLabel("Switch between directories, albums, and artists")
     }
 
@@ -156,13 +159,9 @@ struct LibraryView: View {
     private var folderSearchResults: some View {
         VStack(spacing: 0) {
             HStack {
-                Text(
-                    appModel.library.folderNavigation.rootID == nil
-                        ? "Search across directories"
-                        : "Search in \(appModel.library.folderBreadcrumb)"
-                )
-                .font(HarborFont.panel(10))
-                .foregroundStyle(HarborColor.ivoryDim)
+                Text("Search across directories")
+                    .font(HarborFont.panel(10))
+                    .foregroundStyle(HarborColor.ivoryDim)
                 Spacer()
                 Text("\(appModel.library.folderSearchHits.count)")
                     .font(HarborFont.mono(11))

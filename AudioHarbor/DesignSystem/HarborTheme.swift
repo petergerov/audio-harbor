@@ -68,7 +68,6 @@ enum HarborFont {
 
 enum Brand {
     static let name = "Audio Harbor"
-    static let subtitle = "Local audiophile player"
     static let tagline = "Local. Bit-perfect. Calm."
 
     /// Marketing version from the target (`MARKETING_VERSION` / CFBundleShortVersionString).
@@ -85,54 +84,18 @@ enum Brand {
     }
 }
 
-struct HarborLamp: View {
-    var lit: Bool = true
-    var size: CGFloat = 22
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(HarborColor.faceplate)
-            Circle()
-                .stroke(
-                    LinearGradient(
-                        colors: [HarborColor.brass.opacity(0.9), HarborColor.aluminumDark],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ),
-                    lineWidth: 1.2
-                )
-            Circle()
-                .fill(lit ? HarborColor.amber : HarborColor.aluminumDark)
-                .frame(width: size * 0.38, height: size * 0.38)
-                .shadow(color: lit ? HarborColor.amber.opacity(0.85) : .clear, radius: lit ? 8 : 0)
-        }
-        .frame(width: size, height: size)
-        .accessibilityHidden(true)
-    }
-}
-
 struct BrandMark: View {
     var compact: Bool = false
 
     var body: some View {
-        HStack(alignment: .center, spacing: compact ? 10 : 14) {
-            HarborLamp(lit: true, size: compact ? 22 : 34)
-            VStack(alignment: .leading, spacing: compact ? 2 : 5) {
-                Text(Brand.name)
-                    .font(HarborFont.display(compact ? 17 : 28))
-                    .foregroundStyle(HarborColor.ivory)
-                    .lineLimit(1)
-                Text(Brand.subtitle)
-                    .font(HarborFont.panel(compact ? 9 : 11))
-                    .tracking(0.6)
-                    .foregroundStyle(HarborColor.brass)
-                    .lineLimit(1)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(Brand.name). \(Brand.subtitle)")
+        Image("BrandLogo")
+            .resizable()
+            .interpolation(.high)
+            .scaledToFit()
+            .frame(height: compact ? 40 : 60)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Brand.name)
     }
 }
 
@@ -152,22 +115,26 @@ struct ScreenHeader<Trailing: View>: View {
     var kicker: String? = nil
     let title: String
     var subtitle: String?
+    /// How `trailing` lines up with the title block; `.top` keeps it level with the title.
+    var trailingAlignment: VerticalAlignment = .top
     @ViewBuilder var trailing: Trailing
 
     init(
         kicker: String? = nil,
         title: String,
         subtitle: String? = nil,
+        trailingAlignment: VerticalAlignment = .top,
         @ViewBuilder trailing: () -> Trailing
     ) {
         self.kicker = kicker
         self.title = title
         self.subtitle = subtitle
+        self.trailingAlignment = trailingAlignment
         self.trailing = trailing()
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 16) {
+        HStack(alignment: trailingAlignment, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
                 if let kicker {
                     EngravedLabel(text: kicker)
