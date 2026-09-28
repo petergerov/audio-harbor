@@ -215,13 +215,22 @@ App Store Connect verlangt mindestens **einen** Satz. Sinnvoll:
 | 1280 × 800 | 13″ / 16:10 |
 | 2560 × 1600 | Retina 13″ |
 
-Mindestens 3, besser 5 Bilder, **ohne** Fake-Hardware-Rahmen:
+Fertiger Satz (September 2026, Build 16): [`marketing/app-store/`](marketing/app-store/) —
+`mac-2560x1600/` (Retina) und `mac-1280x800/`, je 5 Bilder, opak (kein Alphakanal), ohne Hardware-Rahmen:
 
-1. Catalogue (Alben, ruhig)
-2. Deck / Now Playing + VU
-3. Settings — Shared / Exclusive / DoP erklärt
-4. Plugin-Rack (Shared · FX)
-5. Paywall / Settings License — [`docs/images/review-information.png`](docs/images/review-information.png) (Unlock · €9.90 + Restore)
+1. **The Deck** — „Open a folder. Hear the file.“ (Plattenspieler, Queue rechts)
+2. **Catalogue** — „The music you already own, by album and artist.“
+3. **Directories** — „Browse your disks as they are. Search all of them at once.“
+4. **AU and AUv3** — „Your own plugins, right on the Deck.“ (Receiver + VU, AUNBandEQ im Rack, Shared · FX)
+5. **Output** — „Shared, Exclusive or DoP, explained in plain words.“
+
+Texte stehen in `marketing/app-store/screenshots.txt`, die Rohaufnahmen in `raw/`;
+`marketing/app-store/build.sh` setzt alles neu zusammen. Kein Preis im Listing-Bild, weil der
+Preis noch in Stufen steigen soll.
+
+Offen: Das IAP-Review-Bild `docs/images/review-information.png` zeigt noch das alte Design
+(alte Seitenleiste, Untertitel). Neu aufnehmen braucht einen gesperrten Zustand (Trial vorbei,
+nicht freigeschaltet).
 
 Caption-Stil: ein Satz, Englisch, kein „Best ever!!!“.
 
