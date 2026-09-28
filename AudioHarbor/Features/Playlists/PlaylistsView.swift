@@ -21,6 +21,12 @@ struct PlaylistsView: View {
         ReceiverChassis {
             VStack(spacing: 14) {
                 header
+                HStack(spacing: 12) {
+                    scopePicker
+                    Spacer(minLength: 8)
+                    MiniPlayer()
+                }
+                .padding(.horizontal, 4)
                 Group {
                     #if os(macOS)
                     sidebarAndDetail
@@ -122,7 +128,6 @@ struct PlaylistsView: View {
 
     private var browserSidebar: some View {
         VStack(spacing: 10) {
-            scopePicker
             List(selection: $model.selection) {
                 switch model.scope {
                 case .playlists:
@@ -138,34 +143,30 @@ struct PlaylistsView: View {
     }
 
     private var scopePicker: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                ForEach(PlaylistBrowserScope.allCases) { scope in
-                    let selected = model.scope == scope
-                    Button {
-                        model.scope = scope
-                    } label: {
-                        Text(scope.title.uppercased())
-                            .font(HarborFont.panel(9))
-                            .tracking(0.8)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 7)
-                            .foregroundStyle(selected ? HarborColor.faceplate : HarborColor.ivoryDim)
-                            .background(
-                                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                                    .fill(selected ? HarborColor.amber : HarborColor.faceplate.opacity(0.5))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 2, style: .continuous)
-                                            .stroke(HarborColor.aluminumDark, lineWidth: 1)
-                                    )
-                            )
-                    }
-                    .buttonStyle(.plain)
+        HStack(spacing: 6) {
+            ForEach(PlaylistBrowserScope.allCases) { scope in
+                let selected = model.scope == scope
+                Button {
+                    model.scope = scope
+                } label: {
+                    Text(scope.title.uppercased())
+                        .font(HarborFont.panel(9))
+                        .tracking(0.8)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .foregroundStyle(selected ? HarborColor.faceplate : HarborColor.ivoryDim)
+                        .background(
+                            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                .fill(selected ? HarborColor.amber : HarborColor.faceplate.opacity(0.5))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                        .stroke(HarborColor.aluminumDark, lineWidth: 1)
+                                )
+                        )
                 }
+                .buttonStyle(.plain)
             }
-            .padding(.horizontal, 10)
         }
-        .scrollClipDisabled()
         .accessibilityLabel("Switch between playlists and labels")
     }
 

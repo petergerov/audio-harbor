@@ -152,22 +152,26 @@ struct ScreenHeader<Trailing: View>: View {
     var kicker: String? = nil
     let title: String
     var subtitle: String?
+    /// Where `trailing` sits: `.top` (level with the title) or `.screenHeaderSubtitle`.
+    var trailingAlignment: VerticalAlignment = .top
     @ViewBuilder var trailing: Trailing
 
     init(
         kicker: String? = nil,
         title: String,
         subtitle: String? = nil,
+        trailingAlignment: VerticalAlignment = .top,
         @ViewBuilder trailing: () -> Trailing
     ) {
         self.kicker = kicker
         self.title = title
         self.subtitle = subtitle
+        self.trailingAlignment = trailingAlignment
         self.trailing = trailing()
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 16) {
+        HStack(alignment: trailingAlignment, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
                 if let kicker {
                     EngravedLabel(text: kicker)
@@ -180,6 +184,7 @@ struct ScreenHeader<Trailing: View>: View {
                         .font(HarborFont.body(13))
                         .foregroundStyle(HarborColor.ivoryDim)
                         .fixedSize(horizontal: false, vertical: true)
+                        .alignmentGuide(.screenHeaderSubtitle) { $0[VerticalAlignment.center] }
                 }
             }
             Spacer(minLength: 8)
@@ -188,6 +193,17 @@ struct ScreenHeader<Trailing: View>: View {
         .padding(.horizontal, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
+}
+
+extension VerticalAlignment {
+    private enum ScreenHeaderSubtitle: AlignmentID {
+        static func defaultValue(in context: ViewDimensions) -> CGFloat {
+            context[VerticalAlignment.center]
+        }
+    }
+
+    /// The middle of a `ScreenHeader`'s subtitle line.
+    static let screenHeaderSubtitle = VerticalAlignment(ScreenHeaderSubtitle.self)
 }
 
 extension ScreenHeader where Trailing == EmptyView {

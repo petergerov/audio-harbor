@@ -14,8 +14,11 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         ScreenHeader(
                             title: "Settings",
-                            subtitle: "How music plays, your folders, and the 7-day trial."
-                        )
+                            subtitle: "How music plays, your folders, and the 7-day trial.",
+                            trailingAlignment: .screenHeaderSubtitle
+                        ) {
+                            MiniPlayer()
+                        }
                     }
 
                     panel(title: "Output") {
