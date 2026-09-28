@@ -7,9 +7,9 @@ Aktuell: **Kopfhörer über Wellen, Gold auf flacher schwarzer Kachel** (PNG-Mas
 | Datei | Zweck |
 | --- | --- |
 | `Icon_favorite.png` | Kachel mit Wortmarke „AUDIO HARBOR“ auf weißem Grund — App-Icon ab 64 px und iOS 1024; außerdem Favicon (32 / 64 px) und Apple-Touch-Icon (180 px) der Homepage |
-| `icon_no_text_2d.png` | dieselbe Kachel ohne Schrift, auf schwarzem Grund — App-Icon bei 16 / 32 px (dort ist die Schrift unlesbar) |
+| `icon_no_text_2d.png` | dieselbe Kachel ohne Schrift, auf schwarzem Grund — App-Icon bei 16 / 32 px (dort ist die Schrift unlesbar); Marke in Nav und Footer der Homepage (`mark-40/80/120`, daneben „AUDIO HARBOR“ als Text) |
 | `icon_no_text.png` | älteres Symbol mit Goldrahmen — Link-Vorschau der Homepage |
-| `logo_homepage.png` | Symbol mit Wortmarke auf dunklem Grund — Logo oben in der Seitenleiste der App (`BrandLogo`, 40 pt hoch) und in Nav und Footer der Homepage (`logo-28/56/84.png`, 28 px hoch); `render-logo.swift` entfernt den Grund und schneidet auf das Logo zu |
+| `logo_homepage.png` | Symbol mit Wortmarke auf dunklem Grund — Logo oben in der Seitenleiste der App (`BrandLogo`, 40 pt hoch); `render-logo.swift` entfernt den Grund und schneidet auf das Logo zu |
 | `logo.png` | ältere Fassung mit engerem Abstand zwischen Symbol und Wortmarke — nicht mehr verwendet |
 
 `render-png.swift` findet die Kachel auf zwei Arten: Haben alle vier Ecken dieselbe Farbe
@@ -28,7 +28,7 @@ Die Übersicht dazu liegt in `uebersicht.html`.
 design/icons/tools/build-appicon.sh
 ```
 
-Rendert `AppIcon.appiconset`, `BrandLogo.imageset`, `docs/images/web/logo-28/56/84.png` sowie `favicon-32.png`,
+Rendert `AppIcon.appiconset`, `BrandLogo.imageset`, `docs/images/web/mark-40/80/120` (PNG + WebP) sowie `favicon-32.png`,
 `favicon-64.png`, `icon-180.png` und `docs/AppIcon.png` (Link-Vorschau) neu. `render-png.swift` kennt drei Modi:
 
 - **mac** — Kachel auf ihre eigene Rundung zugeschnitten, auf Apples Raster (824 von 1024), mit Schlagschatten, transparenter Rand

@@ -38,8 +38,9 @@ A simple, beautiful local audiophile player for macOS and iOS.
 - **Logo:** `design/icons/logo_homepage.png` (headphones over waves + AUDIO HARBOR wordmark, gold),
   background removed and cropped by `render-logo.swift`.
   - App sidebar: asset `BrandLogo`, 40 pt high. No line of text below.
-  - Homepage nav (all pages) and footer: `docs/images/web/logo-28.png` with 2× / 3× versions, 28 px high,
-    replacing the old symbol + "Audio Harbor" text.
+  - Homepage nav (all pages) and footer: the flat symbol tile (`icon_no_text_2d.png` →
+    `docs/images/web/mark-40` with 2× / 3×, WebP + PNG) with *AUDIO HARBOR* set as text beside it —
+    uppercase, wide tracking (after `design/designvorschlag.png`).
 - **App icon:** `Icon_favorite.png` — flat black tile, gold symbol and wordmark — from 64 px and iOS 1024;
   `icon_no_text_2d.png` (same tile, no wordmark) at 16 / 32 px. Rendered by `design/icons/tools/build-appicon.sh`.
 - The store subtitle stays *Local audiophile player*; the app itself shows only the logo.
