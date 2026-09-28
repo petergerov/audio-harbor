@@ -284,18 +284,21 @@ struct HarborArtwork: View {
         .shadow(color: .black.opacity(0.35), radius: 6, y: 3)
         .task(id: "\(hash ?? "")-\(data?.count ?? 0)") {
             let payload = data ?? hash.flatMap { ArtworkCache.shared.load($0) }
-            image = Self.makeImage(payload)
+            image = payload.flatMap(Image.init(artworkData:))
         }
     }
+}
 
-    private static func makeImage(_ data: Data?) -> Image? {
-        guard let data else { return nil }
+extension Image {
+    /// Decodes cover art bytes; `nil` when they are not an image.
+    init?(artworkData data: Data) {
         #if os(macOS)
-        if let ns = NSImage(data: data) { return Image(nsImage: ns) }
+        guard let image = NSImage(data: data) else { return nil }
+        self.init(nsImage: image)
         #else
-        if let ui = UIImage(data: data) { return Image(uiImage: ui) }
+        guard let image = UIImage(data: data) else { return nil }
+        self.init(uiImage: image)
         #endif
-        return nil
     }
 }
 

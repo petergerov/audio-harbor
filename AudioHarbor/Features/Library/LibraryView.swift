@@ -9,13 +9,11 @@ import UIKit
 
 struct LibraryView: View {
     @Environment(AppModel.self) private var appModel
-    @State private var isImporterPresented = false
-    @State private var searchDraft = ""
-    @State private var searchTask: Task<Void, Never>?
-    @State private var expandedAlbumID: UUID?
-    @State private var expandedArtistName: String?
-    @State private var folderPlaylistDraft = ""
-    @State private var folderPlaylistTrack: Track?
+    @State private var model: LibraryViewModel
+
+    init(appModel: AppModel) {
+        _model = State(initialValue: LibraryViewModel(app: appModel))
+    }
 
     var body: some View {
         @Bindable var library = appModel.library
@@ -24,7 +22,7 @@ struct LibraryView: View {
             VStack(spacing: 14) {
                 header
                 modePicker($library.browseMode)
-                searchBar($searchDraft, mode: library.browseMode)
+                searchBar($model.searchDraft, mode: library.browseMode)
                 CatalogueScanBanner()
                 Group {
                     switch library.browseMode {
@@ -32,13 +30,13 @@ struct LibraryView: View {
                         if library.filteredAlbums.isEmpty {
                             emptyState
                         } else {
-                            CatalogueAlbumList(expandedAlbumID: $expandedAlbumID)
+                            CatalogueAlbumList(model: model)
                         }
                     case .artists:
                         if library.filteredArtistFacets.isEmpty {
                             emptyState
                         } else {
-                            CatalogueArtistList(expandedArtistName: $expandedArtistName)
+                            CatalogueArtistList(model: model)
                         }
                     case .folders:
                         folderBrowser
@@ -47,46 +45,13 @@ struct LibraryView: View {
                 .faceplate()
             }
         }
-        .onAppear {
-            searchDraft = appModel.library.searchQuery
-        }
-        .onChange(of: searchDraft) { _, newValue in
-            searchTask?.cancel()
-            searchTask = Task {
-                try? await Task.sleep(for: .milliseconds(180))
-                guard !Task.isCancelled else { return }
-                appModel.library.searchQuery = newValue
-                expandedAlbumID = nil
-                expandedArtistName = nil
-            }
-        }
         .fileImporter(
-            isPresented: $isImporterPresented,
+            isPresented: $model.isDirectoryImporterPresented,
             allowedContentTypes: [.folder],
             allowsMultipleSelection: true
         ) { result in
             if case .success(let urls) = result {
-                appModel.library.addFolders(urls: urls)
-                if appModel.library.browseMode != .folders {
-                    appModel.library.setBrowseMode(.folders)
-                }
-            }
-        }
-        .alert("New Playlist", isPresented: Binding(
-            get: { folderPlaylistTrack != nil },
-            set: { if !$0 { folderPlaylistTrack = nil } }
-        )) {
-            TextField("Name", text: $folderPlaylistDraft)
-            Button("Cancel", role: .cancel) {
-                folderPlaylistTrack = nil
-            }
-            Button("Create") {
-                if let track = folderPlaylistTrack,
-                   let playlist = appModel.playlists.createPlaylist(named: folderPlaylistDraft) {
-                    appModel.playlists.add(track, to: playlist)
-                }
-                folderPlaylistTrack = nil
-                folderPlaylistDraft = ""
+                model.addDirectories(urls)
             }
         }
         #if os(iOS)
@@ -97,7 +62,7 @@ struct LibraryView: View {
     private var header: some View {
         ScreenHeader(
             title: "Catalogue",
-            subtitle: catalogueSubtitle
+            subtitle: model.subtitle
         ) {
             HStack(spacing: 8) {
                 HarborButton(
@@ -113,33 +78,12 @@ struct LibraryView: View {
                     title: "Add Directory",
                     systemImage: "folder.badge.plus",
                     kind: .primary,
-                    action: presentAddDirectory
+                    action: model.addDirectory
                 )
                 .disabled(appModel.library.isScanning)
                 .help("Connect a music directory to the catalogue")
             }
         }
-    }
-
-    private var catalogueSubtitle: String {
-        if appModel.library.showsDemoLibrary {
-            return "Demo library — add a directory to start."
-        }
-        if let status = appModel.library.indexStatusText {
-            return "\(appModel.library.browseMode.title) — \(status)."
-        }
-        return "\(appModel.library.browseMode.title) — \(appModel.library.browseMode.subtitle.lowercased())."
-    }
-
-    private func presentAddDirectory() {
-        #if os(macOS)
-        appModel.library.addFolder()
-        if appModel.library.browseMode != .folders {
-            appModel.library.setBrowseMode(.folders)
-        }
-        #else
-        isImporterPresented = true
-        #endif
     }
 
     private func modePicker(_ mode: Binding<CatalogueBrowseMode>) -> some View {
@@ -202,7 +146,7 @@ struct LibraryView: View {
             emptyState
         } else if appModel.library.isFolderSearchActive {
             folderSearchResults
-        } else if appModel.library.folderRootID == nil {
+        } else if appModel.library.folderNavigation.rootID == nil {
             folderRootsList
         } else {
             folderContentsList
@@ -213,7 +157,7 @@ struct LibraryView: View {
         VStack(spacing: 0) {
             HStack {
                 Text(
-                    appModel.library.folderRootID == nil
+                    appModel.library.folderNavigation.rootID == nil
                         ? "Search across directories"
                         : "Search in \(appModel.library.folderBreadcrumb)"
                 )
@@ -230,23 +174,12 @@ struct LibraryView: View {
             Divider().overlay(HarborColor.aluminumDark.opacity(0.5))
 
             if appModel.library.folderSearchHits.isEmpty {
-                VStack(spacing: 10) {
-                    Spacer()
-                    Text("No matches")
-                        .font(HarborFont.title(16))
-                        .foregroundStyle(HarborColor.ivory)
-                    Text("Try another name, artist, or album.")
-                        .font(HarborFont.body(13))
-                        .foregroundStyle(HarborColor.ivoryDim)
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                EmptyPanel(title: "No matches", message: "Try another name, artist, or album.")
             } else {
                 List {
                     ForEach(appModel.library.folderSearchHits) { hit in
                         folderSearchHitRow(hit)
-                            .listRowBackground(HarborColor.faceplate)
-                            .listRowSeparatorTint(HarborColor.aluminumDark.opacity(0.5))
+                            .harborListRow()
                     }
                 }
                 .listStyle(.plain)
@@ -262,20 +195,15 @@ struct LibraryView: View {
             directoryRow(
                 title: hit.entry.name,
                 subtitle: hit.relativePath,
-                onOpen: {
-                    searchDraft = ""
-                    appModel.library.searchQuery = ""
-                    appModel.library.revealInFolders(url: hit.entry.url)
-                },
-                onPlay: { playDirectory(hit.entry.url, name: hit.entry.name) }
+                onOpen: { model.reveal(hit.entry.url) },
+                onPlay: { model.playDirectory(hit.entry.url, name: hit.entry.name) }
             )
 
-        case .audioFile:
-            let track = appModel.library.trackForPlayback(at: hit.entry.url, identity: hit.entry.id)
+        case .audioFile(let track):
             let folderName = hit.entry.url.deletingLastPathComponent().lastPathComponent
             HStack(spacing: 10) {
                 Button {
-                    playFolderOfHit(hit, startingAtHit: true)
+                    model.playFolder(containing: hit.entry)
                 } label: {
                     HStack(spacing: 12) {
                         Image(systemName: "music.note")
@@ -307,55 +235,22 @@ struct LibraryView: View {
                     systemName: "play.square.stack",
                     help: "Play the whole \"\(folderName)\" folder from the top"
                 ) {
-                    playFolderOfHit(hit, startingAtHit: false)
+                    model.playFolder(containing: hit.entry, startingAtEntry: false)
                 }
             }
-            .contextMenu {
+            .trackContextMenu(for: track, includesLabels: false) {
                 Button("Play This Track First") {
-                    playFolderOfHit(hit, startingAtHit: true)
+                    model.playFolder(containing: hit.entry)
                 }
                 Button("Play Folder “\(folderName)” from Start") {
-                    playFolderOfHit(hit, startingAtHit: false)
+                    model.playFolder(containing: hit.entry, startingAtEntry: false)
                 }
                 Divider()
                 Button("Reveal in Folders") {
-                    searchDraft = ""
-                    appModel.library.searchQuery = ""
-                    appModel.library.revealInFolders(url: hit.entry.url)
-                }
-                Menu("Add to Playlist") {
-                    Button("New Playlist…") {
-                        folderPlaylistDraft = ""
-                        folderPlaylistTrack = track
-                    }
-                    let manuals = appModel.playlists.playlists.filter { !$0.isSmart }
-                    if !manuals.isEmpty {
-                        Divider()
-                        ForEach(manuals) { playlist in
-                            Button(playlist.name) {
-                                appModel.playlists.add(track, to: playlist)
-                            }
-                        }
-                    }
+                    model.reveal(hit.entry.url)
                 }
             }
         }
-    }
-
-    /// Queue the folder holding the hit — either from the hit itself or from the folder's first track.
-    private func playFolderOfHit(_ hit: FolderSearchHit, startingAtHit: Bool) {
-        let playback = appModel.library.folderPlaybackQueue(
-            startingAt: hit.entry.url,
-            identity: hit.entry.id
-        )
-        guard let start = startingAtHit ? playback.track : playback.queue.first else { return }
-        appModel.playback.play(
-            track: start,
-            in: playback.queue,
-            sourceName: hit.entry.url.deletingLastPathComponent().lastPathComponent,
-            sourceKind: "Folder"
-        )
-        appModel.selectedTab = .nowPlaying
     }
 
     private var folderRootsList: some View {
@@ -366,18 +261,10 @@ struct LibraryView: View {
                         title: bookmark.name,
                         subtitle: bookmark.displayPath,
                         onOpen: { appModel.library.openFolderRoot(bookmark) },
-                        onPlay: {
-                            if let url = appModel.library.accessibleFolderURLs[bookmark.id] {
-                                playDirectory(url, name: bookmark.name)
-                            }
-                        }
+                        onPlay: { model.playRoot(bookmark) }
                     )
                     .contextMenu {
-                        Button("Play") {
-                            if let url = appModel.library.accessibleFolderURLs[bookmark.id] {
-                                playDirectory(url, name: bookmark.name)
-                            }
-                        }
+                        Button("Play") { model.playRoot(bookmark) }
                         Button("Remove Directory", role: .destructive) {
                             appModel.library.removeFolder(bookmark)
                         }
@@ -410,7 +297,7 @@ struct LibraryView: View {
 
                 if let url = appModel.library.folderBrowseURL {
                     HarborIconButton(systemName: "play.fill", help: "Play this directory") {
-                        playDirectory(url, name: appModel.library.folderBreadcrumb)
+                        model.playDirectory(url, name: appModel.library.folderBreadcrumb)
                     }
                 }
 
@@ -427,23 +314,12 @@ struct LibraryView: View {
             Divider().overlay(HarborColor.aluminumDark.opacity(0.5))
 
             if appModel.library.folderListing.isEmpty {
-                VStack(spacing: 10) {
-                    Spacer()
-                    Text("Empty folder")
-                        .font(HarborFont.title(16))
-                        .foregroundStyle(HarborColor.ivory)
-                    Text("No subfolders or audio files here.")
-                        .font(HarborFont.body(13))
-                        .foregroundStyle(HarborColor.ivoryDim)
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                EmptyPanel(title: "Empty folder", message: "No subfolders or audio files here.")
             } else {
                 List {
                     ForEach(appModel.library.folderListing) { entry in
                         folderEntryRow(entry)
-                            .listRowBackground(HarborColor.faceplate)
-                            .listRowSeparatorTint(HarborColor.aluminumDark.opacity(0.5))
+                            .harborListRow()
                     }
                 }
                 .listStyle(.plain)
@@ -454,7 +330,7 @@ struct LibraryView: View {
 
     private var folderBreadcrumbs: some View {
         let rootName = appModel.library.selectedFolderRoot?.name ?? "Directory"
-        let components = appModel.library.folderPathComponents
+        let components = appModel.library.folderNavigation.pathComponents
         let currentDepth = components.count
 
         return ScrollView(.horizontal, showsIndicators: false) {
@@ -494,39 +370,14 @@ struct LibraryView: View {
                 title: entry.name,
                 subtitle: nil,
                 onOpen: { appModel.library.enterFolder(entry) },
-                onPlay: { playDirectory(entry.url, name: entry.name) }
+                onPlay: { model.playDirectory(entry.url, name: entry.name) }
             )
             .contextMenu {
-                Button("Play") { playDirectory(entry.url, name: entry.name) }
+                Button("Play") { model.playDirectory(entry.url, name: entry.name) }
             }
 
-        case .audioFile:
-            let track = appModel.library.trackForPlayback(at: entry.url, identity: entry.id)
-            TrackRow(
-                track: track,
-                playlists: appModel.playlists.playlists,
-                onPlay: {
-                    let playback = appModel.library.folderPlaybackQueue(startingAt: entry.url, identity: entry.id)
-                    let folderName = entry.url.deletingLastPathComponent().lastPathComponent
-                    appModel.playback.play(
-                        track: playback.track,
-                        in: playback.queue,
-                        sourceName: folderName,
-                        sourceKind: "Folder"
-                    )
-                    appModel.selectedTab = .nowPlaying
-                },
-                onAddToPlaylist: { playlist in
-                    appModel.playlists.add(track, to: playlist)
-                },
-                onAddLabel: { label in
-                    appModel.library.addLabel(label, to: track)
-                },
-                onRemoveLabel: { label in
-                    appModel.library.removeLabel(label, from: track)
-                },
-                knownLabels: appModel.library.allLabels
-            )
+        case .audioFile(let track):
+            TrackRow(track: track) { model.playFolder(containing: entry) }
         }
     }
 
@@ -568,17 +419,6 @@ struct LibraryView: View {
         }
     }
 
-    private func playDirectory(_ url: URL, name: String) {
-        guard let playback = appModel.library.directoryPlaybackQueue(at: url) else { return }
-        appModel.playback.play(
-            track: playback.track,
-            in: playback.queue,
-            sourceName: name,
-            sourceKind: "Folder"
-        )
-        appModel.selectedTab = .nowPlaying
-    }
-
     private var emptyState: some View {
         VStack(spacing: 16) {
             Spacer()
@@ -594,7 +434,7 @@ struct LibraryView: View {
                 title: "Add Directory",
                 systemImage: "folder.badge.plus",
                 kind: .primary,
-                action: presentAddDirectory
+                action: model.addDirectory
             )
             .disabled(appModel.library.isScanning)
             Spacer()
@@ -621,327 +461,54 @@ private struct CatalogueScanBanner: View {
 
 private struct CatalogueAlbumList: View {
     @Environment(AppModel.self) private var appModel
-    @Binding var expandedAlbumID: UUID?
+    let model: LibraryViewModel
 
     var body: some View {
-        let playlists = appModel.playlists.playlists
-        let labels = appModel.library.allLabels
         List {
             ForEach(appModel.library.filteredAlbums) { album in
-                let isExpanded = expandedAlbumID == album.id
-                let tracks = appModel.library.visibleTracks(in: album)
-                albumHeader(album, trackCount: tracks.count, isExpanded: isExpanded)
-                    .listRowBackground(HarborColor.faceplate)
-                    .listRowSeparatorTint(HarborColor.aluminumDark.opacity(0.5))
-                if isExpanded {
-                    ForEach(tracks) { track in
-                        TrackRow(
-                            track: track,
-                            playlists: playlists,
-                            onPlay: {
-                                appModel.playback.play(
-                                    track: track,
-                                    in: album.tracks,
-                                    sourceName: album.title,
-                                    sourceKind: "Album"
-                                )
-                                appModel.selectedTab = .nowPlaying
-                            },
-                            onAddToPlaylist: { playlist in
-                                appModel.playlists.add(track, to: playlist)
-                            },
-                            onAddLabel: { label in
-                                appModel.library.addLabel(label, to: track)
-                            },
-                            onRemoveLabel: { label in
-                                appModel.library.removeLabel(label, from: track)
-                            },
-                            knownLabels: labels
-                        )
-                        .listRowBackground(HarborColor.faceplate)
-                        .listRowSeparatorTint(HarborColor.aluminumDark.opacity(0.5))
-                        .padding(.leading, 12)
-                    }
+                ExpandableTrackGroup(
+                    title: album.title,
+                    subtitle: album.artist,
+                    tracks: appModel.library.visibleTracks(in: album),
+                    isExpanded: model.expandedAlbumID == album.id,
+                    playHelp: "Play album",
+                    onToggle: { model.toggleAlbum(album) },
+                    onPlay: { model.playAlbum(album, startingAt: $0) }
+                ) {
+                    HarborArtwork(hash: album.artworkHash, data: album.artworkData, size: 56, corner: 8)
                 }
             }
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-    }
-
-    private func albumHeader(_ album: Album, trackCount: Int, isExpanded: Bool) -> some View {
-        HStack(spacing: 12) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    expandedAlbumID = isExpanded ? nil : album.id
-                }
-            } label: {
-                HStack(spacing: 12) {
-                    HarborArtwork(hash: album.artworkHash, data: album.artworkData, size: 56, corner: 8)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(album.title)
-                            .font(HarborFont.title(15))
-                            .foregroundStyle(HarborColor.ivory)
-                            .lineLimit(1)
-                        Text(album.artist)
-                            .font(HarborFont.body(12))
-                            .foregroundStyle(HarborColor.brass)
-                        Text(trackCount == 1 ? "1 track" : "\(trackCount) tracks")
-                            .font(HarborFont.body(11))
-                            .foregroundStyle(HarborColor.ivoryDim)
-                    }
-                    Spacer(minLength: 8)
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(HarborColor.ivoryDim)
-                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
-            HarborIconButton(systemName: "play.fill", help: "Play album") {
-                guard let first = album.tracks.first else { return }
-                appModel.playback.play(
-                    track: first,
-                    in: album.tracks,
-                    sourceName: album.title,
-                    sourceKind: "Album"
-                )
-                appModel.selectedTab = .nowPlaying
-            }
-        }
-        .padding(.vertical, 4)
     }
 }
 
 private struct CatalogueArtistList: View {
     @Environment(AppModel.self) private var appModel
-    @Binding var expandedArtistName: String?
+    let model: LibraryViewModel
 
     var body: some View {
-        let playlists = appModel.playlists.playlists
-        let labels = appModel.library.allLabels
         List {
             ForEach(appModel.library.filteredArtistFacets) { facet in
-                let isExpanded = expandedArtistName == facet.name
-                let tracks = appModel.library.visibleTracks(forArtist: facet.name)
-                artistHeader(facet, trackCount: tracks.count, isExpanded: isExpanded)
-                    .listRowBackground(HarborColor.faceplate)
-                    .listRowSeparatorTint(HarborColor.aluminumDark.opacity(0.5))
-                if isExpanded {
-                    ForEach(tracks) { track in
-                        TrackRow(
-                            track: track,
-                            playlists: playlists,
-                            onPlay: {
-                                appModel.playback.play(
-                                    track: track,
-                                    in: tracks,
-                                    sourceName: facet.name,
-                                    sourceKind: "Artist"
-                                )
-                                appModel.selectedTab = .nowPlaying
-                            },
-                            onAddToPlaylist: { playlist in
-                                appModel.playlists.add(track, to: playlist)
-                            },
-                            onAddLabel: { label in
-                                appModel.library.addLabel(label, to: track)
-                            },
-                            onRemoveLabel: { label in
-                                appModel.library.removeLabel(label, from: track)
-                            },
-                            knownLabels: labels
-                        )
-                        .listRowBackground(HarborColor.faceplate)
-                        .listRowSeparatorTint(HarborColor.aluminumDark.opacity(0.5))
-                        .padding(.leading, 12)
-                    }
-                }
-            }
-        }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-    }
-
-    private func artistHeader(_ facet: LibraryFacet, trackCount: Int, isExpanded: Bool) -> some View {
-        HStack(spacing: 12) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    expandedArtistName = isExpanded ? nil : facet.name
-                }
-            } label: {
-                HStack(spacing: 12) {
+                ExpandableTrackGroup(
+                    title: facet.name,
+                    tracks: appModel.library.visibleTracks(forArtist: facet.name),
+                    isExpanded: model.expandedArtistName == facet.name,
+                    playHelp: "Play artist",
+                    onToggle: { model.toggleArtist(facet.name) },
+                    onPlay: { model.playArtist(facet.name, startingAt: $0) }
+                ) {
                     Image(systemName: "person.wave.2")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(HarborColor.amber)
                         .frame(width: 56, height: 56)
                         .background(HarborColor.faceplateLift)
                         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(facet.name)
-                            .font(HarborFont.title(15))
-                            .foregroundStyle(HarborColor.ivory)
-                            .lineLimit(1)
-                        Text(trackCount == 1 ? "1 track" : "\(trackCount) tracks")
-                            .font(HarborFont.body(11))
-                            .foregroundStyle(HarborColor.ivoryDim)
-                    }
-                    Spacer(minLength: 8)
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(HarborColor.ivoryDim)
-                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
-            HarborIconButton(systemName: "play.fill", help: "Play artist") {
-                let tracks = appModel.library.visibleTracks(forArtist: facet.name)
-                guard let first = tracks.first else { return }
-                appModel.playback.play(
-                    track: first,
-                    in: tracks,
-                    sourceName: facet.name,
-                    sourceKind: "Artist"
-                )
-                appModel.selectedTab = .nowPlaying
-            }
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-struct TrackRow: View {
-    @Environment(AppModel.self) private var appModel
-    let track: Track
-    var playlists: [Playlist] = []
-    let onPlay: () -> Void
-    var onAddToPlaylist: ((Playlist) -> Void)?
-    var onAddLabel: ((String) -> Void)?
-    var onRemoveLabel: ((String) -> Void)?
-    var knownLabels: [String] = []
-    @State private var newLabelDraft = ""
-    @State private var showNewLabelAlert = false
-    @State private var newPlaylistDraft = ""
-    @State private var showNewPlaylistAlert = false
-
-    var body: some View {
-        Button(action: onPlay) {
-            HStack(spacing: 14) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(track.title)
-                        .font(HarborFont.title(14))
-                        .foregroundStyle(HarborColor.ivory)
-                        .lineLimit(1)
-                    Text(durationArtistLine)
-                        .font(HarborFont.body(12))
-                        .foregroundStyle(HarborColor.ivoryDim)
-                        .lineLimit(1)
-                    if !track.labels.isEmpty {
-                        Text(track.labels.joined(separator: " · "))
-                            .font(HarborFont.panel(10))
-                            .foregroundStyle(HarborColor.amber.opacity(0.85))
-                            .lineLimit(1)
-                    }
-                }
-                Spacer()
-                FormatBadge(
-                    format: track.format,
-                    sampleRateHz: track.sampleRateHz,
-                    bitDepth: track.bitDepth
-                )
-            }
-            .padding(.vertical, 7)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .contextMenu {
-            if let onAddToPlaylist {
-                let manual = playlists.filter { !$0.isSmart }
-                Menu("Add to Playlist") {
-                    Button("New Playlist…") {
-                        newPlaylistDraft = ""
-                        showNewPlaylistAlert = true
-                    }
-                    if !manual.isEmpty {
-                        Divider()
-                        ForEach(manual) { playlist in
-                            Button(playlist.name) {
-                                onAddToPlaylist(playlist)
-                            }
-                        }
-                    }
-                }
-            }
-            if onAddLabel != nil || onRemoveLabel != nil {
-                Menu("Labels") {
-                    Button("New Label…") {
-                        newLabelDraft = ""
-                        showNewLabelAlert = true
-                    }
-                    if !mergedLabelSuggestions.isEmpty {
-                        Divider()
-                        ForEach(mergedLabelSuggestions, id: \.self) { label in
-                            let hasLabel = track.labels.contains {
-                                $0.caseInsensitiveCompare(label) == .orderedSame
-                            }
-                            Button {
-                                if hasLabel {
-                                    onRemoveLabel?(label)
-                                } else {
-                                    onAddLabel?(label)
-                                }
-                            } label: {
-                                if hasLabel {
-                                    Label(label, systemImage: "checkmark")
-                                } else {
-                                    Text(label)
-                                }
-                            }
-                        }
-                    }
                 }
             }
         }
-        .alert("New Playlist", isPresented: $showNewPlaylistAlert) {
-            TextField("Name", text: $newPlaylistDraft)
-            Button("Cancel", role: .cancel) {}
-            Button("Create") {
-                onCreatePlaylistFromContext()
-            }
-        }
-        .alert("New Label", isPresented: $showNewLabelAlert) {
-            TextField("Label", text: $newLabelDraft)
-            Button("Cancel", role: .cancel) {}
-            Button("Add") {
-                onAddLabel?(newLabelDraft)
-            }
-        }
-    }
-
-    private var mergedLabelSuggestions: [String] {
-        Array(Set(knownLabels + track.labels))
-            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
-    }
-
-    private var durationArtistLine: String {
-        var parts: [String] = [track.artist]
-        if let year = track.year {
-            parts.append(String(year))
-        }
-        if track.duration > 0 {
-            let total = Int(track.duration)
-            parts.append("\(total / 60):\(String(format: "%02d", total % 60))")
-        }
-        return parts.joined(separator: " · ")
-    }
-
-    private func onCreatePlaylistFromContext() {
-        guard let playlist = appModel.playlists.createPlaylist(named: newPlaylistDraft) else { return }
-        onAddToPlaylist?(playlist)
-        newPlaylistDraft = ""
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
     }
 }

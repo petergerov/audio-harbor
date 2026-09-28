@@ -10,10 +10,11 @@ final class PlaybackService {
     private(set) var currentTrack: Track?
     private(set) var queue: [Track] = []
     private(set) var queueIndex: Int = 0
-    /// Display name for the active queue source (playlist name, album, folder…).
-    private(set) var queueSourceName: String?
+    /// Where the active queue came from (playlist, album, folder…); `nil` for a loose queue.
+    private(set) var queueSource: QueueSource?
+    var queueSourceName: String? { queueSource?.name }
     /// Short label for the context rail header (e.g. "Playlist", "Album").
-    private(set) var queueSourceKind: String = "Queue"
+    var queueSourceKind: String { queueSource?.kindLabel ?? "Queue" }
     /// True once the last queue entry has played to its end.
     private(set) var queueEnded = false
 
@@ -29,7 +30,7 @@ final class PlaybackService {
     var outputMode: OutputMode = .shared {
         didSet {
             guard outputMode != oldValue else { return }
-            UserDefaults.standard.set(outputMode.rawValue, forKey: Self.outputModeKey)
+            UserDefaults.standard.set(outputMode.rawValue, forKey: DefaultsKey.outputMode)
             let wasPlayingAs = effectiveMode(for: oldValue)
             guard pathChanges(from: wasPlayingAs, to: effectiveOutputMode) else {
                 engine.setOutputMode(outputMode)
@@ -43,14 +44,14 @@ final class PlaybackService {
     var repeatMode: RepeatMode = .off {
         didSet {
             guard repeatMode != oldValue else { return }
-            UserDefaults.standard.set(repeatMode.rawValue, forKey: Self.repeatModeKey)
+            UserDefaults.standard.set(repeatMode.rawValue, forKey: DefaultsKey.repeatMode)
         }
     }
 
     var isShuffled: Bool = false {
         didSet {
             guard isShuffled != oldValue else { return }
-            UserDefaults.standard.set(isShuffled, forKey: Self.shuffleKey)
+            UserDefaults.standard.set(isShuffled, forKey: DefaultsKey.shuffle)
             // Keep the current track on the deck, redraw everything after it.
             rebuildPlayOrder(anchoredTo: queueIndex)
         }
@@ -61,7 +62,7 @@ final class PlaybackService {
     var outputDeviceUID: String? {
         didSet {
             guard outputDeviceUID != oldValue else { return }
-            UserDefaults.standard.set(outputDeviceUID, forKey: Self.outputDeviceKey)
+            UserDefaults.standard.set(outputDeviceUID, forKey: DefaultsKey.outputDevice)
             rememberOutputDeviceName()
             moveToOutputDevice()
         }
@@ -112,29 +113,23 @@ final class PlaybackService {
     private var playOrder: [Int] = []
     private var orderPosition: Int = 0
 
-    private static let outputModeKey = "audioharbor.outputMode"
-    private static let outputDeviceKey = "audioharbor.outputDevice"
-    private static let outputDeviceNameKey = "audioharbor.outputDeviceName"
-    private static let repeatModeKey = "audioharbor.repeatMode"
-    private static let shuffleKey = "audioharbor.shuffle"
 
     init(engine: any PlaybackEngine, license: LicenseService) {
         self.engine = engine
         self.license = license
-        if let raw = UserDefaults.standard.string(forKey: Self.outputModeKey),
+        if let raw = UserDefaults.standard.string(forKey: DefaultsKey.outputMode),
            let mode = OutputMode(rawValue: raw) {
             outputMode = mode
         }
-        UserDefaults.standard.removeObject(forKey: "audioharbor.dsdStrategy")
-        if let raw = UserDefaults.standard.string(forKey: Self.repeatModeKey),
+        if let raw = UserDefaults.standard.string(forKey: DefaultsKey.repeatMode),
            let mode = RepeatMode(rawValue: raw) {
             repeatMode = mode
         }
-        isShuffled = UserDefaults.standard.bool(forKey: Self.shuffleKey)
+        isShuffled = UserDefaults.standard.bool(forKey: DefaultsKey.shuffle)
         engine.setOutputMode(outputMode)
         // Assigned in init, so didSet does not run — hand the engine the pick directly.
-        outputDeviceName = UserDefaults.standard.string(forKey: Self.outputDeviceNameKey)
-        outputDeviceUID = UserDefaults.standard.string(forKey: Self.outputDeviceKey)
+        outputDeviceName = UserDefaults.standard.string(forKey: DefaultsKey.outputDeviceName)
+        outputDeviceUID = UserDefaults.standard.string(forKey: DefaultsKey.outputDevice)
         engine.setOutputDevice(uid: outputDeviceUID)
         engine.setOutputStatusHandler { [weak self] status in
             self?.outputStatus = status
@@ -146,12 +141,7 @@ final class PlaybackService {
         syncFromEngine()
     }
 
-    func play(
-        track: Track,
-        in queueTracks: [Track]? = nil,
-        sourceName: String? = nil,
-        sourceKind: String? = nil
-    ) {
+    func play(track: Track, in queueTracks: [Track]? = nil, from source: QueueSource? = nil) {
         guard allowPlayback() else { return }
 
         if let queueTracks {
@@ -163,15 +153,12 @@ final class PlaybackService {
         }
         rebuildPlayOrder(anchoredTo: queueIndex)
 
-        if let sourceName, !sourceName.isEmpty {
-            queueSourceName = sourceName
-            queueSourceKind = sourceKind ?? "Queue"
+        if let source, !source.name.isEmpty {
+            queueSource = source
         } else if queueTracks != nil, !track.album.isEmpty {
-            queueSourceName = track.album
-            queueSourceKind = sourceKind ?? "Album"
+            queueSource = .album(track.album)
         } else {
-            queueSourceName = nil
-            queueSourceKind = "Queue"
+            queueSource = nil
         }
 
         Task { await loadAndPlay(track) }
@@ -338,7 +325,7 @@ final class PlaybackService {
         }
         guard name != outputDeviceName else { return }
         outputDeviceName = name
-        UserDefaults.standard.set(name, forKey: Self.outputDeviceNameKey)
+        UserDefaults.standard.set(name, forKey: DefaultsKey.outputDeviceName)
     }
 
     /// Whether the current track sounds different on the new path. Exclusive and DoP only
