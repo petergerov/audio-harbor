@@ -29,6 +29,7 @@
       display: flex; align-items: center; gap: 8px;
       font-size: 0.95rem; font-weight: 600; color: var(--text); text-decoration: none;
     }
+    .nav-logo img { display: block; width: auto; height: 28px; }
     .nav-cta { font-size: 0.82rem; font-weight: 500; color: var(--accent); text-decoration: none; }
     .nav-cta:hover { color: var(--accent2); }
     main { max-width: 720px; margin: 0 auto; padding: 100px 24px 80px; }
@@ -79,7 +80,13 @@
 </head>
 <body>
 <nav>
-  <a class="nav-logo" href="index.html">Audio Harbor</a>
+  <a class="nav-logo" href="index.html">
+    <picture>
+      <source type="image/webp" srcset="images/web/logo-28.webp, images/web/logo-56.webp 2x, images/web/logo-84.webp 3x" />
+      <img src="images/web/logo-28.png" srcset="images/web/logo-56.png 2x, images/web/logo-84.png 3x"
+           alt="Audio Harbor" width="100" height="28" />
+    </picture>
+  </a>
   <a class="nav-cta" href="https://github.com/petergerov/audio-harbor/issues">Ask a question</a>
 </nav>
 <main>
@@ -241,7 +248,14 @@
     <details>
       <summary>Can I bring playlists from other apps?</summary>
       <div class="answer">
-        <p>Yes. In <strong>Playlists</strong>, use <strong>Import M3U</strong> for <code>.m3u</code> / <code>.m3u8</code> files from foobar2000, VLC, Audirvāna, Roon, or Music. The tracks must be in a folder Audio Harbor already knows. To take a playlist or label elsewhere, right-click it and choose <strong>Export M3U8…</strong></p>
+        <p>Yes. In <strong>Playlists</strong>, use <strong>Import M3U</strong> for <code>.m3u</code> / <code>.m3u8</code> files from foobar2000, VLC, Audirvāna, Roon, or Music. The tracks must be in a folder Audio Harbor already knows. To take a playlist or label elsewhere, select it and click <strong>Export M3U8</strong> (or right-click a playlist and choose <strong>Export M3U8…</strong>).</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Does search only look in the folder I have open?</summary>
+      <div class="answer">
+        <p>No. In <strong>Catalogue → Directories</strong>, search always covers every directory you have connected, wherever you are browsing. Use <strong>Reveal in Folders</strong> on a result to jump to its folder.</p>
       </div>
     </details>
   </section>

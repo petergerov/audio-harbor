@@ -26,8 +26,8 @@
                 │                     │
 ┌───────────────▼──────────┐  ┌───────▼───────────────────┐
 │         Features         │  │        Design System      │
-│ Library · NowPlaying ·   │  │ Typography · Color · Motion│
-│ Queue · Settings         │  └───────────────────────────┘
+│ Catalogue · Playlists ·  │  │ Typography · Color · Motion│
+│ Deck · Effects · Settings│  └───────────────────────────┘
 └───────────────┬──────────┘
                 │
 ┌───────────────▼─────────────────────────────────────────┐
@@ -193,15 +193,15 @@ Do not iCloud-sync `catalogue.sqlite` or bookmarks. Do not invent a Harbor accou
 ## App navigation (UX architecture)
 
 ```
-Root
- ├─ Library (sidebar Mac / tabs iOS)
- │   ├─ Albums
- │   ├─ Artists
- │   ├─ Folders
- │   └─ Playlists
- ├─ Now Playing (full + mini bar)
+Root (sidebar on Mac · tabs on iOS; logo on top of the sidebar)
+ ├─ Catalogue — Directories · Albums · Artists; search always covers every connected directory
+ ├─ Playlists — Playlists · Labels, list on the left, tracks on the right
+ ├─ Deck      — Now Playing, queue rail, effects rack
  └─ Settings
 ```
+
+Catalogue, Playlists and Settings carry a compact `MiniPlayer` in the row under their title
+(next to the mode switches; in Settings level with the title). The Deck has its own transport.
 
 Hero rule for UI: **first viewport = brand + music**, not a control panel. Now Playing is the emotional center; Settings stay out of the way.
 
@@ -209,7 +209,15 @@ Hero rule for UI: **first viewport = brand + music**, not a control panel. Now P
 
 ## Concurrency & state
 
-- `@MainActor` view models for UI.
+- Services (`LibraryService`, `PlaybackService`, `PlaylistService`, …) are `@Observable @MainActor`
+  and live on `AppModel`, which views read from the environment.
+- Screens with their own state and actions have a view model (`LibraryViewModel`,
+  `PlaylistsViewModel`), owned as `@State` and created in the view's `init(appModel:)`.
+  Views stay layout; logic goes to the view model or the services.
+- Start playback through `AppModel.play(_:startingAt:from:)` with a `QueueSource`, so the Deck
+  opens and shows where the queue came from.
+- Nothing expensive in `body`: folder listings are stored and refreshed on change, artwork is
+  decoded once per track in `.task(id:)`.
 - Audio engine callbacks hop to MainActor for state publish.
 - Scanning off main thread with progress stream.
 - Prefer `AsyncStream` for scanner events and engine state.
@@ -219,22 +227,29 @@ Hero rule for UI: **first viewport = brand + music**, not a control panel. Now P
 ## Project layout (repo)
 
 ```
-Audio Harbor/
-  App/                 # AudioHarborApp, RootView, DI
-  DesignSystem/        # Colors, type, components
+AudioHarbor/
+  App/                 # AudioHarborApp, RootView, AppModel (services + play entry), DefaultsKey
+  DesignSystem/        # HarborTheme (colour, type, BrandMark, ScreenHeader), chrome, list style, deck rigs
   Features/
-    Library/
-    NowPlaying/
+    Library/           # Catalogue: LibraryView + LibraryViewModel, TrackRow, ExpandableTrackGroup
+    Playlists/         # PlaylistsView + PlaylistsViewModel
+    NowPlaying/        # Deck, queue rail, MiniPlayer
+    Effects/           # AU / AUv3 rack
     Settings/
-  Domain/              # Pure models
+  Domain/              # Pure models (Track, Album, QueueSource, …)
   Services/
-    Library/
-    Playback/
-  Audio/               # Engine + decoders
-  Resources/
+    Library/           # LibraryService, CatalogueIndexStore (SQLite), CatalogueIndexer,
+                       # CatalogueSearchIndex, TrackLabelStore, FolderNavigation, bookmarks, M3U
+    Playback/          # PlaybackService, LicenseService
+  Audio/               # PlaybackEngine + CoreAudio impl, HAL player, DSD / SACD decoders, meters
+  Resources/           # Assets (AppIcon, BrandLogo, deck photos), Info.plist, entitlements
+design/icons/          # Icon and logo masters + render tools (build-appicon.sh)
 docs/
   PRODUCT.md
   ARCHITECTURE.md
+  REFACTORING.md       # readability plan (done) and notes
+  settings.md · brand.md
+  index.html · faq.html · privacy.html   # GitHub Pages site
 project.yml            # XcodeGen
 ```
 

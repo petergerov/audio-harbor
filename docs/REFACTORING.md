@@ -6,7 +6,8 @@ builds on its own, keeps behaviour identical, and lands as its own commit.
 Rules from `.claude/CLAUDE.md` that drive this: passive views, `@Observable` + `@MainActor`
 view models, no heavy work in `body`, small subviews, `.task` over `.onAppear`.
 
-Status: ☐ todo · ◐ in progress · ☑ done
+Status: ☐ todo · ◐ in progress · ☑ done — **all seven steps done** (September 2026, squashed
+into `develop` and `main` as "Refactor for readability").
 
 ---
 
