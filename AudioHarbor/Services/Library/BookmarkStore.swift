@@ -20,7 +20,7 @@ struct FolderBookmark: Identifiable, Codable, Hashable, Sendable {
 actor BookmarkStore {
     static let shared = BookmarkStore()
 
-    private let defaultsKey = "audioharbor.library.folderBookmarks"
+    private let defaultsKey = DefaultsKey.folderBookmarks
     private var activeURLs: [UUID: URL] = [:]
 
     func load() -> [FolderBookmark] {

@@ -215,7 +215,8 @@ enum CatalogueBrowseMode: String, CaseIterable, Identifiable, Sendable {
 struct FolderBrowseEntry: Identifiable, Hashable, Sendable {
     enum Kind: Hashable, Sendable {
         case directory
-        case audioFile
+        /// The catalogue track, or a file-based stand-in when the file is not indexed yet.
+        case audioFile(Track)
     }
 
     let id: String
@@ -228,6 +229,13 @@ struct FolderBrowseEntry: Identifiable, Hashable, Sendable {
         self.name = name
         self.url = url
         self.kind = kind
+    }
+
+    var isDirectory: Bool { kind == .directory }
+
+    var track: Track? {
+        guard case .audioFile(let track) = kind else { return nil }
+        return track
     }
 }
 

@@ -121,7 +121,7 @@ struct Playlist: Identifiable, Hashable, Codable, Sendable {
 @MainActor
 final class PlaylistService {
     private(set) var playlists: [Playlist] = []
-    private let defaultsKey = "audioharbor.playlists"
+    private let defaultsKey = DefaultsKey.playlists
 
     init() {
         load()
