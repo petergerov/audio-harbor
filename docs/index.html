@@ -83,7 +83,7 @@
       font-size: 0.95rem; font-weight: 600; color: var(--text);
       text-decoration: none;
     }
-    .nav-logo img { width: 28px; height: 28px; border-radius: 6px; }
+    .nav-logo img { display: block; width: auto; height: 28px; }
     .nav-links { display: flex; gap: 32px; }
     .nav-link {
       color: var(--secondary); text-decoration: none;
@@ -359,7 +359,7 @@
       font-size: 0.9rem; font-weight: 600; color: var(--text);
       text-decoration: none;
     }
-    .footer-logo img { width: 22px; height: 22px; border-radius: 5px; }
+    .footer-logo img { display: block; width: auto; height: 28px; }
     .footer-links { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; }
     .footer-links a {
       font-size: 0.78rem; color: var(--secondary);
@@ -438,8 +438,11 @@
 
 <nav>
   <a class="nav-logo" href="#">
-    <img src="images/web/icon-128.png" alt="Audio Harbor" width="128" height="128" />
-    Audio Harbor
+    <picture>
+      <source type="image/webp" srcset="images/web/logo-28.webp, images/web/logo-56.webp 2x, images/web/logo-84.webp 3x" />
+      <img src="images/web/logo-28.png" srcset="images/web/logo-56.png 2x, images/web/logo-84.png 3x"
+           alt="Audio Harbor" width="100" height="28" />
+    </picture>
   </a>
   <div class="nav-links">
     <a href="#listening" class="nav-link">Listening</a>
@@ -776,8 +779,11 @@
 
 <footer>
   <a class="footer-logo" href="#">
-    <img src="images/web/icon-128.png" alt="Audio Harbor" width="128" height="128" loading="lazy" />
-    Audio Harbor
+    <picture>
+      <source type="image/webp" srcset="images/web/logo-28.webp, images/web/logo-56.webp 2x, images/web/logo-84.webp 3x" />
+      <img src="images/web/logo-28.png" srcset="images/web/logo-56.png 2x, images/web/logo-84.png 3x"
+           alt="Audio Harbor" width="100" height="28" loading="lazy" />
+    </picture>
   </a>
   <div class="footer-links">
     <a href="https://github.com/petergerov/audio-harbor">GitHub</a>

@@ -12,11 +12,7 @@ struct SettingsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 8) {
-                        ScreenHeader(
-                            title: "Settings",
-                            subtitle: "How music plays, your folders, and the 7-day trial.",
-                            trailingAlignment: .screenHeaderSubtitle
-                        ) {
+                        ScreenHeader(title: "Settings", trailingAlignment: .center) {
                             MiniPlayer()
                         }
                     }
