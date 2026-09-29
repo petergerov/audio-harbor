@@ -78,6 +78,7 @@ enum BrowseScope: String, Codable, Sendable {
     case albums
     case artists
     case playlists
+    case folders
     case albumTracks
     case artistTracks
     case playlistTracks
@@ -95,10 +96,12 @@ enum BrowseItem: Codable, Sendable, Equatable {
     case album(id: UUID, title: String, artist: String, trackCount: Int, artworkHash: String?)
     case artist(name: String, trackCount: Int)
     case playlist(id: UUID, name: String, trackCount: Int)
+    /// Connected directory or subdirectory. `id` is `rootUUID` or `rootUUID/rel/path`.
+    case folder(id: String, name: String, childHint: String?)
     case track(TrackDTO)
 
     enum CodingKeys: String, CodingKey {
-        case album, artist, playlist, track
+        case album, artist, playlist, folder, track
     }
 
     enum AlbumKeys: String, CodingKey {
@@ -111,6 +114,10 @@ enum BrowseItem: Codable, Sendable, Equatable {
 
     enum PlaylistKeys: String, CodingKey {
         case id, name, trackCount
+    }
+
+    enum FolderKeys: String, CodingKey {
+        case id, name, childHint
     }
 
     init(from decoder: Decoder) throws {
@@ -143,6 +150,15 @@ enum BrowseItem: Codable, Sendable, Equatable {
             )
             return
         }
+        if container.contains(.folder) {
+            let nested = try container.nestedContainer(keyedBy: FolderKeys.self, forKey: .folder)
+            self = .folder(
+                id: try nested.decode(String.self, forKey: .id),
+                name: try nested.decode(String.self, forKey: .name),
+                childHint: try nested.decodeIfPresent(String.self, forKey: .childHint)
+            )
+            return
+        }
         if container.contains(.track) {
             self = .track(try container.decode(TrackDTO.self, forKey: .track))
             return
@@ -171,6 +187,11 @@ enum BrowseItem: Codable, Sendable, Equatable {
             try nested.encode(id, forKey: .id)
             try nested.encode(name, forKey: .name)
             try nested.encode(trackCount, forKey: .trackCount)
+        case let .folder(id, name, childHint):
+            var nested = container.nestedContainer(keyedBy: FolderKeys.self, forKey: .folder)
+            try nested.encode(id, forKey: .id)
+            try nested.encode(name, forKey: .name)
+            try nested.encodeIfPresent(childHint, forKey: .childHint)
         case .track(let dto):
             try container.encode(dto, forKey: .track)
         }
@@ -181,6 +202,7 @@ enum BrowseItem: Codable, Sendable, Equatable {
         case let .album(id, _, _, _, _): "album:\(id.uuidString)"
         case let .artist(name, _): "artist:\(name)"
         case let .playlist(id, _, _): "playlist:\(id.uuidString)"
+        case let .folder(id, _, _): "folder:\(id)"
         case .track(let dto): "track:\(dto.cataloguePath)"
         }
     }
@@ -190,6 +212,7 @@ enum BrowseItem: Codable, Sendable, Equatable {
         case let .album(_, title, _, _, _): title
         case let .artist(name, _): name
         case let .playlist(_, name, _): name
+        case let .folder(_, name, _): name
         case .track(let dto): dto.title
         }
     }
@@ -199,6 +222,7 @@ enum BrowseItem: Codable, Sendable, Equatable {
         case let .album(_, _, artist, trackCount, _): "\(artist) · \(trackCount)"
         case let .artist(_, trackCount): "\(trackCount) tracks"
         case let .playlist(_, _, trackCount): "\(trackCount) tracks"
+        case let .folder(_, _, hint): hint ?? "Folder"
         case .track(let dto): "\(dto.artist) — \(dto.album)"
         }
     }
@@ -209,15 +233,18 @@ enum PlaySelection: Codable, Sendable, Equatable {
     case artist(name: String)
     case track(cataloguePath: String)
     case playlist(id: UUID)
+    /// `rootUUID` or `rootUUID/rel/path` — plays that directory's queue.
+    case folder(id: String)
 
     enum CodingKeys: String, CodingKey {
-        case album, artist, track, playlist
+        case album, artist, track, playlist, folder
     }
 
     enum AlbumKeys: String, CodingKey { case id }
     enum ArtistKeys: String, CodingKey { case name }
     enum TrackKeys: String, CodingKey { case cataloguePath }
     enum PlaylistKeys: String, CodingKey { case id }
+    enum FolderKeys: String, CodingKey { case id }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -241,6 +268,11 @@ enum PlaySelection: Codable, Sendable, Equatable {
             self = .playlist(id: try nested.decode(UUID.self, forKey: .id))
             return
         }
+        if container.contains(.folder) {
+            let nested = try container.nestedContainer(keyedBy: FolderKeys.self, forKey: .folder)
+            self = .folder(id: try nested.decode(String.self, forKey: .id))
+            return
+        }
         throw DecodingError.dataCorrupted(
             .init(codingPath: decoder.codingPath, debugDescription: "Unknown PlaySelection")
         )
@@ -260,6 +292,9 @@ enum PlaySelection: Codable, Sendable, Equatable {
             try nested.encode(path, forKey: .cataloguePath)
         case .playlist(let id):
             var nested = container.nestedContainer(keyedBy: PlaylistKeys.self, forKey: .playlist)
+            try nested.encode(id, forKey: .id)
+        case .folder(let id):
+            var nested = container.nestedContainer(keyedBy: FolderKeys.self, forKey: .folder)
             try nested.encode(id, forKey: .id)
         }
     }

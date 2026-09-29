@@ -59,7 +59,52 @@ enum LibraryQueryService {
             else { return ([], false) }
             let tracks = playlists.tracks(for: playlist, from: library.allTracks)
             return pageTracks(tracks, offset: offset, limit: limit)
+
+        case .folders:
+            return browseFolders(request, library: library, offset: offset, limit: limit)
         }
+    }
+
+    private static func browseFolders(
+        _ request: BrowseRequest,
+        library: LibraryService,
+        offset: Int,
+        limit: Int
+    ) -> (items: [BrowseItem], hasMore: Bool) {
+        // Roots: connected directories on the Mac.
+        guard let parentID = request.parentID, !parentID.isEmpty else {
+            let roots = library.remoteFolderRoots()
+            let slice = Array(roots.dropFirst(offset).prefix(limit + 1))
+            let hasMore = slice.count > limit
+            let page = slice.prefix(limit).map { root -> BrowseItem in
+                .folder(
+                    id: RemoteFolderRef.encode(rootID: root.bookmark.id),
+                    name: root.bookmark.name,
+                    childHint: root.bookmark.displayPath
+                )
+            }
+            return (Array(page), hasMore)
+        }
+
+        guard let parsed = RemoteFolderRef.parse(parentID),
+              let listing = library.remoteFolderListing(rootID: parsed.rootID, components: parsed.components)
+        else { return ([], false) }
+
+        let slice = Array(listing.dropFirst(offset).prefix(limit + 1))
+        let hasMore = slice.count > limit
+        let page: [BrowseItem] = slice.prefix(limit).compactMap { entry in
+            switch entry.kind {
+            case .directory:
+                return .folder(
+                    id: RemoteFolderRef.childID(parent: parentID, directoryName: entry.name),
+                    name: entry.name,
+                    childHint: "Folder"
+                )
+            case .audioFile(let track):
+                return .track(TrackDTO(track: track))
+            }
+        }
+        return (page, hasMore)
     }
 
     static func search(query: String, limit: Int, library: LibraryService) async -> [TrackDTO] {
@@ -115,6 +160,16 @@ enum LibraryQueryService {
             let tracks = playlists.tracks(for: playlist, from: library.allTracks)
             guard let first = tracks.first else { return nil }
             return (first, tracks, .playlist(playlist.name))
+
+        case .folder(let id):
+            guard let parsed = RemoteFolderRef.parse(id),
+                  let url = library.remoteFolderURL(rootID: parsed.rootID, components: parsed.components),
+                  let playback = library.directoryPlaybackQueue(at: url)
+            else { return nil }
+            let name = parsed.components.last
+                ?? library.folders.first(where: { $0.id == parsed.rootID })?.name
+                ?? url.lastPathComponent
+            return (playback.track, playback.queue, .folder(name))
         }
     }
 

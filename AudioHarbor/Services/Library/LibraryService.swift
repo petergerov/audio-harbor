@@ -91,6 +91,29 @@ final class LibraryService {
         tracksByPath[path]
     }
 
+    /// Folder listing for remote — does not move the Mac Directories tab.
+    func remoteFolderRoots() -> [(bookmark: FolderBookmark, url: URL)] {
+        folders.compactMap { bookmark in
+            guard let url = accessibleFolderURLs[bookmark.id] else { return nil }
+            return (bookmark, url)
+        }
+    }
+
+    func remoteFolderListing(rootID: UUID, components: [String]) -> [FolderBrowseEntry]? {
+        guard let rootURL = accessibleFolderURLs[rootID] else { return nil }
+        let url = components.reduce(rootURL) { partial, component in
+            partial.appendingPathComponent(component, isDirectory: true)
+        }
+        return listFolderContents(at: url)
+    }
+
+    func remoteFolderURL(rootID: UUID, components: [String]) -> URL? {
+        guard let rootURL = accessibleFolderURLs[rootID] else { return nil }
+        return components.reduce(rootURL) { partial, component in
+            partial.appendingPathComponent(component, isDirectory: true)
+        }
+    }
+
     var allArtists: [String] { artistFacets.map(\.name) }
 
     var allYears: [Int] { yearFacets.compactMap { Int($0.name) } }

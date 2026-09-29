@@ -13,17 +13,19 @@ private enum RemotePane: String, CaseIterable, Identifiable {
 }
 
 private enum BrowseRoot: String, CaseIterable, Identifiable {
-    case albums, artists, playlists
+    case folders, albums, artists, playlists
     var id: String { rawValue }
     var title: String {
         switch self {
+        case .folders: "Dirs"
         case .albums: "Albums"
         case .artists: "Artists"
-        case .playlists: "Playlists"
+        case .playlists: "Lists"
         }
     }
     var scope: BrowseScope {
         switch self {
+        case .folders: .folders
         case .albums: .albums
         case .artists: .artists
         case .playlists: .playlists
@@ -44,7 +46,7 @@ struct RemoteControllerView: View {
     @State private var seekDraft: Double = 0
     @State private var isSeeking = false
     @State private var searchText = ""
-    @State private var browseRoot: BrowseRoot = .albums
+    @State private var browseRoot: BrowseRoot = .folders
     @State private var drill: BrowseDrill?
     @State private var tick = Date()
     @State private var searchTask: Task<Void, Never>?
@@ -331,12 +333,12 @@ struct RemoteControllerView: View {
             if let drill {
                 HStack {
                     Button {
-                        self.drill = nil
-                        reloadBrowseRoot()
+                        navigateBrowseBack(from: drill)
                     } label: {
                         Label(drill.title, systemImage: "chevron.left")
                             .font(HarborFont.title(13))
                             .foregroundStyle(HarborColor.amber)
+                            .lineLimit(1)
                     }
                     .buttonStyle(.plain)
                     Spacer()
@@ -463,6 +465,8 @@ struct RemoteControllerView: View {
                     iconTile("person.fill")
                 case .playlist:
                     iconTile("music.note.list")
+                case .folder:
+                    iconTile("folder.fill")
                 case .track:
                     iconTile("music.note")
                 }
@@ -531,10 +535,25 @@ struct RemoteControllerView: View {
         case let .playlist(id, name, _):
             drill = BrowseDrill(title: name, scope: .playlistTracks, parentID: id.uuidString)
             controller.browse(scope: .playlistTracks, parentID: id.uuidString)
+        case let .folder(id, name, _):
+            drill = BrowseDrill(title: name, scope: .folders, parentID: id)
+            controller.browse(scope: .folders, parentID: id)
         case .track(let dto):
             controller.play(cataloguePath: dto.cataloguePath)
             pane = .now
         }
+    }
+
+    private func navigateBrowseBack(from drill: BrowseDrill) {
+        if drill.scope == .folders, let parent = RemoteFolderRef.parentID(of: drill.parentID) {
+            let title = RemoteFolderRef.parse(parent)?.components.last
+                ?? browseRoot.title
+            self.drill = BrowseDrill(title: title, scope: .folders, parentID: parent)
+            controller.browse(scope: .folders, parentID: parent)
+            return
+        }
+        self.drill = nil
+        reloadBrowseRoot()
     }
 
     private func playAll(for drill: BrowseDrill) {
@@ -552,6 +571,9 @@ struct RemoteControllerView: View {
         case .artistTracks:
             controller.playArtist(name: drill.parentID)
             pane = .now
+        case .folders:
+            controller.playFolder(id: drill.parentID)
+            pane = .now
         default:
             break
         }
@@ -559,7 +581,11 @@ struct RemoteControllerView: View {
 
     private func reloadBrowseRoot() {
         drill = nil
-        controller.browse(scope: browseRoot.scope)
+        if browseRoot == .folders {
+            controller.browse(scope: .folders, parentID: nil)
+        } else {
+            controller.browse(scope: browseRoot.scope)
+        }
     }
 
     @ViewBuilder

@@ -131,6 +131,10 @@ final class RemoteController {
         send(.playSelection(selection: .artist(name: name)))
     }
 
+    func playFolder(id: String) {
+        send(.playSelection(selection: .folder(id: id)))
+    }
+
     func search(_ query: String) {
         send(.search(query: query, limit: 200))
     }
