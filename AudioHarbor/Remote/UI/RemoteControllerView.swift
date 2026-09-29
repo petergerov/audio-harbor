@@ -1,0 +1,599 @@
+import SwiftUI
+
+private enum RemotePane: String, CaseIterable, Identifiable {
+    case now, browse, queue
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .now: "Now"
+        case .browse: "Browse"
+        case .queue: "Queue"
+        }
+    }
+}
+
+private enum BrowseRoot: String, CaseIterable, Identifiable {
+    case albums, artists, playlists
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .albums: "Albums"
+        case .artists: "Artists"
+        case .playlists: "Playlists"
+        }
+    }
+    var scope: BrowseScope {
+        switch self {
+        case .albums: .albums
+        case .artists: .artists
+        case .playlists: .playlists
+        }
+    }
+}
+
+private struct BrowseDrill: Equatable {
+    var title: String
+    var scope: BrowseScope
+    var parentID: String
+}
+
+/// Remote Now Playing surface — controls a Harbor engine over the LAN.
+struct RemoteControllerView: View {
+    @Bindable var controller: RemoteController
+    @State private var pane: RemotePane = .now
+    @State private var seekDraft: Double = 0
+    @State private var isSeeking = false
+    @State private var searchText = ""
+    @State private var browseRoot: BrowseRoot = .albums
+    @State private var drill: BrowseDrill?
+    @State private var tick = Date()
+    @State private var searchTask: Task<Void, Never>?
+
+    private let tickTimer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        ReceiverChassis {
+            VStack(alignment: .leading, spacing: 10) {
+                header
+                switch controller.phase {
+                case .needsPairing:
+                    pairingPanel
+                case .connected:
+                    panePicker
+                    switch pane {
+                    case .now:
+                        VStack(alignment: .leading, spacing: 10) {
+                            compactNowPlaying
+                            searchPanel
+                        }
+                    case .browse:
+                        browsePanel
+                    case .queue:
+                        queuePanel
+                    }
+                case .connecting:
+                    ProgressView()
+                        .tint(HarborColor.amber)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                case .failed(let message):
+                    Text(message)
+                        .font(HarborFont.body(14))
+                        .foregroundStyle(HarborColor.ivoryDim)
+                    Button("Disconnect") { controller.disconnect() }
+                        .foregroundStyle(HarborColor.amber)
+                case .idle:
+                    Text("Not connected")
+                        .foregroundStyle(HarborColor.ivoryDim)
+                }
+            }
+        }
+        .onReceive(tickTimer) { tick = $0 }
+        .onChange(of: controller.phase) { _, phase in
+            if phase == .connected {
+                reloadBrowseRoot()
+            }
+        }
+        #if os(macOS)
+        .frame(minWidth: 440, minHeight: 640)
+        #endif
+    }
+
+    private var header: some View {
+        HStack(alignment: .center, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(controller.serverName ?? "Remote")
+                    .font(HarborFont.title(15))
+                    .foregroundStyle(HarborColor.ivory)
+                Text(controller.statusText)
+                    .font(HarborFont.mono(10))
+                    .foregroundStyle(HarborColor.ivoryDim)
+                    .lineLimit(1)
+            }
+            Spacer()
+            if controller.phase != .idle {
+                Button("Disconnect") { controller.disconnect() }
+                    .buttonStyle(.plain)
+                    .font(HarborFont.body(12))
+                    .foregroundStyle(HarborColor.amber)
+            }
+        }
+    }
+
+    private var panePicker: some View {
+        HStack(spacing: 0) {
+            ForEach(RemotePane.allCases) { item in
+                Button {
+                    pane = item
+                    if item == .browse, controller.browseItems.isEmpty {
+                        reloadBrowseRoot()
+                    }
+                } label: {
+                    Text(item.title)
+                        .font(HarborFont.title(13))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .foregroundStyle(pane == item ? HarborColor.chassis : HarborColor.ivory)
+                        .background(pane == item ? HarborColor.amber : HarborColor.faceplateLift)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private var pairingPanel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Enter the 6-digit code shown under Settings → Remote on the Mac.")
+                .font(HarborFont.body(13))
+                .foregroundStyle(HarborColor.ivoryDim)
+
+            TextField("000000", text: $controller.pairingCodeInput)
+                .textFieldStyle(.plain)
+                .font(HarborFont.mono(28))
+                .tracking(6)
+                .foregroundStyle(HarborColor.amber)
+                .padding(12)
+                .background(HarborColor.faceplateLift)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                #if os(iOS)
+                .keyboardType(.numberPad)
+                #endif
+
+            Button {
+                controller.submitPairingCode()
+            } label: {
+                Text("Pair")
+                    .font(HarborFont.title(14))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .foregroundStyle(HarborColor.chassis)
+                    .background(HarborColor.amber)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(controller.pairingCodeInput.trimmingCharacters(in: .whitespacesAndNewlines).count < 6)
+        }
+        .padding(.top, 8)
+    }
+
+    private var compactNowPlaying: some View {
+        let snap = controller.nowPlaying
+        let track = snap?.track
+        let position = isSeeking ? seekDraft : controller.displayedPosition
+        _ = tick
+
+        return VStack(spacing: 8) {
+            HStack(spacing: 12) {
+                artwork(for: track?.artworkHash, large: false)
+                    .frame(width: 56, height: 56)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(track?.title ?? "Nothing playing")
+                        .font(HarborFont.title(14))
+                        .foregroundStyle(HarborColor.ivory)
+                        .lineLimit(1)
+                    Text(track.map { "\($0.artist) — \($0.album)" } ?? " ")
+                        .font(HarborFont.body(11))
+                        .foregroundStyle(HarborColor.ivoryDim)
+                        .lineLimit(1)
+                    if let path = snap?.pathLabel {
+                        let format = snap?.activeFormatLabel
+                        Text([path, format].compactMap { $0 }.joined(separator: " · "))
+                            .font(HarborFont.mono(10))
+                            .foregroundStyle(HarborColor.ivoryDim)
+                            .lineLimit(1)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                HStack(spacing: 6) {
+                    compactTransport("backward.end.fill") { controller.previous() }
+                    compactTransport(controller.isPlaying ? "pause.fill" : "play.fill", emphasized: true) {
+                        controller.togglePlayPause()
+                    }
+                    compactTransport("forward.end.fill") { controller.next() }
+                }
+            }
+
+            HStack(spacing: 8) {
+                Text(formatTime(position))
+                    .font(HarborFont.mono(10))
+                    .foregroundStyle(HarborColor.ivoryDim)
+                    .frame(width: 36, alignment: .leading)
+                Slider(
+                    value: Binding(
+                        get: { position },
+                        set: { seekDraft = $0; isSeeking = true }
+                    ),
+                    in: 0...max(1, snap?.duration ?? 1),
+                    onEditingChanged: { editing in
+                        if !editing {
+                            controller.seek(to: seekDraft)
+                            isSeeking = false
+                        }
+                    }
+                )
+                .tint(HarborColor.amber)
+                Text(formatTime(snap?.duration ?? 0))
+                    .font(HarborFont.mono(10))
+                    .foregroundStyle(HarborColor.ivoryDim)
+                    .frame(width: 36, alignment: .trailing)
+            }
+        }
+        .padding(10)
+        .background(HarborColor.faceplateLift)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private var searchPanel: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(HarborColor.ivoryDim)
+                TextField("Search whole catalogue", text: $searchText)
+                    .textFieldStyle(.plain)
+                    .foregroundStyle(HarborColor.ivory)
+                    .onChange(of: searchText) { _, newValue in
+                        scheduleSearch(newValue)
+                    }
+                    .onSubmit { controller.search(searchText) }
+                if !searchText.isEmpty {
+                    Button("Go") { controller.search(searchText) }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(HarborColor.amber)
+                    Button {
+                        searchTask?.cancel()
+                        searchText = ""
+                        controller.clearSearch()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(HarborColor.ivoryDim)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(10)
+            .background(HarborColor.faceplateLift)
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+            if controller.searchResults.isEmpty {
+                Text(searchText.isEmpty ? "Search the whole Mac catalogue" : "No matches")
+                    .font(HarborFont.body(13))
+                    .foregroundStyle(HarborColor.ivoryDim)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                Text("\(controller.searchResults.count) match\(controller.searchResults.count == 1 ? "" : "es")")
+                    .font(HarborFont.mono(10))
+                    .foregroundStyle(HarborColor.ivoryDim)
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        ForEach(controller.searchResults, id: \.cataloguePath) { track in
+                            trackRow(track)
+                            Divider().overlay(HarborColor.aluminumDark.opacity(0.4))
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    private func scheduleSearch(_ query: String) {
+        searchTask?.cancel()
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            controller.clearSearch()
+            return
+        }
+        searchTask = Task {
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            guard !Task.isCancelled else { return }
+            controller.search(trimmed)
+        }
+    }
+
+    private func compactTransport(_ systemName: String, emphasized: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: emphasized ? 16 : 13, weight: .semibold))
+                .foregroundStyle(emphasized ? HarborColor.chassis : HarborColor.ivory)
+                .frame(width: emphasized ? 36 : 30, height: emphasized ? 36 : 30)
+                .background(emphasized ? HarborColor.amber : HarborColor.faceplate)
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var browsePanel: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if let drill {
+                HStack {
+                    Button {
+                        self.drill = nil
+                        reloadBrowseRoot()
+                    } label: {
+                        Label(drill.title, systemImage: "chevron.left")
+                            .font(HarborFont.title(13))
+                            .foregroundStyle(HarborColor.amber)
+                    }
+                    .buttonStyle(.plain)
+                    Spacer()
+                    Button("Play all") {
+                        playAll(for: drill)
+                    }
+                    .buttonStyle(.plain)
+                    .font(HarborFont.body(13))
+                    .foregroundStyle(HarborColor.amber)
+                }
+            } else {
+                HStack(spacing: 0) {
+                    ForEach(BrowseRoot.allCases) { root in
+                        Button {
+                            browseRoot = root
+                            reloadBrowseRoot()
+                        } label: {
+                            Text(root.title)
+                                .font(HarborFont.body(12))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 7)
+                                .foregroundStyle(browseRoot == root ? HarborColor.amber : HarborColor.ivoryDim)
+                                .background(
+                                    browseRoot == root
+                                        ? HarborColor.amber.opacity(0.12)
+                                        : Color.clear
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .background(HarborColor.faceplateLift)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
+
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ForEach(controller.browseItems, id: \.listID) { item in
+                        browseRow(item)
+                        Divider().overlay(HarborColor.aluminumDark.opacity(0.4))
+                    }
+                    if controller.browseHasMore {
+                        Button("Load more") {
+                            controller.loadMoreBrowse()
+                        }
+                        .buttonStyle(.plain)
+                        .font(HarborFont.body(13))
+                        .foregroundStyle(HarborColor.amber)
+                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+            }
+        }
+    }
+
+    private var queuePanel: some View {
+        let queue = controller.queue
+        return Group {
+            if let queue, !queue.tracks.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("\(queue.sourceKind)\(queue.sourceName.map { " · \($0)" } ?? "")")
+                        .font(HarborFont.body(12))
+                        .foregroundStyle(HarborColor.ivoryDim)
+
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            ForEach(Array(queue.tracks.enumerated()), id: \.element.cataloguePath) { index, track in
+                                Button {
+                                    controller.playQueueIndex(index)
+                                } label: {
+                                    HStack(spacing: 10) {
+                                        Text("\(index + 1)")
+                                            .font(HarborFont.mono(11))
+                                            .foregroundStyle(HarborColor.ivoryDim)
+                                            .frame(width: 28, alignment: .trailing)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(track.title)
+                                                .font(HarborFont.body(13))
+                                                .foregroundStyle(
+                                                    index == queue.index ? HarborColor.amber : HarborColor.ivory
+                                                )
+                                            Text(track.artist)
+                                                .font(HarborFont.body(11))
+                                                .foregroundStyle(HarborColor.ivoryDim)
+                                        }
+                                        Spacer()
+                                        if index == queue.index {
+                                            Image(systemName: controller.isPlaying ? "speaker.wave.2.fill" : "pause.fill")
+                                                .font(.system(size: 11))
+                                                .foregroundStyle(HarborColor.amber)
+                                        }
+                                    }
+                                    .padding(.vertical, 8)
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                Divider().overlay(HarborColor.aluminumDark.opacity(0.4))
+                            }
+                        }
+                    }
+                }
+            } else {
+                Text("Queue is empty")
+                    .font(HarborFont.body(13))
+                    .foregroundStyle(HarborColor.ivoryDim)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func browseRow(_ item: BrowseItem) -> some View {
+        Button {
+            handleBrowseTap(item)
+        } label: {
+            HStack(spacing: 12) {
+                switch item {
+                case let .album(_, _, _, _, hash):
+                    artwork(for: hash, large: false)
+                        .frame(width: 44, height: 44)
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                case .artist:
+                    iconTile("person.fill")
+                case .playlist:
+                    iconTile("music.note.list")
+                case .track:
+                    iconTile("music.note")
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.title)
+                        .font(HarborFont.body(13))
+                        .foregroundStyle(HarborColor.ivory)
+                        .lineLimit(1)
+                    Text(item.subtitle)
+                        .font(HarborFont.body(11))
+                        .foregroundStyle(HarborColor.ivoryDim)
+                        .lineLimit(1)
+                }
+                Spacer()
+                if case .track = item {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(HarborColor.amber)
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(HarborColor.aluminumDark)
+                }
+            }
+            .padding(.vertical, 8)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func trackRow(_ track: TrackDTO) -> some View {
+        Button {
+            controller.play(cataloguePath: track.cataloguePath)
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(track.title)
+                        .font(HarborFont.body(13))
+                        .foregroundStyle(HarborColor.ivory)
+                        .lineLimit(1)
+                    Text("\(track.artist) — \(track.album)")
+                        .font(HarborFont.body(11))
+                        .foregroundStyle(HarborColor.ivoryDim)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Image(systemName: "play.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(HarborColor.amber)
+            }
+            .padding(.vertical, 8)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func handleBrowseTap(_ item: BrowseItem) {
+        switch item {
+        case let .album(id, title, _, _, _):
+            drill = BrowseDrill(title: title, scope: .albumTracks, parentID: id.uuidString)
+            controller.browse(scope: .albumTracks, parentID: id.uuidString)
+        case let .artist(name, _):
+            drill = BrowseDrill(title: name, scope: .artistTracks, parentID: name)
+            controller.browse(scope: .artistTracks, parentID: name)
+        case let .playlist(id, name, _):
+            drill = BrowseDrill(title: name, scope: .playlistTracks, parentID: id.uuidString)
+            controller.browse(scope: .playlistTracks, parentID: id.uuidString)
+        case .track(let dto):
+            controller.play(cataloguePath: dto.cataloguePath)
+            pane = .now
+        }
+    }
+
+    private func playAll(for drill: BrowseDrill) {
+        switch drill.scope {
+        case .albumTracks:
+            if let id = UUID(uuidString: drill.parentID) {
+                controller.play(albumID: id)
+                pane = .now
+            }
+        case .playlistTracks:
+            if let id = UUID(uuidString: drill.parentID) {
+                controller.play(playlistID: id)
+                pane = .now
+            }
+        case .artistTracks:
+            controller.playArtist(name: drill.parentID)
+            pane = .now
+        default:
+            break
+        }
+    }
+
+    private func reloadBrowseRoot() {
+        drill = nil
+        controller.browse(scope: browseRoot.scope)
+    }
+
+    @ViewBuilder
+    private func artwork(for hash: String?, large: Bool) -> some View {
+        let data = hash.flatMap { controller.artworkByHash[$0] }
+        if let data, let image = Image(artworkData: data) {
+            image
+                .resizable()
+                .scaledToFill()
+        } else {
+            ZStack {
+                HarborColor.faceplate
+                Image(systemName: "hifispeaker.fill")
+                    .font(.system(size: large ? 22 : 16))
+                    .foregroundStyle(HarborColor.aluminumDark)
+            }
+        }
+    }
+
+    private func iconTile(_ systemName: String) -> some View {
+        ZStack {
+            HarborColor.faceplateLift
+            Image(systemName: systemName)
+                .font(.system(size: 16))
+                .foregroundStyle(HarborColor.aluminumDark)
+        }
+        .frame(width: 44, height: 44)
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+    }
+
+    private func formatTime(_ t: TimeInterval) -> String {
+        let total = Int(t.rounded(.down))
+        let m = total / 60
+        let s = total % 60
+        return String(format: "%d:%02d", m, s)
+    }
+}
