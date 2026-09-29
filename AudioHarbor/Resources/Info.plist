@@ -12,5 +12,11 @@
 	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Audio Harbor uses the local network so an iPhone can control playback on this Mac.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_audioharbor._tcp</string>
+	</array>
 </dict>
 </plist>

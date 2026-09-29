@@ -75,6 +75,11 @@ final class LibraryService {
 
     var allTracks: [Track] { tracks }
 
+    /// Lookup by catalogue identity — used by remote play / browse.
+    func track(forCataloguePath path: String) -> Track? {
+        tracksByPath[path]
+    }
+
     var allArtists: [String] { artistFacets.map(\.name) }
 
     var allYears: [Int] { yearFacets.compactMap { Int($0.name) } }

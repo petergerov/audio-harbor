@@ -9,6 +9,8 @@ final class AppModel {
     let playlists: PlaylistService
     let effects: EffectHost
     let license: LicenseService
+    /// LAN remote control (Mac engine). Created after `self` exists.
+    private(set) var remote: RemoteControlService!
 
     var selectedTab: AppTab = .library
     var isRebuildWarningPresented = false
@@ -34,6 +36,7 @@ final class AppModel {
         self.license = license
         self.playback = PlaybackService(engine: engine, license: license)
         self.playlists = PlaylistService()
+        self.remote = RemoteControlService(appModel: self)
     }
 }
 

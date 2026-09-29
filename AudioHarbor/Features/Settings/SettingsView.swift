@@ -58,6 +58,12 @@ struct SettingsView: View {
                         directoriesSection
                     }
 
+                    #if os(macOS)
+                    panel(title: "Remote") {
+                        RemoteSettingsSection(remote: appModel.remote)
+                    }
+                    #endif
+
                     panel(title: "About") {
                         LabeledContent("App", value: Brand.name)
                             .foregroundStyle(HarborColor.ivory)
