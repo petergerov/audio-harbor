@@ -12,7 +12,7 @@ final class RemoteCommandRouter {
         self.appModel = appModel
     }
 
-    func handle(_ message: ClientMessage, requestID: UInt32?) -> RouterReply {
+    func handle(_ message: ClientMessage, requestID: UInt32?) async -> RouterReply {
         switch message {
         case .hello, .subscribe:
             // Handled by the session before routing.
@@ -45,7 +45,7 @@ final class RemoteCommandRouter {
             )
 
         case .search(let query, let limit):
-            let tracks = LibraryQueryService.search(
+            let tracks = await LibraryQueryService.search(
                 query: query,
                 limit: limit,
                 library: appModel.library

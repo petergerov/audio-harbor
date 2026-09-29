@@ -58,11 +58,13 @@ struct SettingsView: View {
                         directoriesSection
                     }
 
-                    #if os(macOS)
                     panel(title: "Remote") {
-                        RemoteSettingsSection(remote: appModel.remote)
+                        RemoteSettingsSection(
+                            remote: appModel.remote,
+                            browser: appModel.remoteBrowser,
+                            controller: appModel.remoteController
+                        )
                     }
-                    #endif
 
                     panel(title: "About") {
                         LabeledContent("App", value: Brand.name)

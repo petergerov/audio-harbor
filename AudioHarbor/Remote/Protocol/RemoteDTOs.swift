@@ -175,6 +175,33 @@ enum BrowseItem: Codable, Sendable, Equatable {
             try container.encode(dto, forKey: .track)
         }
     }
+
+    var listID: String {
+        switch self {
+        case let .album(id, _, _, _, _): "album:\(id.uuidString)"
+        case let .artist(name, _): "artist:\(name)"
+        case let .playlist(id, _, _): "playlist:\(id.uuidString)"
+        case .track(let dto): "track:\(dto.cataloguePath)"
+        }
+    }
+
+    var title: String {
+        switch self {
+        case let .album(_, title, _, _, _): title
+        case let .artist(name, _): name
+        case let .playlist(_, name, _): name
+        case .track(let dto): dto.title
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case let .album(_, _, artist, trackCount, _): "\(artist) · \(trackCount)"
+        case let .artist(_, trackCount): "\(trackCount) tracks"
+        case let .playlist(_, _, trackCount): "\(trackCount) tracks"
+        case .track(let dto): "\(dto.artist) — \(dto.album)"
+        }
+    }
 }
 
 enum PlaySelection: Codable, Sendable, Equatable {

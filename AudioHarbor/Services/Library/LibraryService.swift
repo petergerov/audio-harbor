@@ -73,6 +73,17 @@ final class LibraryService {
         return hits.sorted().compactMap { tracks.indices.contains($0) ? tracks[$0] : nil }
     }
 
+    /// Full-catalogue search for remote / APIs — does not touch the Mac UI search field.
+    func searchAllTracks(query: String, limit: Int = 200) -> [Track] {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return [] }
+        let cap = min(max(1, limit), 500)
+        guard let hits = searchIndex.matchingIndices(query: q, trackCount: tracks.count) else {
+            return []
+        }
+        return hits.sorted().prefix(cap).compactMap { tracks.indices.contains($0) ? tracks[$0] : nil }
+    }
+
     var allTracks: [Track] { tracks }
 
     /// Lookup by catalogue identity — used by remote play / browse.

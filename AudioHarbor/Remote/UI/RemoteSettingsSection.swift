@@ -1,10 +1,50 @@
 import SwiftUI
 
-/// Settings panel: enable LAN remote, show pairing code, manage paired devices.
+/// Settings panel: enable LAN remote (Mac), discover & control other Harbors (all platforms).
 struct RemoteSettingsSection: View {
     @Bindable var remote: RemoteControlService
+    @Bindable var browser: RemoteBrowser
+    @Bindable var controller: RemoteController
+    @State private var isControllerPresented = false
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            #if os(macOS)
+            serverBlock
+            Divider().overlay(HarborColor.aluminumDark.opacity(0.45))
+            #endif
+
+            controlNearbyBlock
+
+            Text(footerText)
+                .font(HarborFont.body(12))
+                .foregroundStyle(HarborColor.ivoryDim)
+        }
+        .onAppear { browser.start() }
+        .onDisappear {
+            if !isControllerPresented {
+                browser.stop()
+            }
+        }
+        .sheet(isPresented: $isControllerPresented) {
+            RemoteControllerView(controller: controller)
+                #if os(macOS)
+                .frame(minWidth: 440, minHeight: 640)
+                #endif
+        }
+    }
+
+    private var footerText: String {
+        #if os(macOS)
+        "LAN only for now. Pairing uses a one-time code; transport encryption comes next."
+        #else
+        "Find a Mac running Audio Harbor with Remote enabled. Music plays on the Mac DAC — this phone steers."
+        #endif
+    }
+
+    #if os(macOS)
+    @ViewBuilder
+    private var serverBlock: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Control this Mac from another Audio Harbor on the same network. Music still plays here on the DAC.")
                 .font(HarborFont.body(13))
@@ -30,10 +70,6 @@ struct RemoteSettingsSection: View {
                 pairingBlock
                 pairedDevicesBlock
             }
-
-            Text("LAN only for now. Pairing uses a one-time code; transport encryption comes next.")
-                .font(HarborFont.body(12))
-                .foregroundStyle(HarborColor.ivoryDim)
         }
     }
 
@@ -118,5 +154,70 @@ struct RemoteSettingsSection: View {
             }
             .padding(.top, 4)
         }
+    }
+    #endif
+
+    @ViewBuilder
+    private var controlNearbyBlock: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Control nearby")
+                    .font(HarborFont.title(14))
+                    .foregroundStyle(HarborColor.ivory)
+                Spacer()
+                if controller.phase == .connected || controller.phase == .needsPairing {
+                    Button("Open Remote") {
+                        isControllerPresented = true
+                    }
+                    .buttonStyle(.plain)
+                    .font(HarborFont.body(13))
+                    .foregroundStyle(HarborColor.amber)
+                }
+            }
+
+            Text(browser.statusText)
+                .font(HarborFont.mono(11))
+                .foregroundStyle(HarborColor.ivoryDim)
+
+            if browser.servers.isEmpty {
+                Text("Turn on Allow Remote Control on the Mac you want to steer.")
+                    .font(HarborFont.body(13))
+                    .foregroundStyle(HarborColor.ivoryDim)
+            } else {
+                ForEach(browser.servers) { server in
+                    Button {
+                        controller.connect(to: server)
+                        isControllerPresented = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "hifispeaker.fill")
+                                .foregroundStyle(HarborColor.amber)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(server.name)
+                                    .font(HarborFont.body(13))
+                                    .foregroundStyle(HarborColor.ivory)
+                                Text(subtitle(for: server))
+                                    .font(HarborFont.body(11))
+                                    .foregroundStyle(HarborColor.ivoryDim)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(HarborColor.aluminumDark)
+                        }
+                        .padding(.vertical, 6)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private func subtitle(for server: RemoteServerEndpoint) -> String {
+        if let id = server.serverID, RemoteClientStore.token(forServerID: id) != nil {
+            return "Paired · tap to control"
+        }
+        return "Tap to pair"
     }
 }

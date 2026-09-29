@@ -62,16 +62,28 @@ enum LibraryQueryService {
         }
     }
 
-    static func search(query: String, limit: Int, library: LibraryService) -> [TrackDTO] {
+    static func search(query: String, limit: Int, library: LibraryService) async -> [TrackDTO] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return [] }
-        let cap = min(max(1, limit), 100)
-        // Snapshot without mutating the UI's searchQuery.
-        let previous = library.searchQuery
-        library.searchQuery = trimmed
-        let hits = Array(library.filteredTracks.prefix(cap)).map(TrackDTO.init(track:))
-        library.searchQuery = previous
-        return hits
+        let cap = min(max(1, limit), 500)
+
+        // FTS over the whole on-disk catalogue (same index the Mac uses).
+        let paths = await CatalogueIndexStore.shared.searchPaths(query: trimmed)
+        if !paths.isEmpty {
+            var seen = Set<String>()
+            var results: [TrackDTO] = []
+            results.reserveCapacity(min(cap, paths.count))
+            for path in paths {
+                guard seen.insert(path).inserted else { continue }
+                guard let track = library.track(forCataloguePath: path) else { continue }
+                results.append(TrackDTO(track: track))
+                if results.count >= cap { break }
+            }
+            if !results.isEmpty { return results }
+        }
+
+        // Demo library / empty FTS: fall back to the in-memory catalogue index.
+        return library.searchAllTracks(query: trimmed, limit: cap).map(TrackDTO.init(track:))
     }
 
     static func resolve(

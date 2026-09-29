@@ -165,10 +165,8 @@ actor RemoteSession {
                 await send(.error(code: .unauthorized, message: "Not paired"), requestID: requestID)
                 return
             }
-            let reply = await MainActor.run {
-                router.handle(envelope.body, requestID: requestID)
-            }
-            switch reply {
+            let routed = await router.handle(envelope.body, requestID: requestID)
+            switch routed {
             case .none:
                 break
             case let .message(message, id):

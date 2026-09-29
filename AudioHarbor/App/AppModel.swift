@@ -11,6 +11,8 @@ final class AppModel {
     let license: LicenseService
     /// LAN remote control (Mac engine). Created after `self` exists.
     private(set) var remote: RemoteControlService!
+    let remoteBrowser = RemoteBrowser()
+    let remoteController = RemoteController()
 
     var selectedTab: AppTab = .library
     var isRebuildWarningPresented = false

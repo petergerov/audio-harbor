@@ -1,6 +1,9 @@
 import Foundation
 import Network
 import Observation
+#if os(iOS)
+import UIKit
+#endif
 
 /// Owns the Bonjour listener, pairing UI state, and snapshot fan-out.
 @Observable
@@ -41,7 +44,11 @@ final class RemoteControlService {
     }
 
     var serverDisplayName: String {
+        #if os(macOS)
         Host.current().localizedName ?? "Audio Harbor"
+        #else
+        UIDevice.current.name
+        #endif
     }
 
     func setEnabled(_ enabled: Bool) {
