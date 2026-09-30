@@ -2,7 +2,6 @@ import Foundation
 import Security
 
 /// Application-layer pairing for LAN remote.
-/// Slice 1: 6-digit code → 32-byte token in Keychain. TLS-PSK lands before public release.
 enum RemotePairing {
     static let codeTTL: TimeInterval = 3 * 60
     static let maxFailedAttempts = 5
@@ -31,34 +30,52 @@ enum RemotePairing {
     }
 }
 
-/// Persists paired remote tokens. Mirrors the LicenseService Keychain style.
+/// Persists paired remote tokens on the Mac engine.
+/// UserDefaults is primary so re-pairing survives debug runs; Keychain is mirrored.
 enum RemotePairingStore {
-    private static let service = "com.gerov.audioharbor.remote.pairing"
-    private static let devicesAccount = "paired-devices"
-    private static let tokenAccountPrefix = "token."
+    private static let defaults = UserDefaults.standard
+    private static let devicesKey = "audioharbor.remote.server.pairedDevices"
+    private static let tokenPrefix = "audioharbor.remote.server.token."
+    private static let keychainService = "com.gerov.audioharbor.remote.pairing"
 
     static func loadDevices() -> [RemotePairing.PairedDevice] {
-        guard let data = readData(account: devicesAccount),
-              let devices = try? JSONDecoder().decode([RemotePairing.PairedDevice].self, from: data)
-        else { return [] }
-        return devices
+        if let data = defaults.data(forKey: devicesKey),
+           let devices = try? JSONDecoder().decode([RemotePairing.PairedDevice].self, from: data) {
+            return devices
+        }
+        if let data = keychainRead(account: "paired-devices"),
+           let devices = try? JSONDecoder().decode([RemotePairing.PairedDevice].self, from: data) {
+            defaults.set(data, forKey: devicesKey)
+            return devices
+        }
+        return []
     }
 
     static func saveDevices(_ devices: [RemotePairing.PairedDevice]) {
         guard let data = try? JSONEncoder().encode(devices) else { return }
-        writeData(data, account: devicesAccount)
+        defaults.set(data, forKey: devicesKey)
+        keychainWrite(data, account: "paired-devices")
     }
 
     static func storeToken(_ token: Data, for clientID: UUID) {
-        writeData(token, account: tokenAccountPrefix + clientID.uuidString)
+        defaults.set(token, forKey: tokenPrefix + clientID.uuidString)
+        keychainWrite(token, account: "token." + clientID.uuidString)
     }
 
     static func token(for clientID: UUID) -> Data? {
-        readData(account: tokenAccountPrefix + clientID.uuidString)
+        if let data = defaults.data(forKey: tokenPrefix + clientID.uuidString), !data.isEmpty {
+            return data
+        }
+        if let data = keychainRead(account: "token." + clientID.uuidString), !data.isEmpty {
+            defaults.set(data, forKey: tokenPrefix + clientID.uuidString)
+            return data
+        }
+        return nil
     }
 
     static func revoke(clientID: UUID) {
-        delete(account: tokenAccountPrefix + clientID.uuidString)
+        defaults.removeObject(forKey: tokenPrefix + clientID.uuidString)
+        keychainDelete(account: "token." + clientID.uuidString)
         var devices = loadDevices()
         devices.removeAll { $0.id == clientID }
         saveDevices(devices)
@@ -66,7 +83,8 @@ enum RemotePairingStore {
 
     static func revokeAll() {
         for device in loadDevices() {
-            delete(account: tokenAccountPrefix + device.id.uuidString)
+            defaults.removeObject(forKey: tokenPrefix + device.id.uuidString)
+            keychainDelete(account: "token." + device.id.uuidString)
         }
         saveDevices([])
     }
@@ -79,12 +97,12 @@ enum RemotePairingStore {
         saveDevices(devices)
     }
 
-    // MARK: - Keychain
+    // MARK: - Keychain mirror
 
-    private static func readData(account: String) -> Data? {
+    private static func keychainRead(account: String) -> Data? {
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
+            kSecAttrService as String: keychainService,
             kSecAttrAccount as String: account,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
@@ -93,15 +111,14 @@ enum RemotePairingStore {
         query[kSecUseDataProtectionKeychain as String] = true
         #endif
         var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
-        guard status == errSecSuccess else { return nil }
+        guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess else { return nil }
         return item as? Data
     }
 
-    private static func writeData(_ data: Data, account: String) {
+    private static func keychainWrite(_ data: Data, account: String) {
         var base: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
+            kSecAttrService as String: keychainService,
             kSecAttrAccount as String: account
         ]
         #if os(macOS)
@@ -114,10 +131,10 @@ enum RemotePairingStore {
         SecItemAdd(add as CFDictionary, nil)
     }
 
-    private static func delete(account: String) {
+    private static func keychainDelete(account: String) {
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
+            kSecAttrService as String: keychainService,
             kSecAttrAccount as String: account
         ]
         #if os(macOS)

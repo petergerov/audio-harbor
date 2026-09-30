@@ -182,7 +182,7 @@ struct RemoteHomeView: View {
     }
 
     private func subtitle(for server: RemoteServerEndpoint) -> String {
-        if let id = server.serverID, RemoteClientStore.token(forServerID: id) != nil {
+        if RemoteClientStore.isPaired(with: server) {
             return "Paired · tap to control"
         }
         return "Tap to pair with a code"

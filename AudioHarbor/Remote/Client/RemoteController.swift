@@ -67,6 +67,10 @@ final class RemoteController {
             if let id = server.serverID, let token = RemoteClientStore.token(forServerID: id) {
                 return .token(token)
             }
+            if let match = RemoteClientStore.tokenMatching(serverName: server.name) {
+                serverID = match.serverID
+                return .token(match.token)
+            }
             return nil
         }()
 
@@ -229,13 +233,16 @@ final class RemoteController {
             }
 
             if let preferredAuth {
+                statusText = "Authenticating…"
                 await sendHello(connection: connection, auth: preferredAuth, serverID: serverID)
-                if case .token = preferredAuth {
-                    await finishAuthenticated(connection: connection)
-                }
+                // Wait for `.paired` before subscribing — do not assume token success.
             } else if let token = RemoteClientStore.token(forServerID: serverID) {
+                statusText = "Authenticating…"
                 await sendHello(connection: connection, auth: .token(token), serverID: serverID)
-                await finishAuthenticated(connection: connection)
+            } else if let match = RemoteClientStore.tokenMatching(serverName: name) {
+                self.serverID = match.serverID
+                statusText = "Authenticating…"
+                await sendHello(connection: connection, auth: .token(match.token), serverID: match.serverID)
             } else {
                 phase = .needsPairing
                 statusText = "Enter the pairing code from the Mac"
@@ -276,7 +283,12 @@ final class RemoteController {
 
         case .error(let code, let message):
             if code == .unauthorized {
-                if let serverID { RemoteClientStore.forget(serverID: serverID) }
+                // Only drop the stored token when the hello auth itself was rejected.
+                if message.localizedCaseInsensitiveContains("token")
+                    || message.localizedCaseInsensitiveContains("pairing code")
+                {
+                    if let serverID { RemoteClientStore.forget(serverID: serverID) }
+                }
                 didAuthenticate = false
                 phase = .needsPairing
                 statusText = message

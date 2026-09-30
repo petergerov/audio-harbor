@@ -130,12 +130,11 @@ actor RemoteSession {
                 auth: auth
             )
             switch result {
-            case .ok(let token, let newlyPaired):
+            case .ok(let token, _):
                 authenticated = true
                 self.clientID = clientID
-                if newlyPaired {
-                    await send(.paired(token: token), requestID: requestID)
-                }
+                // Always ack so the client can subscribe only after auth is confirmed.
+                await send(.paired(token: token), requestID: requestID)
             case .lockedOut:
                 await send(
                     .error(code: .busy, message: "Too many failed attempts — try again shortly"),

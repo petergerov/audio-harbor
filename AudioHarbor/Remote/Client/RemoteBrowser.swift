@@ -22,7 +22,10 @@ final class RemoteBrowser {
 
     func start() {
         guard browser == nil else { return }
-        let descriptor = NWBrowser.Descriptor.bonjour(type: RemoteProtocol.serviceType, domain: "local.")
+        let descriptor = NWBrowser.Descriptor.bonjourWithTXTRecord(
+            type: RemoteProtocol.serviceType,
+            domain: "local."
+        )
         let browser = NWBrowser(for: descriptor, using: .tcp)
         browser.stateUpdateHandler = { [weak self] state in
             Task { @MainActor in
