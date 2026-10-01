@@ -309,13 +309,6 @@ struct LibraryView: View {
                         model.playDirectory(url, name: appModel.library.folderBreadcrumb)
                     }
                 }
-
-                Button("Directories") {
-                    appModel.library.resetFolderBrowseToRoots()
-                }
-                .buttonStyle(.plain)
-                .font(HarborFont.panel(11))
-                .foregroundStyle(HarborColor.amber)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
