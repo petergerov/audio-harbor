@@ -39,13 +39,17 @@
 - [x] Search
 - [x] Simple playlists (local)
 - [x] M3U / M3U8 playlist import and export
+- [x] Add a directory, album, artist or the Deck queue to a playlist or label (right-click)
+- [x] Album artist grouping; untagged compilations stay one album
+- [x] Cover art from the file, else from the album folder (`cover` / `folder` / `front`)
 
 ### UI / UX
 - [x] SwiftUI multiplatform shell (Mac + iPhone; iPad adaptive)
 - [x] Three primary surfaces: Library · Now Playing · Settings
 - [x] Large artwork Now Playing, minimal chrome
 - [x] Dark, quiet visual language (no dashboard clutter)
-- [x] Keyboard shortcuts on Mac (space, arrows, ⌘O)
+- [x] Keyboard shortcuts on Mac (Space, ⌘← / ⌘→, ⌘O; ⌘1 Catalogue, ⌘2 Playlists, ⌘3 Deck, ⌘, Settings)
+- [x] Play from the Catalogue without leaving it; ⌘-click, *Play and Show Deck* or the mini player open the Deck
 
 ### Settings (MVP-thin)
 - [x] Output device (Mac)

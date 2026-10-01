@@ -4,12 +4,14 @@ Eine App, zwei Plattformen, **ein** Eintrag in App Store Connect:
 
 | Plattform | Rolle | Release |
 |---|---|---|
-| **macOS** | Der Player: Bibliothek, Deck, Exclusive / DoP, Rack. Spielt auf dem DAC. | **1.0.0** zuerst, allein (Branch `release/REL_1.0.0`, Build 16, **ohne** Remote) |
-| **iOS** (iPhone) | Die Fernbedienung: findet den Mac per Bonjour, koppelt per 6-stelligem Code, steuert Wiedergabe, Queue, Suche und die Lautstärke des DAC. Spielt selbst nichts. | Zusammen mit **Mac 1.1.0**, sobald Mac 1.0.0 live ist — siehe [§ 11](#11-iphone-remote--mac-110-zweite-einreichung) |
+| **macOS** | Der Player: Bibliothek, Deck, Exclusive / DoP, Rack. Spielt auf dem DAC. | **1.1.0** — erste Mac-Version, mit Remote-Server |
+| **iOS** (iPhone) | Die Fernbedienung: findet den Mac per Bonjour, koppelt per 6-stelligem Code, steuert Wiedergabe, Queue, Suche und die Lautstärke des DAC. Spielt selbst nichts. | **1.1.0** — erste iOS-Version, siehe [§ 11](#11-iphone-remote) |
 
-Warum diese Reihenfolge: Der Remote-Server steckt erst auf `develop` (ab `75625e5`), nicht in Mac 1.0.0. Ein iPhone-Remote ohne einen Mac im Store, mit dem er spricht, ist für Review und Kunden wertlos. Also: Mac 1.0.0 live → dann Mac 1.1.0 (Remote-Server + DAC-Lautstärke) und iOS 1.0 als **eine** Einreichung.
+**Beide gehen in einer Einreichung raus.** Review bekommt Mac und iPhone gleichzeitig und kann den Remote gegen den Mac-Player testen, auch ohne dass der Mac schon im Store ist.
 
-Stand der App im Repo: Bundle `com.gerov.audioharbor.player`, Version **1.0.0 (16)** auf `release/REL_1.0.0`, App Sandbox aktiv, StoreKit 2 (Trial + Unlock) eingebaut. Archiviert wird von einem Release-Branch, der aus `develop` erstellt wird. Offen sind vor allem Sandbox-Tests, Verträge und App Store Connect.
+Vorgeschichte: Mac 1.0.0 (16, Branch `release/REL_1.0.0`, ohne Remote) hing im Review. Sie wird aus dem Review genommen und in App Store Connect auf **1.1.0** umbenannt (Schritte in [§ 11.4](#114-app-store-connect--ablauf)). `release/REL_1.0.0` bleibt nur als Archiv. In Build 16 fehlte außerdem das Lesen der FLAC-Tags: jeder FLAC-Track stand als „Unknown Artist“ ohne Cover im Katalog.
+
+Stand der App im Repo: Bundle `com.gerov.audioharbor.player`, Version **1.1.0 (1)** auf `release/REL_1.1.0` (aus `develop`), App Sandbox aktiv, StoreKit 2 (Trial + Unlock) eingebaut. Offen sind vor allem Sandbox-Tests, die Remote-Tests (§ 11.3), Verträge und App Store Connect.
 
 ---
 
@@ -88,7 +90,8 @@ Ordnerzugriff läuft über `NSOpenPanel` / `fileImporter` + security-scoped Book
 
 ### 1.3 Version, Signing, Privacy-URL
 
-- [x] Marketing-Version **1.0.0** — in `project.yml` gesetzt, landet über XcodeGen im Projekt. Aktueller Build **16** (`CURRENT_PROJECT_VERSION`), jeder Upload +1
+- [x] Marketing-Version **1.1.0** — in `project.yml` gesetzt, landet über XcodeGen im Projekt. Aktueller Build **1** (`CURRENT_PROJECT_VERSION`), jeder Upload +1
+- [ ] Mac-Upload mit Build 1 prüfen: Für macOS verlangt App Store Connect womöglich eine höhere Build-Nummer als jede bisher hochgeladene (Build 16 von 1.0.0). Bricht der Upload mit „CFBundleVersion must contain a higher version …“ ab, auf Build **17** gehen — für iOS ist 17 ebenso gültig.
 - [ ] Team: Apple Developer Program, Signing **Apple Distribution** / Mac App Store (nicht Developer ID)
 - [x] Privacy Policy **live per HTTPS**: <https://petergerov.github.io/audio-harbor/privacy.html>
       (GitHub Pages, Quelle `main` + `/docs`). Geprüft: 200, HTTP wird auf HTTPS umgeleitet, Inhalt identisch mit `main`.
@@ -103,6 +106,7 @@ Ordnerzugriff läuft über `NSOpenPanel` / `fileImporter` + security-scoped Book
 | 11 | DSD-Strategie entfernt, der Output-Modus entscheidet; Exclusive spielt DSD exklusiv als PCM (Umrechnung vorab im Hintergrund); DoP nur an externe DACs (USB, Thunderbolt, FireWire, PCI); AU-Plugins ohne `sandboxSafe` laden out-of-process; kein Absturz mehr beim Start mit Plugin-Rack |
 | 12 | DAC bleibt über Titelwechsel exklusiv (kein DSD↔PCM-Umschalten pro Titel, das manche DACs per USB-Reset quittieren); solange die App den DAC hält, ist er das Ziel statt des System-Standards; Play nach fehlgeschlagenem Laden lädt den Titel neu |
 | 13 | Exclusive/DoP nur mit externem DAC (sonst Shared, Lautstärketasten gehen); Settings grauen sie ohne DAC aus, zeigen Shared und wählen beim Anstecken wieder die vorherige DAC-Einstellung; M3U/M3U8-Import und -Export (Entitlement `user-selected.read-write`); neues App-Icon; FAQ-Seite `docs/faq.html` |
+| 1.1.0 (1) | iPhone-Remote: Remote-Server am Mac (Bonjour, Pairing-Code, Token), DAC-Lautstärke per Remote; FLAC-Tags und -Cover werden gelesen, Cover-Dateien im Ordner (`cover.jpg`, `folder.jpg`, …) als Rückfall; Alben nach Album-Artist gruppiert, Sampler ohne Tag bleiben ein Album; größeres Cover im Deck, auch bei Tonband und Receiver; Rechtsklick „Add to Playlist“ / „Labels“ für Ordner, Alben, Künstler und die Deck-Queue; Klick spielt ohne Sprung zum Deck (⌘-Klick, „Play and Show Deck“, ⌘3). Der Katalog wird beim ersten Start einmal neu eingelesen (neues Schema). |
 
 - [ ] Vor dem Upload mit USB-DAC testen: DSF, DFF und SACD ISO in **DoP** (kein Rauschen, keine Aussetzer), PCM in **Exclusive**
 
@@ -114,7 +118,9 @@ Ordnerzugriff läuft über `NSOpenPanel` / `fileImporter` + security-scoped Book
 
 ---
 
-## 2. App Store Connect — App anlegen (nur Mac)
+## 2. App Store Connect — App anlegen
+
+Erledigt: Der Eintrag existiert seit der Mac-1.0.0-Einreichung. Zur Erinnerung, so wurde er angelegt:
 
 1. [App Store Connect](https://appstoreconnect.apple.com) → My Apps → **+** → New App
 2. Platforms: **nur macOS** (iOS nicht ankreuzen)
@@ -125,7 +131,7 @@ Ordnerzugriff läuft über `NSOpenPanel` / `fileImporter` + security-scoped Book
 7. User Access: Full Access
 8. **Pricing and Availability:** Price = **Free**. Availability = die Länder, in denen ihr listen wollt. Nicht versehentlich 9,90 € als App-Preis setzen.
 
-Später das iPhone: **dieselbe** App um die Plattform **iOS** erweitern, keine zweite App anlegen — siehe [§ 11](#11-iphone-remote--mac-110-zweite-einreichung). Gleiche Bundle ID auf beiden Plattformen = **Universal Purchase**: ein Eintrag, ein Preis, ein IAP `unlock`, gültig für alle Geräte derselben Apple-ID.
+Das iPhone kommt dazu, indem **dieselbe** App um die Plattform **iOS** erweitert wird, keine zweite App — siehe [§ 11.4](#114-app-store-connect--ablauf). Gleiche Bundle ID auf beiden Plattformen = **Universal Purchase**: ein Eintrag, ein Preis, ein IAP `unlock`, gültig für alle Geräte derselben Apple-ID.
 
 ---
 
@@ -186,6 +192,7 @@ What you get
 • Shared, Exclusive, and DoP — explained in plain language
 • Import and export M3U / M3U8 playlists
 • Optional AU / AUv3 rack on Shared
+• Free iPhone remote — browse, queue, and set your DAC's volume from the couch
 
 What you do not get
 • Streaming services or an account
@@ -259,6 +266,8 @@ Exclusive / DoP need an external USB DAC. Shared works on built-in speakers.
 SACD ISO: stereo area only. Tracks come from the Scarlet Book TOC. Uncompressed DSD and DST-compressed tracks both play: DST is decoded with Harbor’s own MPEG-4 DST decoder to a cached DFF, then the same DoP / PCM path as DSF. The first play of a DST track may pause while that cache is built. Multi-channel SACD areas, CUE sheets, and format conversion are not in this version.
 
 Please use your own files or a short CC clip. Do not require ripped commercial SACD images for review.
+
+iPhone remote: this submission also contains the iOS app, a remote for this Mac app (same record, Universal Purchase). The Mac listens on the local network only so the user's own paired iPhone can control playback (com.apple.security.network.server / network.client). See the iOS review notes for the pairing steps.
 ```
 
 Demo-Musik: ein kurzes **eigenes** oder CC-File im Review-Ordner erwähnen, oder Reviewer eigene Dateien nutzen lassen. Keine gerippten Major-Label-ISOs mitschicken.
@@ -276,9 +285,8 @@ xcodegen generate
 # Organizer → Distribute App → App Store Connect → Upload
 ```
 
-- Destination **macOS**, nicht iOS
-- Destination iOS im Target darf bleiben; einfach nicht archivieren
-- Nach Processing: Build der Version 1.0.0 zuweisen, IAP der Version anhängen (IAP muss **Ready to Submit** sein)
+- Zweimal archivieren: einmal **Any Mac**, einmal **Any iOS Device (arm64)** — siehe [§ 11.9](#119-archive--upload)
+- Nach Processing: jeden Build seiner Version 1.1.0 zuweisen (Mac-Build → macOS, iOS-Build → iOS), IAP an die Mac-Version anhängen (IAP muss **Ready to Submit** sein)
 - Export Compliance: `ITSAppUsesNonExemptEncryption = NO` steht in Info.plist / project.yml (HTTPS + Hashing only). Damit fällt „Missing Compliance“ nach dem Upload weg. Nur ändern, wenn ihr eigene nicht-exempt Verschlüsselung einbaut.
 
 ---
@@ -317,13 +325,12 @@ Data Used to Track You: **No**.
 - [x] Privacy-URL final — <https://petergerov.github.io/audio-harbor/privacy.html>
 - [ ] Support-URL final
 - [ ] Phased Release optional
-- [ ] iPhone-Remote + Mac 1.1.0 einreichen — [§ 11](#11-iphone-remote--mac-110-zweite-einreichung)
 
 ---
 
-## 11. iPhone-Remote + Mac 1.1.0 (zweite Einreichung)
+## 11. iPhone-Remote
 
-Voraussetzung: Mac 1.0.0 ist **live**. Erst dann kann Review den Mac-Player laden, mit dem der Remote spricht.
+Geht in **derselben** Einreichung wie Mac 1.1.0 raus (siehe oben). Review prüft beide zusammen.
 
 ### 11.1 Was rausgeht
 
@@ -332,7 +339,7 @@ Voraussetzung: Mac 1.0.0 ist **live**. Erst dann kann Review den Mac-Player lade
 | Neu | Remote-Server (Settings → Remote → *Allow Remote Control*), Pairing, DAC-Lautstärke per Remote | Erste iOS-Version: Remote für den Mac |
 | Branch | `release/REL_1.1.0` aus `develop` | derselbe Branch, dasselbe Target |
 | Version | `MARKETING_VERSION` 1.1.0 | ebenfalls 1.1.0 — ein Target, eine Versionsnummer. Eine erste iOS-Version muss nicht 1.0 heißen. |
-| Build | `CURRENT_PROJECT_VERSION` +1 | derselbe Build-Wert ist ok — Mac und iOS haben getrennte Build-Reihen |
+| Build | `CURRENT_PROJECT_VERSION` 1 (beim Mac evtl. 17, siehe § 1.3) | derselbe Build-Wert ist ok — Mac und iOS haben getrennte Build-Reihen |
 
 Der iPhone-Remote ist **kostenlos** und hat keine eigene Trial-Sperre. Die Trial-Uhr und die Sperre gibt es nur auf dem Mac, weil nur dort Musik spielt. Das Unlock-Panel in den iPhone-Settings kauft oder stellt denselben IAP wieder her. Durch Universal Purchase schaltet ein Kauf am iPhone den Mac derselben Apple-ID frei (am Mac danach *Restore Purchases*, falls der Status nicht sofort springt).
 
@@ -354,13 +361,13 @@ Der iPhone-Remote ist **kostenlos** und hat keine eigene Trial-Sperre. Die Trial
 - [ ] Lautstärketasten mit Musik einer anderen App auf dem iPhone: Tasten gehören dann dieser App. Nach dem Trennen hat das iPhone wieder seine alte Lautstärke
 - [ ] App in den Hintergrund und zurück: Verbindung kommt wieder, Tasten gehen wieder
 
-### 11.4 App Store Connect — iOS-Plattform ergänzen
+### 11.4 App Store Connect — Ablauf
 
-1. My Apps → **Audio Harbor** → links unter der Plattform-Liste **„+ Add Platform“** → **iOS**. Keine neue App anlegen — sonst gibt es kein Universal Purchase.
-2. Es entsteht eine eigene **iOS-App-Version 1.1.0** mit eigener Beschreibung, eigenen Keywords und eigenen Screenshots. Name, Preis (Free), IAP, App Privacy und Altersfreigabe gelten für den ganzen Eintrag.
-3. Parallel am Mac: **macOS-Version 1.1.0** anlegen.
-4. Beide Builds hochladen (§ 11.6), je der passenden Version zuweisen.
-5. **Add for Review** an beiden Versionen → **eine** Submission mit Mac 1.1.0 + iOS 1.1.0. Der IAP ist seit Mac 1.0.0 freigegeben und muss nicht nochmal mit.
+1. **Mac 1.0.0 aus dem Review nehmen:** Versionsseite → **Remove from Review**. Die Version wird wieder bearbeitbar; Texte, Screenshots und der angehängte IAP bleiben.
+2. **Versionsnummer der Mac-Version auf 1.1.0 ändern.** Eine nicht veröffentlichte Version lässt sich umbenennen — keine zweite Mac-Version anlegen. Build 16 von der Version lösen.
+3. My Apps → **Audio Harbor** → links unter der Plattform-Liste **„+ Add Platform“** → **iOS**. Keine neue App anlegen — sonst gibt es kein Universal Purchase. Es entsteht eine eigene **iOS-App-Version 1.1.0** mit eigener Beschreibung, eigenen Keywords und eigenen Screenshots (§ 11.5, § 11.6). Name, Preis (Free), IAP, App Privacy und Altersfreigabe gelten für den ganzen Eintrag.
+4. Beide Builds hochladen (§ 11.9), je der passenden Version zuweisen.
+5. **Add for Review** an beiden Versionen → **eine** Submission mit Mac 1.1.0 + iOS 1.1.0. Der IAP geht mit der Mac-Version zum ersten Mal ins Review, muss also angehängt sein.
 6. IAP-Beschreibung prüfen — sie erscheint jetzt auch auf dem iPhone. Vorschlag EN: `One-time unlock after the 7-day trial. Plays your local library on your Mac — Exclusive, DoP, and the plugin rack included.`
 
 ### 11.5 Listing-Copy iOS (English — so paste)
@@ -419,7 +426,7 @@ Die Daten sind erfunden (Künstler, Alben, generierte Cover — keine echte Musi
 Audio Harbor for iPhone is the remote control for Audio Harbor for Mac, the same app record (Universal Purchase). It plays no audio itself.
 
 To review:
-1. Install Audio Harbor on a Mac (Mac App Store, same listing) and add a folder with a few audio files.
+1. Install the Mac build from this same submission on a Mac and add a folder with a few audio files.
 2. On the Mac: Settings → Remote → turn on "Allow Remote Control", then "New Code".
 3. On the iPhone (same Wi-Fi): allow local network access, tap the Mac, enter the six-digit code.
 4. Play, browse, search, and change the volume. The iPhone's volume buttons change the Mac's output volume while the remote is open.
@@ -437,16 +444,18 @@ Bleibt **Data Not Collected**. Der Remote schickt Titel, Cover, Queue und Befehl
 
 Export Compliance bleibt `NO`: Die Remote-Verbindung ist einfaches TCP mit Pairing-Token, ohne eigene Verschlüsselung.
 
-### 11.9 Archive & Upload iOS
+### 11.9 Archive & Upload
 
 ```bash
+git switch release/REL_1.1.0
 xcodegen generate
 # Xcode: Scheme AudioHarbor → Any iOS Device (arm64)
 # Product → Archive (Release) → Distribute App → App Store Connect → Upload
+# Danach dasselbe mit Destination Any Mac
 ```
 
 - Signing: Automatic, Team `C9LBGZNZ6P`, Apple Distribution. Die Bundle ID ist dieselbe wie am Mac; Xcode legt das iOS-Profil an.
-- Danach dasselbe mit Destination **Any Mac** für Mac 1.1.0.
+- `xcodegen generate` entfernt Versionseinträge, die Xcode direkt im Target gesetzt hat; maßgeblich ist `project.yml`.
 
 ---
 

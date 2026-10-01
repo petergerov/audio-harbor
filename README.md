@@ -25,8 +25,13 @@ Select the **AudioHarbor** scheme → **My Mac** or an iPhone simulator → Run.
 
 - Security-scoped folder bookmarks (persist across launches)
 - Catalogue: directories, albums, artists; playlists and labels
+- Click plays and stays in the list; ⌘-click, *Play and Show Deck*, the mini player or ⌘3 open the Deck
+- Right-click a directory, album, artist or the Deck queue → Add to Playlist / Labels
+- Shortcuts: Space, ⌘← / ⌘→, ⌘1 Catalogue, ⌘2 Playlists, ⌘3 Deck, ⌘, Settings, ⌘O, ⇧⌘R
 - M3U / M3U8 playlist import and export
-- Real metadata + artwork via AVFoundation / DSD probe
+- Real metadata + artwork via AVFoundation (incl. FLAC Vorbis comments) / DSD probe; folder images (`cover`, `folder`, `front`, …) when a file has none
+- Albums grouped by album artist; untagged compilations in one folder stay one album
+- iPhone remote: Bonjour + pairing code; browse, queue, transport, DAC volume
 - Mac exclusive mode: hog + sample-rate match + HAL 24-bit path, external DACs only (USB / Thunderbolt / FireWire / PCI); Exclusive and DoP grey out without one and the choice returns when the DAC is plugged in
 - DSF / DFF → DoP in Output DoP; DSD→PCM in Shared and Exclusive
 - SACD ISO stereo tracks, including MPEG-4 DST → cached DFF → same DSD path

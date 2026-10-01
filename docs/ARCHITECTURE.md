@@ -129,9 +129,9 @@ Compatibility: new optional snapshot fields decode as nil from an older Mac; the
 ## Library architecture
 
 1. **Folder roots** stored as security-scoped bookmarks (this Mac + this app only).
-2. **Scanner** walks trees, hashes path+mtime, extracts tags/artwork. Incremental; Rebuild is explicit.
+2. **Scanner** walks trees, hashes path+mtime, extracts tags/artwork. Incremental; Rebuild is explicit. FLAC tags come from Vorbis comments (AVFoundation leaves `commonMetadata` empty for them). Files without embedded art take a folder image (`FolderArtworkLookup`), once per directory per scan. A schema bump in `CatalogueIndexStore` forces a full re-read.
 3. **Catalogue** is SQLite+FTS5 (`catalogue.sqlite` in Application Support). UI never scans live on every open.
-4. **Artwork** on-disk cache keyed by file hash.
+4. **Artwork** on-disk cache keyed by content hash of the downscaled image (512 px JPEG).
 5. **Search** via FTS5.
 
 Identity of a track is `cataloguePath` (file path, plus virtual suffixes for SACD ISO / DFF chapters). Playlists and labels must key off that, never off scan UUIDs.
@@ -234,8 +234,10 @@ Hero rule for UI: **first viewport = brand + music**, not a control panel. Now P
 - Screens with their own state and actions have a view model (`LibraryViewModel`,
   `PlaylistsViewModel`), owned as `@State` and created in the view's `init(appModel:)`.
   Views stay layout; logic goes to the view model or the services.
-- Start playback through `AppModel.play(_:startingAt:from:)` with a `QueueSource`, so the Deck
-  opens and shows where the queue came from.
+- Start playback through `AppModel.play(_:startingAt:from:showDeck:)` with a `QueueSource`, so the
+  Deck shows where the queue came from. Playing keeps the user where they are; the Deck opens when
+  `showDeck` is `true`, or — left `nil` — when ⌘ is held (`PlayGesture`). The remote passes `false`.
+  `AppModel.showDeck()` is the one way to switch to it (mini player, *Play and Show Deck*, ⌘3).
 - Nothing expensive in `body`: folder listings are stored and refreshed on change, artwork is
   decoded once per track in `.task(id:)`.
 - Audio engine callbacks hop to MainActor for state publish.
