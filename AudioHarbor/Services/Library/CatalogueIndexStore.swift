@@ -7,7 +7,7 @@ actor CatalogueIndexStore {
 
     private var db: OpaquePointer?
     private let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
-    private static let schemaVersion = "2"
+    private static let schemaVersion = "3"
 
     init() {
         db = Self.connect()

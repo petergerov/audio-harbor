@@ -119,6 +119,10 @@ enum MetadataReader {
             // iTunes / ID3 style extras
             let all = try await asset.load(.metadata)
             for item in all {
+                if item.keySpace?.rawValue == "vorb", let key = item.key as? String {
+                    try await applyVorbisComment(key.uppercased(), item: item, to: &meta)
+                    continue
+                }
                 let id = item.identifier
                 if id == .id3MetadataTrackNumber || id == .iTunesMetadataTrackNumber {
                     if let value = try await item.load(.stringValue) {
@@ -153,6 +157,64 @@ enum MetadataReader {
         if format.commonFormat == .pcmFormatFloat32 { return 32 }
         if format.commonFormat == .pcmFormatInt16 { return 16 }
         return nil
+    }
+
+    /// FLAC tags arrive only as Vorbis comments — AVFoundation leaves `commonMetadata` empty for them.
+    private static func applyVorbisComment(_ key: String, item: AVMetadataItem, to meta: inout TrackMetadata) async throws {
+        if key == "METADATA_BLOCK_PICTURE" {
+            guard meta.artworkData == nil else { return }
+            var payload = try await item.load(.dataValue)
+            if payload == nil, let base64 = try await item.load(.stringValue) {
+                payload = Data(base64Encoded: base64)
+            }
+            meta.artworkData = payload.flatMap(flacPictureImage).flatMap(normalizedImageData)
+            return
+        }
+
+        guard let value = try await item.load(.stringValue)?.trimmingCharacters(in: .whitespaces),
+              !value.isEmpty
+        else { return }
+        switch key {
+        case "TITLE": meta.title = value
+        case "ARTIST": meta.artist = value
+        case "ALBUM": meta.album = value
+        case "TRACKNUMBER": meta.trackNumber = parseTrackNumber(value)
+        case "DATE", "YEAR": meta.year = parseYear(value)
+        default: break
+        }
+    }
+
+    /// AVFoundation hands over the bare image; a raw FLAC PICTURE block is unwrapped as a fallback.
+    private static func flacPictureImage(_ data: Data) -> Data? {
+        if let source = CGImageSourceCreateWithData(data as CFData, nil), CGImageSourceGetType(source) != nil {
+            return data
+        }
+        // Block layout (big-endian): type, MIME, description, width, height, depth, colours, image.
+        var offset = data.startIndex
+        func uint32() -> Int? {
+            guard data.endIndex - offset >= 4 else { return nil }
+            let value = data[offset..<offset + 4].reduce(0) { $0 << 8 | Int($1) }
+            offset += 4
+            return value
+        }
+        guard uint32() != nil, let mimeLength = uint32() else { return nil }
+        offset += mimeLength
+        guard let descriptionLength = uint32() else { return nil }
+        offset += descriptionLength
+        for _ in 0..<4 {
+            guard uint32() != nil else { return nil }
+        }
+        guard let length = uint32(), length > 0, data.endIndex - offset >= length else { return nil }
+        return data.subdata(in: offset..<offset + length)
+    }
+
+    /// Cover from a folder image (`cover.jpg`, `folder.jpg`, …), downscaled like embedded art.
+    static func folderArtwork(at url: URL) -> Data? {
+        guard let data = try? Data(contentsOf: url),
+              let source = CGImageSourceCreateWithData(data as CFData, nil),
+              CGImageSourceGetType(source) != nil
+        else { return nil }
+        return normalizedImageData(data)
     }
 
     private static func parseTrackNumber(_ raw: String) -> Int? {
