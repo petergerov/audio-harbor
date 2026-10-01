@@ -24,7 +24,7 @@ if [[ "${1:-}" == "--capture" ]]; then
     --wifiBars 3 --cellularMode active --cellularBars 4 --batteryState discharging --batteryLevel 100
   xcrun simctl install "$SIM" "$DD/Build/Products/Debug-iphonesimulator/AudioHarbor.app"
   mkdir -p raw-ipad
-  for scene in now browse nearby pairing; do
+  for scene in now browse queue nearby pairing; do
     xcrun simctl terminate "$SIM" com.gerov.audioharbor.player 2>/dev/null || true
     xcrun simctl launch "$SIM" com.gerov.audioharbor.player -remoteScreenshot "$scene" >/dev/null
     sleep 4

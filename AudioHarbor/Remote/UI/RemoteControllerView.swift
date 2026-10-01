@@ -43,9 +43,6 @@ private struct BrowseDrill: Equatable {
 struct RemoteControllerView: View {
     @Bindable var controller: RemoteController
     @Environment(\.scenePhase) private var scenePhase
-    #if os(iOS)
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    #endif
     @State private var pane: RemotePane = .now
     @State private var seekDraft: Double = 0
     @State private var isSeeking = false
@@ -65,21 +62,17 @@ struct RemoteControllerView: View {
                 case .needsPairing:
                     pairingPanel
                 case .connected:
-                    if isWide {
-                        wideLayout
-                    } else {
-                        panePicker
-                        switch pane {
-                        case .now:
-                            VStack(alignment: .leading, spacing: 10) {
-                                compactNowPlaying(large: false)
-                                searchPanel
-                            }
-                        case .browse:
-                            browsePanel
-                        case .queue:
-                            queuePanel
+                    panePicker
+                    switch pane {
+                    case .now:
+                        VStack(alignment: .leading, spacing: 10) {
+                            compactNowPlaying
+                            searchPanel
                         }
+                    case .browse:
+                        browsePanel
+                    case .queue:
+                        queuePanel
                     }
                 case .connecting:
                     ProgressView()
@@ -98,9 +91,8 @@ struct RemoteControllerView: View {
             }
             // Short panels (pairing, errors) start under the header instead of floating mid-screen.
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            // On iPad only the connected two-column layout uses the full width.
-            .frame(maxWidth: isWide && controller.phase != .connected ? 600 : .infinity)
-            .frame(maxWidth: .infinity)
+            // The iPad shows the iPhone layout, centred at a phone-like width.
+            .remoteReadableWidth()
         }
         .onReceive(tickTimer) { tick = $0 }
         #if DEBUG && os(iOS)
@@ -128,39 +120,6 @@ struct RemoteControllerView: View {
         #if os(macOS)
         .frame(minWidth: 440, minHeight: 640)
         #endif
-    }
-
-    /// iPad full screen or a wide Split View: everything at once instead of three panes.
-    private var isWide: Bool {
-        #if os(iOS)
-        horizontalSizeClass == .regular
-        #else
-        false
-        #endif
-    }
-
-    /// Left: what plays and what comes next. Right: search over browse — typing swaps
-    /// the browse list for the matches.
-    private var wideLayout: some View {
-        HStack(alignment: .top, spacing: 16) {
-            VStack(alignment: .leading, spacing: 12) {
-                compactNowPlaying(large: true)
-                EngravedLabel(text: "Queue")
-                queuePanel
-            }
-            .frame(width: 400)
-            .frame(maxHeight: .infinity, alignment: .top)
-
-            VStack(alignment: .leading, spacing: 10) {
-                searchField
-                if searchText.isEmpty {
-                    browsePanel
-                } else {
-                    searchResults
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        }
     }
 
     private var header: some View {
@@ -241,7 +200,7 @@ struct RemoteControllerView: View {
         .padding(.top, 8)
     }
 
-    private func compactNowPlaying(large: Bool) -> some View {
+    private var compactNowPlaying: some View {
         let snap = controller.nowPlaying
         let track = snap?.track
         let position = isSeeking ? seekDraft : controller.displayedPosition
@@ -255,8 +214,8 @@ struct RemoteControllerView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             HStack(spacing: 12) {
-                artwork(for: track?.artworkHash, large: large)
-                    .frame(width: large ? 96 : 56, height: large ? 96 : 56)
+                artwork(for: track?.artworkHash, large: false)
+                    .frame(width: 56, height: 56)
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -275,16 +234,15 @@ struct RemoteControllerView: View {
                             .foregroundStyle(HarborColor.ivoryDim)
                             .lineLimit(1)
                     }
-                    // Large card: transport under the text, so the path line keeps its room.
-                    if large {
-                        transportButtons
-                            .padding(.top, 6)
-                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                if !large {
-                    transportButtons
+                HStack(spacing: 6) {
+                    compactTransport("backward.end.fill") { controller.previous() }
+                    compactTransport(controller.isPlaying ? "pause.fill" : "play.fill", emphasized: true) {
+                        controller.togglePlayPause()
+                    }
+                    compactTransport("forward.end.fill") { controller.next() }
                 }
             }
 
@@ -326,64 +284,56 @@ struct RemoteControllerView: View {
 
     private var searchPanel: some View {
         VStack(alignment: .leading, spacing: 8) {
-            searchField
-            searchResults
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-    }
-
-    private var searchField: some View {
-        HStack {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(HarborColor.ivoryDim)
-            TextField("Search whole catalogue", text: $searchText)
-                .textFieldStyle(.plain)
-                .foregroundStyle(HarborColor.ivory)
-                .onChange(of: searchText) { _, newValue in
-                    scheduleSearch(newValue)
-                }
-                .onSubmit { controller.search(searchText) }
-            if !searchText.isEmpty {
-                Button("Go") { controller.search(searchText) }
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(HarborColor.ivoryDim)
+                TextField("Search whole catalogue", text: $searchText)
+                    .textFieldStyle(.plain)
+                    .foregroundStyle(HarborColor.ivory)
+                    .onChange(of: searchText) { _, newValue in
+                        scheduleSearch(newValue)
+                    }
+                    .onSubmit { controller.search(searchText) }
+                if !searchText.isEmpty {
+                    Button("Go") { controller.search(searchText) }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(HarborColor.amber)
+                    Button {
+                        searchTask?.cancel()
+                        searchText = ""
+                        controller.clearSearch()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(HarborColor.ivoryDim)
+                    }
                     .buttonStyle(.plain)
-                    .foregroundStyle(HarborColor.amber)
-                Button {
-                    searchTask?.cancel()
-                    searchText = ""
-                    controller.clearSearch()
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(HarborColor.ivoryDim)
                 }
-                .buttonStyle(.plain)
             }
-        }
-        .padding(10)
-        .background(HarborColor.faceplateLift)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-    }
+            .padding(10)
+            .background(HarborColor.faceplateLift)
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
-    @ViewBuilder
-    private var searchResults: some View {
-        if controller.searchResults.isEmpty {
-            Text(searchText.isEmpty ? "Search the whole Mac catalogue" : "No matches")
-                .font(HarborFont.body(13))
-                .foregroundStyle(HarborColor.ivoryDim)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else {
-            Text("\(controller.searchResults.count) match\(controller.searchResults.count == 1 ? "" : "es")")
-                .font(HarborFont.mono(10))
-                .foregroundStyle(HarborColor.ivoryDim)
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 0) {
-                    ForEach(controller.searchResults, id: \.cataloguePath) { track in
-                        trackRow(track)
-                        Divider().overlay(HarborColor.aluminumDark.opacity(0.4))
+            if controller.searchResults.isEmpty {
+                Text(searchText.isEmpty ? "Search the whole Mac catalogue" : "No matches")
+                    .font(HarborFont.body(13))
+                    .foregroundStyle(HarborColor.ivoryDim)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                Text("\(controller.searchResults.count) match\(controller.searchResults.count == 1 ? "" : "es")")
+                    .font(HarborFont.mono(10))
+                    .foregroundStyle(HarborColor.ivoryDim)
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        ForEach(controller.searchResults, id: \.cataloguePath) { track in
+                            trackRow(track)
+                            Divider().overlay(HarborColor.aluminumDark.opacity(0.4))
+                        }
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     private func scheduleSearch(_ query: String) {
@@ -397,16 +347,6 @@ struct RemoteControllerView: View {
             try? await Task.sleep(nanoseconds: 250_000_000)
             guard !Task.isCancelled else { return }
             controller.search(trimmed)
-        }
-    }
-
-    private var transportButtons: some View {
-        HStack(spacing: 6) {
-            compactTransport("backward.end.fill") { controller.previous() }
-            compactTransport(controller.isPlaying ? "pause.fill" : "play.fill", emphasized: true) {
-                controller.togglePlayPause()
-            }
-            compactTransport("forward.end.fill") { controller.next() }
         }
     }
 
