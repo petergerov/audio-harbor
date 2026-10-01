@@ -3,6 +3,7 @@ import SwiftUI
 /// A list header for a group of tracks (an album, an artist) that expands in place to show
 /// them. Produces several list rows: the header, then one per track while expanded.
 struct ExpandableTrackGroup<Thumbnail: View>: View {
+    @Environment(AppModel.self) private var appModel
     let title: String
     var subtitle: String?
     let tracks: [Track]
@@ -21,6 +22,10 @@ struct ExpandableTrackGroup<Thumbnail: View>: View {
         header
             .tracksContextMenu(tracks: menuTracks) {
                 Button(playHelp) { onPlay(nil) }
+                Button("\(playHelp) and Show Deck") {
+                    onPlay(nil)
+                    appModel.showDeck()
+                }
                 Divider()
             }
             .harborListRow()

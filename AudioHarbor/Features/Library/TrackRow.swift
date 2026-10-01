@@ -1,19 +1,29 @@
 import SwiftUI
 
 /// A playable track line: title, artist · year · length, labels and format badge.
-/// Right-click offers Add to Playlist and Labels.
+/// The loaded track is marked, since playing no longer leaves the list.
+/// Right-click offers Play and Show Deck, Add to Playlist and Labels.
 struct TrackRow: View {
+    @Environment(AppModel.self) private var appModel
     let track: Track
     let onPlay: () -> Void
 
     var body: some View {
+        let isCurrent = appModel.playback.currentTrack?.cataloguePath == track.cataloguePath
         Button(action: onPlay) {
             HStack(spacing: 14) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(track.title)
-                        .font(HarborFont.title(14))
-                        .foregroundStyle(HarborColor.ivory)
-                        .lineLimit(1)
+                    HStack(spacing: 6) {
+                        if isCurrent {
+                            Image(systemName: appModel.playback.isPlaying ? "speaker.wave.2.fill" : "speaker.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(HarborColor.amber)
+                        }
+                        Text(track.title)
+                            .font(HarborFont.title(14))
+                            .foregroundStyle(isCurrent ? HarborColor.amber : HarborColor.ivory)
+                            .lineLimit(1)
+                    }
                     Text(durationArtistLine)
                         .font(HarborFont.body(12))
                         .foregroundStyle(HarborColor.ivoryDim)
@@ -36,7 +46,13 @@ struct TrackRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .trackContextMenu(for: track)
+        .trackContextMenu(for: track) {
+            Button("Play and Show Deck") {
+                onPlay()
+                appModel.showDeck()
+            }
+            Divider()
+        }
     }
 
     private var durationArtistLine: String {

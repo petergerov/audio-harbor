@@ -30,7 +30,7 @@ final class RemoteCommandRouter {
             ) else {
                 return .message(.error(code: .notFound, message: "Selection not found"), requestID: requestID)
             }
-            appModel.play(resolved.queue, startingAt: resolved.track, from: resolved.source)
+            appModel.play(resolved.queue, startingAt: resolved.track, from: resolved.source, showDeck: false)
             return .none
 
         case .browse(let request):

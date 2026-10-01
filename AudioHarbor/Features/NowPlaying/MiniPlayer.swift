@@ -19,7 +19,7 @@ struct MiniPlayer: View {
     private func content(_ track: Track, playback: PlaybackService) -> some View {
         HStack(spacing: 8) {
             Button {
-                appModel.selectedTab = .nowPlaying
+                appModel.showDeck()
             } label: {
                 HStack(spacing: 8) {
                     HarborArtwork(hash: track.artworkHash, data: track.artworkData, size: 26, corner: 4)
@@ -38,7 +38,7 @@ struct MiniPlayer: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help("Open the Deck")
+            .help("Open the Deck (⌘3)")
 
             HStack(spacing: 2) {
                 control("backward.fill", label: "Previous track") { playback.playPrevious() }

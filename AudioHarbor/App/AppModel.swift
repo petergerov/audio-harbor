@@ -1,3 +1,6 @@
+#if os(macOS)
+import AppKit
+#endif
 import Foundation
 import Observation
 
@@ -22,10 +25,22 @@ final class AppModel {
         isRebuildWarningPresented = true
     }
 
-    /// Queue `tracks`, start at `track` (default: the first) and switch to the Deck.
-    func play(_ tracks: [Track], startingAt track: Track? = nil, from source: QueueSource) {
+    /// Queue `tracks` and start at `track` (default: the first). Playing keeps the user where
+    /// they are; the Deck opens when `showDeck` says so, or — left `nil` — on ⌘-click.
+    func play(
+        _ tracks: [Track],
+        startingAt track: Track? = nil,
+        from source: QueueSource,
+        showDeck: Bool? = nil
+    ) {
         guard let start = track ?? tracks.first else { return }
         playback.play(track: start, in: tracks, from: source)
+        if showDeck ?? PlayGesture.wantsDeck {
+            self.showDeck()
+        }
+    }
+
+    func showDeck() {
         selectedTab = .nowPlaying
     }
 
@@ -72,5 +87,17 @@ enum AppTab: String, CaseIterable, Identifiable {
         case .nowPlaying: "hifispeaker.fill"
         case .settings: "gearshape"
         }
+    }
+}
+
+/// ⌘ held while clicking a play control also opens the Deck.
+@MainActor
+enum PlayGesture {
+    static var wantsDeck: Bool {
+        #if os(macOS)
+        NSEvent.modifierFlags.contains(.command)
+        #else
+        false
+        #endif
     }
 }

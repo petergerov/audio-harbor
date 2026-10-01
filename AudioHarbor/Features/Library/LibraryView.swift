@@ -199,6 +199,10 @@ struct LibraryView: View {
             )
             .tracksContextMenu(tracks: { appModel.library.tracks(under: hit.entry.url) }) {
                 Button("Play") { model.playDirectory(hit.entry.url, name: hit.entry.name) }
+                Button("Play and Show Deck") {
+                    model.playDirectory(hit.entry.url, name: hit.entry.name)
+                    appModel.showDeck()
+                }
                 Divider()
             }
 
@@ -248,6 +252,10 @@ struct LibraryView: View {
                 Button("Play Folder “\(folderName)” from Start") {
                     model.playFolder(containing: hit.entry, startingAtEntry: false)
                 }
+                Button("Play and Show Deck") {
+                    model.playFolder(containing: hit.entry)
+                    appModel.showDeck()
+                }
                 Divider()
                 Button("Reveal in Folders") {
                     model.reveal(hit.entry.url)
@@ -271,6 +279,10 @@ struct LibraryView: View {
                             .map(appModel.library.tracks(under:)) ?? []
                     }) {
                         Button("Play") { model.playRoot(bookmark) }
+                        Button("Play and Show Deck") {
+                            model.playRoot(bookmark)
+                            appModel.showDeck()
+                        }
                         Divider()
                     } trailing: {
                         Divider()
@@ -376,6 +388,10 @@ struct LibraryView: View {
             )
             .tracksContextMenu(tracks: { appModel.library.tracks(under: entry.url) }) {
                 Button("Play") { model.playDirectory(entry.url, name: entry.name) }
+                Button("Play and Show Deck") {
+                    model.playDirectory(entry.url, name: entry.name)
+                    appModel.showDeck()
+                }
                 Divider()
             }
 
