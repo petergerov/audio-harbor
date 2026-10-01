@@ -20,14 +20,14 @@ struct ExpandableTrackGroup<Thumbnail: View>: View {
 
     var body: some View {
         header
-            .tracksContextMenu(tracks: menuTracks) {
+            .tracksContextMenu(tracks: menuTracks, leading: {
                 Button(playHelp) { onPlay(nil) }
                 Button("\(playHelp) and Show Deck") {
                     onPlay(nil)
                     appModel.showDeck()
                 }
                 Divider()
-            }
+            })
             .harborListRow()
         if isExpanded {
             ForEach(tracks) { track in

@@ -197,14 +197,14 @@ struct LibraryView: View {
                 onOpen: { model.reveal(hit.entry.url) },
                 onPlay: { model.playDirectory(hit.entry.url, name: hit.entry.name) }
             )
-            .tracksContextMenu(tracks: { appModel.library.tracks(under: hit.entry.url) }) {
+            .tracksContextMenu(tracks: { appModel.library.tracks(under: hit.entry.url) }, leading: {
                 Button("Play") { model.playDirectory(hit.entry.url, name: hit.entry.name) }
                 Button("Play and Show Deck") {
                     model.playDirectory(hit.entry.url, name: hit.entry.name)
                     appModel.showDeck()
                 }
                 Divider()
-            }
+            })
 
         case .audioFile(let track):
             let folderName = hit.entry.url.deletingLastPathComponent().lastPathComponent
@@ -386,14 +386,14 @@ struct LibraryView: View {
                 onOpen: { appModel.library.enterFolder(entry) },
                 onPlay: { model.playDirectory(entry.url, name: entry.name) }
             )
-            .tracksContextMenu(tracks: { appModel.library.tracks(under: entry.url) }) {
+            .tracksContextMenu(tracks: { appModel.library.tracks(under: entry.url) }, leading: {
                 Button("Play") { model.playDirectory(entry.url, name: entry.name) }
                 Button("Play and Show Deck") {
                     model.playDirectory(entry.url, name: entry.name)
                     appModel.showDeck()
                 }
                 Divider()
-            }
+            })
 
         case .audioFile(let track):
             TrackRow(track: track) { model.playFolder(containing: entry) }
