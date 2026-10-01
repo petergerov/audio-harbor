@@ -65,6 +65,7 @@ final class PlaybackObserver {
             _ = playback.pathLabel
             _ = playback.outputVolume
             _ = playback.outputStatus.activeDevice?.name
+            _ = playback.requiresUnlock
         } onChange: { [weak self] in
             Task { @MainActor in
                 guard let self else { return }
@@ -123,7 +124,8 @@ final class PlaybackObserver {
             activeFormatLabel: playback.activeFormatLabel,
             pathLabel: playback.pathLabel,
             outputVolume: playback.outputVolume,
-            outputName: playback.outputStatus.activeDevice?.name
+            outputName: playback.outputStatus.activeDevice?.name,
+            playbackLocked: playback.requiresUnlock
         )
     }
 

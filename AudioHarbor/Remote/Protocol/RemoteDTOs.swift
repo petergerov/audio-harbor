@@ -56,6 +56,8 @@ struct NowPlayingSnapshot: Codable, Sendable, Equatable {
     var outputVolume: Double?
     /// Name of the output the Mac plays to.
     var outputName: String?
+    /// The Mac's trial has ended without an unlock, so it will not play.
+    var playbackLocked: Bool?
 
     /// Equality ignoring continuous position fields — used to coalesce tick updates.
     func equalsIgnoringPosition(_ other: NowPlayingSnapshot) -> Bool {

@@ -189,6 +189,12 @@ struct RemoteControllerView: View {
         _ = tick
 
         return VStack(spacing: 8) {
+            if snap?.playbackLocked == true {
+                Text("The trial on \(controller.serverName ?? "the Mac") has ended. Unlock Audio Harbor in its Settings to keep playing.")
+                    .font(HarborFont.body(12))
+                    .foregroundStyle(HarborColor.amber)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
             HStack(spacing: 12) {
                 artwork(for: track?.artworkHash, large: false)
                     .frame(width: 56, height: 56)

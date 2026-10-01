@@ -108,6 +108,8 @@ final class PlaybackService {
     }
 
     var state: PlaybackState { playbackState }
+    /// The trial has ended without an unlock — play requests open the unlock sheet instead.
+    var requiresUnlock: Bool { !license.canPlay }
     var isPlaying: Bool { playbackState == .playing }
 
     private var syncTimer: Timer?

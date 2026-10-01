@@ -19,6 +19,7 @@ targets:
         excludes:
           - Resources/Info.plist
           - Resources/AudioHarbor.entitlements
+          - Resources/AudioHarbor-iOS.entitlements
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.gerov.audioharbor.player
@@ -28,6 +29,12 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_FILE: AudioHarbor/Resources/Info.plist
         CODE_SIGN_ENTITLEMENTS: AudioHarbor/Resources/AudioHarbor.entitlements
+        # The macOS file holds App Sandbox keys iOS rejects. The remote needs none
+        # (Bonjour only needs NSBonjourServices in Info.plist).
+        CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]: AudioHarbor/Resources/AudioHarbor-iOS.entitlements
+        CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]: AudioHarbor/Resources/AudioHarbor-iOS.entitlements
+        # iPhone only for the first iOS release (the remote); iPad later.
+        TARGETED_DEVICE_FAMILY: "1"
         INFOPLIST_KEY_CFBundleDisplayName: Audio Harbor
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.music

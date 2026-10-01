@@ -1,8 +1,15 @@
-# Audio Harbor — App Store Submission (macOS first)
+# Audio Harbor — App Store Submission (Mac player, iPhone remote)
 
-Erste Veröffentlichung: **Mac App Store only**. iPhone/iPad bleiben im Xcode-Projekt, gehen aber noch nicht live.
+Eine App, zwei Plattformen, **ein** Eintrag in App Store Connect:
 
-Stand der App im Repo: Bundle `com.gerov.audioharbor.player`, Version **1.0.0 (16)**, App Sandbox aktiv, StoreKit 2 (Trial + Unlock) eingebaut. Archiviert wird von einem Release-Branch, der aus `develop` erstellt wird. Offen sind vor allem Sandbox-Tests, Verträge und App Store Connect.
+| Plattform | Rolle | Release |
+|---|---|---|
+| **macOS** | Der Player: Bibliothek, Deck, Exclusive / DoP, Rack. Spielt auf dem DAC. | **1.0.0** zuerst, allein (Branch `release/REL_1.0.0`, Build 16, **ohne** Remote) |
+| **iOS** (iPhone) | Die Fernbedienung: findet den Mac per Bonjour, koppelt per 6-stelligem Code, steuert Wiedergabe, Queue, Suche und die Lautstärke des DAC. Spielt selbst nichts. | Zusammen mit **Mac 1.1.0**, sobald Mac 1.0.0 live ist — siehe [§ 11](#11-iphone-remote--mac-110-zweite-einreichung) |
+
+Warum diese Reihenfolge: Der Remote-Server steckt erst auf `develop` (ab `75625e5`), nicht in Mac 1.0.0. Ein iPhone-Remote ohne einen Mac im Store, mit dem er spricht, ist für Review und Kunden wertlos. Also: Mac 1.0.0 live → dann Mac 1.1.0 (Remote-Server + DAC-Lautstärke) und iOS 1.0 als **eine** Einreichung.
+
+Stand der App im Repo: Bundle `com.gerov.audioharbor.player`, Version **1.0.0 (16)** auf `release/REL_1.0.0`, App Sandbox aktiv, StoreKit 2 (Trial + Unlock) eingebaut. Archiviert wird von einem Release-Branch, der aus `develop` erstellt wird. Offen sind vor allem Sandbox-Tests, Verträge und App Store Connect.
 
 ---
 
@@ -81,7 +88,7 @@ Ordnerzugriff läuft über `NSOpenPanel` / `fileImporter` + security-scoped Book
 
 ### 1.3 Version, Signing, Privacy-URL
 
-- [x] Marketing-Version **1.0.0** — in `project.yml` gesetzt, landet über XcodeGen im Projekt. Aktueller Build **15** (`CURRENT_PROJECT_VERSION`), jeder Upload +1
+- [x] Marketing-Version **1.0.0** — in `project.yml` gesetzt, landet über XcodeGen im Projekt. Aktueller Build **16** (`CURRENT_PROJECT_VERSION`), jeder Upload +1
 - [ ] Team: Apple Developer Program, Signing **Apple Distribution** / Mac App Store (nicht Developer ID)
 - [x] Privacy Policy **live per HTTPS**: <https://petergerov.github.io/audio-harbor/privacy.html>
       (GitHub Pages, Quelle `main` + `/docs`). Geprüft: 200, HTTP wird auf HTTPS umgeleitet, Inhalt identisch mit `main`.
@@ -118,7 +125,7 @@ Ordnerzugriff läuft über `NSOpenPanel` / `fileImporter` + security-scoped Book
 7. User Access: Full Access
 8. **Pricing and Availability:** Price = **Free**. Availability = die Länder, in denen ihr listen wollt. Nicht versehentlich 9,90 € als App-Preis setzen.
 
-Später iPhone/iPad: dieselbe App um die Plattform **iOS** erweitern, nicht eine zweite App (außer Apple/Bundle zwingt uns). IAP `unlock` dann für beide Plattformen freigeben — ein Kauf, alle Geräte desselben Apple-ID.
+Später das iPhone: **dieselbe** App um die Plattform **iOS** erweitern, keine zweite App anlegen — siehe [§ 11](#11-iphone-remote--mac-110-zweite-einreichung). Gleiche Bundle ID auf beiden Plattformen = **Universal Purchase**: ein Eintrag, ein Preis, ein IAP `unlock`, gültig für alle Geräte derselben Apple-ID.
 
 ---
 
@@ -310,7 +317,128 @@ Data Used to Track You: **No**.
 - [x] Privacy-URL final — <https://petergerov.github.io/audio-harbor/privacy.html>
 - [ ] Support-URL final
 - [ ] Phased Release optional
-- [ ] iOS/iPadOS: eigene Screenshots + dieselbe IAP-ID, wenn die Plattform ergänzt wird. Trial-Uhr **pro Gerät** (erste Installation); Unlock folgt der Apple-ID via Restore
+- [ ] iPhone-Remote + Mac 1.1.0 einreichen — [§ 11](#11-iphone-remote--mac-110-zweite-einreichung)
+
+---
+
+## 11. iPhone-Remote + Mac 1.1.0 (zweite Einreichung)
+
+Voraussetzung: Mac 1.0.0 ist **live**. Erst dann kann Review den Mac-Player laden, mit dem der Remote spricht.
+
+### 11.1 Was rausgeht
+
+| | Mac 1.1.0 | iOS 1.1.0 |
+|---|---|---|
+| Neu | Remote-Server (Settings → Remote → *Allow Remote Control*), Pairing, DAC-Lautstärke per Remote | Erste iOS-Version: Remote für den Mac |
+| Branch | `release/REL_1.1.0` aus `develop` | derselbe Branch, dasselbe Target |
+| Version | `MARKETING_VERSION` 1.1.0 | ebenfalls 1.1.0 — ein Target, eine Versionsnummer. Eine erste iOS-Version muss nicht 1.0 heißen. |
+| Build | `CURRENT_PROJECT_VERSION` +1 | derselbe Build-Wert ist ok — Mac und iOS haben getrennte Build-Reihen |
+
+Der iPhone-Remote ist **kostenlos** und hat keine eigene Trial-Sperre. Die Trial-Uhr und die Sperre gibt es nur auf dem Mac, weil nur dort Musik spielt. Das Unlock-Panel in den iPhone-Settings kauft oder stellt denselben IAP wieder her. Durch Universal Purchase schaltet ein Kauf am iPhone den Mac derselben Apple-ID frei (am Mac danach *Restore Purchases*, falls der Status nicht sofort springt).
+
+### 11.2 Blocker im Code vor dem iOS-Archive
+
+- [x] **`UIBackgroundModes` → `audio` aus `AudioHarbor/Resources/Info.plist` entfernt.** Der Remote spielt kein Audio; Hintergrund-Audio ohne Audio ist ein sicherer Ablehnungsgrund (Guideline 2.5.4). Auf dem Mac ist der Key wirkungslos, er kann also ganz raus.
+- [x] **`NSLocalNetworkUsageDescription` neutral formuliert.** Der Text erscheint auch auf dem iPhone, dort passte „on this Mac“ nicht. Jetzt: `Audio Harbor uses your local network so your iPhone can find your Mac and control playback on it.`
+- [x] **Entitlements pro Plattform.** `AudioHarbor.entitlements` enthält macOS-Schlüssel (`com.apple.security.*`), die ein iOS-Upload ablehnen kann (ITMS-90046). iOS signiert jetzt mit `AudioHarbor/Resources/AudioHarbor-iOS.entitlements` (leeres `<dict/>` — Bonjour braucht kein Entitlement, nur `NSBonjourServices`), gesetzt über `CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]` in `project.yml`.
+- [x] **Mac-Entitlements für 1.1.0**: `com.apple.security.network.server` + `network.client` stehen in `project.yml` (in 1.0.0 nicht). Falls Review fragt: „The Mac listens on the local network only so the user’s own paired iPhone can control playback.“
+- [x] **Nur iPhone.** `TARGETED_DEVICE_FAMILY: "1"` in `project.yml`. Mit iPad im Target verlangt App Store Connect **iPad-Screenshots** und Review testet das Layout auf dem iPad — das kommt später. (Auf dem iPad läuft die iPhone-App trotzdem im Kompatibilitätsmodus.)
+- [x] **Gesperrter Mac sichtbar.** Ist die Trial am Mac abgelaufen, meldet der Snapshot `playbackLocked`, und das iPhone zeigt über Now Playing: „The trial on … has ended. Unlock Audio Harbor in its Settings to keep playing.“
+
+### 11.3 Testen vor dem Upload
+
+- [ ] Echtes iPhone + Mac im selben WLAN: Mac findet sich, Pairing mit Code, Reconnect ohne Code (Token), *Revoke* am Mac wirft das iPhone raus
+- [ ] Local-Network-Abfrage auf dem iPhone erscheint beim ersten Suchen; nach *Ablehnen* zeigt die App einen verständlichen Zustand
+- [ ] Play / Pause / Skip / Seek / Queue / Suche / Ordner, Album, Playlist starten
+- [ ] Lautstärke: Regler und Lautstärketasten am iPhone ändern den DAC (Exclusive **und** DoP), Drehknopf am DAC oder Mac-Lautstärketasten (Shared) wandern zurück aufs iPhone. DAC ohne Hardware-Lautstärke: kein Regler, Hinweistext
+- [ ] Lautstärketasten mit Musik einer anderen App auf dem iPhone: Tasten gehören dann dieser App. Nach dem Trennen hat das iPhone wieder seine alte Lautstärke
+- [ ] App in den Hintergrund und zurück: Verbindung kommt wieder, Tasten gehen wieder
+
+### 11.4 App Store Connect — iOS-Plattform ergänzen
+
+1. My Apps → **Audio Harbor** → links unter der Plattform-Liste **„+ Add Platform“** → **iOS**. Keine neue App anlegen — sonst gibt es kein Universal Purchase.
+2. Es entsteht eine eigene **iOS-App-Version 1.1.0** mit eigener Beschreibung, eigenen Keywords und eigenen Screenshots. Name, Preis (Free), IAP, App Privacy und Altersfreigabe gelten für den ganzen Eintrag.
+3. Parallel am Mac: **macOS-Version 1.1.0** anlegen.
+4. Beide Builds hochladen (§ 11.6), je der passenden Version zuweisen.
+5. **Add for Review** an beiden Versionen → **eine** Submission mit Mac 1.1.0 + iOS 1.1.0. Der IAP ist seit Mac 1.0.0 freigegeben und muss nicht nochmal mit.
+6. IAP-Beschreibung prüfen — sie erscheint jetzt auch auf dem iPhone. Vorschlag EN: `One-time unlock after the 7-day trial. Plays your local library on your Mac — Exclusive, DoP, and the plugin rack included.`
+
+### 11.5 Listing-Copy iOS (English — so paste)
+
+**Subtitle** (gilt pro Plattform): `Remote for the Mac player`
+
+**Promotional text:**
+
+```
+Steer Audio Harbor on your Mac from the couch. Browse, queue, play, and set your DAC's volume with the iPhone's volume buttons. Free.
+```
+
+**Description:**
+
+```
+Audio Harbor for iPhone is the remote for Audio Harbor on your Mac. The music plays on the Mac and its DAC — the phone steers.
+
+You need Audio Harbor for Mac on the same network. Turn on Settings → Remote → Allow Remote Control on the Mac, then enter the six-digit code on the phone once. After that the phone reconnects on its own.
+
+What you can do
+• Play, pause, skip, and seek
+• Browse your Mac's folders, albums, artists, and playlists
+• Search the whole catalogue on the Mac
+• Jump anywhere in the queue
+• Set the volume of your DAC — with the slider or the iPhone's volume buttons. The DAC changes its own level, so the music stays bit-perfect.
+
+What it is not
+• Not a player on the phone. Nothing is copied to the iPhone.
+• No account and no cloud. Phone and Mac talk directly over your local network.
+
+The remote is free. Playback on the Mac follows the Mac app's trial and one-time unlock.
+```
+
+**Keywords:** `remote,mac,audiophile,DAC,volume,FLAC,DSD,bit-perfect,hi-res,player,control`
+
+### 11.6 Screenshots iOS
+
+| Gerät | Größe (Portrait) | Pflicht |
+|---|---|---|
+| iPhone 6,9″ | 1320 × 2868 (oder 1290 × 2796) | Ja |
+| iPad 13″ | 2064 × 2752 (oder 2048 × 2732) | Nein — Target ist iPhone-only |
+
+Vorschlag (3–5 Bilder): Suche nach dem Mac → Pairing-Code → Now Playing mit Lautstärke → Browse (Alben) → Queue. Den Mac-Namen im Bild neutral halten („Studio Mac“), keine echten Gerätenamen.
+
+### 11.7 Review notes iOS (an Apple)
+
+```
+Audio Harbor for iPhone is the remote control for Audio Harbor for Mac, the same app record (Universal Purchase). It plays no audio itself.
+
+To review:
+1. Install Audio Harbor on a Mac (Mac App Store, same listing) and add a folder with a few audio files.
+2. On the Mac: Settings → Remote → turn on "Allow Remote Control", then "New Code".
+3. On the iPhone (same Wi-Fi): allow local network access, tap the Mac, enter the six-digit code.
+4. Play, browse, search, and change the volume. The iPhone's volume buttons change the Mac's output volume while the remote is open.
+
+A screen recording of this flow is here: <URL>
+
+Phone and Mac talk directly over the local network (Bonjour, TCP). There is no server, no account, and no data leaves the network.
+```
+
+- [ ] Bildschirmvideo des Ablaufs aufnehmen und als Link in die Notes (Review hat oft keinen Mac im selben Netz). Ohne Video droht die Rückfrage nach Guideline 2.1 bzw. 4.2.3 („App funktioniert nicht allein“).
+
+### 11.8 App Privacy (gilt für beide Plattformen)
+
+Bleibt **Data Not Collected**. Der Remote schickt Titel, Cover, Queue und Befehle nur zwischen eigenem iPhone und eigenem Mac im lokalen Netz; nichts davon erreicht uns. [`docs/privacy.html`](docs/privacy.html) beschreibt das im Abschnitt *iPhone remote and your local network*.
+
+Export Compliance bleibt `NO`: Die Remote-Verbindung ist einfaches TCP mit Pairing-Token, ohne eigene Verschlüsselung.
+
+### 11.9 Archive & Upload iOS
+
+```bash
+xcodegen generate
+# Xcode: Scheme AudioHarbor → Any iOS Device (arm64)
+# Product → Archive (Release) → Distribute App → App Store Connect → Upload
+```
+
+- Signing: Automatic, Team `C9LBGZNZ6P`, Apple Distribution. Die Bundle ID ist dieselbe wie am Mac; Xcode legt das iOS-Profil an.
+- Danach dasselbe mit Destination **Any Mac** für Mac 1.1.0.
 
 ---
 
@@ -319,10 +447,13 @@ Data Used to Track You: **No**.
 | | |
 |---|---|
 | Display name | Audio Harbor |
-| Bundle ID | `com.gerov.audioharbor.player` |
+| Bundle ID | `com.gerov.audioharbor.player` — macOS **und** iOS (Universal Purchase) |
+| Plattformen | macOS = Player · iOS = Remote (ab 1.1.0) |
 | Category (Info.plist) | `public.app-category.music` |
 | macOS deployment | 14.0 |
+| iOS deployment | 17.0 |
+| Remote | Bonjour `_audioharbor._tcp`, TCP im lokalen Netz, 6-stelliger Code (3 min gültig) |
 | App-Preis | Free — jeder darf installieren |
 | IAP product | `com.gerov.audioharbor.unlock` |
-| Trial | 7 Tage ab erster Installation |
+| Trial | 7 Tage ab erster Installation — nur am Mac; der iPhone-Remote ist frei |
 | Unlock | 9,90 € einmalig |
