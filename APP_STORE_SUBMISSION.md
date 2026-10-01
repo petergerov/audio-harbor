@@ -1,11 +1,11 @@
-# Audio Harbor — App Store Submission (Mac player, iPhone remote)
+# Audio Harbor — App Store Submission (Mac player, iPhone and iPad remote)
 
 Eine App, zwei Plattformen, **ein** Eintrag in App Store Connect:
 
 | Plattform | Rolle | Release |
 |---|---|---|
 | **macOS** | Der Player: Bibliothek, Deck, Exclusive / DoP, Rack. Spielt auf dem DAC. | **1.1.0** — erste Mac-Version, mit Remote-Server |
-| **iOS** (iPhone) | Die Fernbedienung: findet den Mac per Bonjour, koppelt per 6-stelligem Code, steuert Wiedergabe, Queue, Suche und die Lautstärke des DAC. Spielt selbst nichts. | **1.1.0** — erste iOS-Version, siehe [§ 11](#11-iphone-remote) |
+| **iOS** (iPhone, iPad) | Die Fernbedienung: findet den Mac per Bonjour, koppelt per 6-stelligem Code, steuert Wiedergabe, Queue, Suche und die Lautstärke des DAC. Spielt selbst nichts. | **1.1.0** — erste iOS-Version, siehe [§ 11](#11-iphone-remote) |
 
 **Beide gehen in einer Einreichung raus.** Review bekommt Mac und iPhone gleichzeitig und kann den Remote gegen den Mac-Player testen, auch ohne dass der Mac schon im Store ist.
 
@@ -106,7 +106,7 @@ Ordnerzugriff läuft über `NSOpenPanel` / `fileImporter` + security-scoped Book
 | 11 | DSD-Strategie entfernt, der Output-Modus entscheidet; Exclusive spielt DSD exklusiv als PCM (Umrechnung vorab im Hintergrund); DoP nur an externe DACs (USB, Thunderbolt, FireWire, PCI); AU-Plugins ohne `sandboxSafe` laden out-of-process; kein Absturz mehr beim Start mit Plugin-Rack |
 | 12 | DAC bleibt über Titelwechsel exklusiv (kein DSD↔PCM-Umschalten pro Titel, das manche DACs per USB-Reset quittieren); solange die App den DAC hält, ist er das Ziel statt des System-Standards; Play nach fehlgeschlagenem Laden lädt den Titel neu |
 | 13 | Exclusive/DoP nur mit externem DAC (sonst Shared, Lautstärketasten gehen); Settings grauen sie ohne DAC aus, zeigen Shared und wählen beim Anstecken wieder die vorherige DAC-Einstellung; M3U/M3U8-Import und -Export (Entitlement `user-selected.read-write`); neues App-Icon; FAQ-Seite `docs/faq.html` |
-| 1.1.0 (1) | iPhone-Remote: Remote-Server am Mac (Bonjour, Pairing-Code, Token), DAC-Lautstärke per Remote; FLAC-Tags und -Cover werden gelesen, Cover-Dateien im Ordner (`cover.jpg`, `folder.jpg`, …) als Rückfall; Alben nach Album-Artist gruppiert, Sampler ohne Tag bleiben ein Album; größeres Cover im Deck, auch bei Tonband und Receiver; Rechtsklick „Add to Playlist“ / „Labels“ für Ordner, Alben, Künstler und die Deck-Queue; Klick spielt ohne Sprung zum Deck (⌘-Klick, „Play and Show Deck“, ⌘3). Der Katalog wird beim ersten Start einmal neu eingelesen (neues Schema). |
+| 1.1.0 (1) | iPhone- und iPad-Remote (iPad zweispaltig: Now + Queue links, Suche/Browse rechts): Remote-Server am Mac (Bonjour, Pairing-Code, Token), DAC-Lautstärke per Remote; FLAC-Tags und -Cover werden gelesen, Cover-Dateien im Ordner (`cover.jpg`, `folder.jpg`, …) als Rückfall; Alben nach Album-Artist gruppiert, Sampler ohne Tag bleiben ein Album; größeres Cover im Deck, auch bei Tonband und Receiver; Rechtsklick „Add to Playlist“ / „Labels“ für Ordner, Alben, Künstler und die Deck-Queue; Klick spielt ohne Sprung zum Deck (⌘-Klick, „Play and Show Deck“, ⌘3). Der Katalog wird beim ersten Start einmal neu eingelesen (neues Schema). |
 
 - [ ] Vor dem Upload mit USB-DAC testen: DSF, DFF und SACD ISO in **DoP** (kein Rauschen, keine Aussetzer), PCM in **Exclusive**
 
@@ -192,7 +192,7 @@ What you get
 • Shared, Exclusive, and DoP — explained in plain language
 • Import and export M3U / M3U8 playlists
 • Optional AU / AUv3 rack on Shared
-• Free iPhone remote — browse, queue, and set your DAC's volume from the couch
+• Free iPhone and iPad remote — browse, queue, and set your DAC's volume from the couch
 
 What you do not get
 • Streaming services or an account
@@ -330,7 +330,7 @@ Data Used to Track You: **No**.
 
 ## 11. iPhone-Remote
 
-Geht in **derselben** Einreichung wie Mac 1.1.0 raus (siehe oben). Review prüft beide zusammen.
+Geht in **derselben** Einreichung wie Mac 1.1.0 raus (siehe oben). Review prüft beide zusammen. Die iOS-App läuft auf iPhone **und iPad**; alles hier gilt für beide, wo nicht anders steht.
 
 ### 11.1 Was rausgeht
 
@@ -349,12 +349,13 @@ Der iPhone-Remote ist **kostenlos** und hat keine eigene Trial-Sperre. Die Trial
 - [x] **`NSLocalNetworkUsageDescription` neutral formuliert.** Der Text erscheint auch auf dem iPhone, dort passte „on this Mac“ nicht. Jetzt: `Audio Harbor uses your local network so your iPhone can find your Mac and control playback on it.`
 - [x] **Entitlements pro Plattform.** `AudioHarbor.entitlements` enthält macOS-Schlüssel (`com.apple.security.*`), die ein iOS-Upload ablehnen kann (ITMS-90046). iOS signiert jetzt mit `AudioHarbor/Resources/AudioHarbor-iOS.entitlements` (leeres `<dict/>` — Bonjour braucht kein Entitlement, nur `NSBonjourServices`), gesetzt über `CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]` in `project.yml`.
 - [x] **Mac-Entitlements für 1.1.0**: `com.apple.security.network.server` + `network.client` stehen in `project.yml` (in 1.0.0 nicht). Falls Review fragt: „The Mac listens on the local network only so the user’s own paired iPhone can control playback.“
-- [x] **Nur iPhone.** `TARGETED_DEVICE_FAMILY: "1"` in `project.yml`. Mit iPad im Target verlangt App Store Connect **iPad-Screenshots** und Review testet das Layout auf dem iPad — das kommt später. (Auf dem iPad läuft die iPhone-App trotzdem im Kompatibilitätsmodus.)
+- [x] **iPhone und iPad.** `TARGETED_DEVICE_FAMILY: "1,2"` in `project.yml`. Auf dem iPad (regular width) zeigt der Remote zwei Spalten: links Now Playing + Queue, rechts Suche über Browse. In schmalem Split View fällt er auf das iPhone-Layout zurück; Discovery und Pairing stehen zentriert auf lesbarer Breite. Alle vier Ausrichtungen sind erlaubt (Pflicht für iPad-Multitasking). Achtung: iPad-Unterstützung lässt sich nach dem ersten Release **nicht mehr entfernen**.
 - [x] **Gesperrter Mac sichtbar.** Ist die Trial am Mac abgelaufen, meldet der Snapshot `playbackLocked`, und das iPhone zeigt über Now Playing: „The trial on … has ended. Unlock Audio Harbor in its Settings to keep playing.“
 
 ### 11.3 Testen vor dem Upload
 
 - [ ] Echtes iPhone + Mac im selben WLAN: Mac findet sich, Pairing mit Code, Reconnect ohne Code (Token), *Revoke* am Mac wirft das iPhone raus
+- [ ] Dasselbe mit einem iPad: zwei Spalten im Quer- und Hochformat, schmales Split View zeigt das iPhone-Layout, Lautstärketasten am iPad
 - [ ] Local-Network-Abfrage auf dem iPhone erscheint beim ersten Suchen; nach *Ablehnen* zeigt die App einen verständlichen Zustand
 - [ ] Play / Pause / Skip / Seek / Queue / Suche / Ordner, Album, Playlist starten
 - [ ] Lautstärke: Regler und Lautstärketasten am iPhone ändern den DAC (Exclusive **und** DoP), Drehknopf am DAC oder Mac-Lautstärketasten (Shared) wandern zurück aufs iPhone. DAC ohne Hardware-Lautstärke: kein Regler, Hinweistext
@@ -377,13 +378,13 @@ Der iPhone-Remote ist **kostenlos** und hat keine eigene Trial-Sperre. Die Trial
 **Promotional text:**
 
 ```
-Steer Audio Harbor on your Mac from the couch. Browse, queue, play, and set your DAC's volume with the iPhone's volume buttons. Free.
+Steer Audio Harbor on your Mac from the couch. Browse, queue, play, and set your DAC's volume with your iPhone's or iPad's volume buttons. Free.
 ```
 
 **Description:**
 
 ```
-Audio Harbor for iPhone is the remote for Audio Harbor on your Mac. The music plays on the Mac and its DAC — the phone steers.
+Audio Harbor for iPhone and iPad is the remote for Audio Harbor on your Mac. The music plays on the Mac and its DAC — your iPhone or iPad steers. On iPad, what plays, the queue, and your library sit side by side.
 
 You need Audio Harbor for Mac on the same network. Turn on Settings → Remote → Allow Remote Control on the Mac, then enter the six-digit code on the phone once. After that the phone reconnects on its own.
 
@@ -392,10 +393,10 @@ What you can do
 • Browse your Mac's folders, albums, artists, and playlists
 • Search the whole catalogue on the Mac
 • Jump anywhere in the queue
-• Set the volume of your DAC — with the slider or the iPhone's volume buttons. The DAC changes its own level, so the music stays bit-perfect.
+• Set the volume of your DAC — with the slider or the volume buttons. The DAC changes its own level, so the music stays bit-perfect.
 
 What it is not
-• Not a player on the phone. Nothing is copied to the iPhone.
+• Not a player on the iPhone or iPad. Nothing is copied to it.
 • No account and no cloud. Phone and Mac talk directly over your local network.
 
 The remote is free. Playback on the Mac follows the Mac app's trial and one-time unlock.
@@ -408,7 +409,7 @@ The remote is free. Playback on the Mac follows the Mac app's trial and one-time
 | Gerät | Größe (Portrait) | Pflicht |
 |---|---|---|
 | iPhone 6,9″ | 1320 × 2868 (oder 1290 × 2796) | Ja |
-| iPad 13″ | 2064 × 2752 (oder 2048 × 2732) | Nein — Target ist iPhone-only |
+| iPad 13″ | 2064 × 2752 (oder 2048 × 2732) | Ja — das Target unterstützt iPad |
 
 Fertiger Satz (Oktober 2026): [`marketing/app-store/iphone-1320x2868/`](marketing/app-store/iphone-1320x2868/), 5 Bilder, opak, 1320 × 2868:
 
@@ -420,16 +421,25 @@ Fertiger Satz (Oktober 2026): [`marketing/app-store/iphone-1320x2868/`](marketin
 
 Die Daten sind erfunden (Künstler, Alben, generierte Cover — keine echte Musik, keine echten Gerätenamen). Sie kommen aus dem Fixture-Modus des Debug-Builds (`RemoteScreenshotFixture.swift`, Launch-Argument `-remoteScreenshot <scene>`), der im Release-Build nicht existiert. Texte stehen in `marketing/app-store/screenshots-iphone.txt`, die Rohaufnahmen in `raw-iphone/`. Neu erzeugen: `marketing/app-store/build-iphone.sh --capture` (baut, startet den Simulator „iPhone 17 Pro Max“, nimmt auf, setzt zusammen); ohne `--capture` nur neu zusammensetzen.
 
+iPad-Satz (Oktober 2026): [`marketing/app-store/ipad-2064x2752/`](marketing/app-store/ipad-2064x2752/), 4 Bilder, opak, 2064 × 2752, gleicher Fixture-Modus auf dem Simulator „iPad Pro 13-inch (M5)“:
+
+1. **Remote** — „Your Mac plays. Your iPad steers.“ (zwei Spalten: Now + Queue, Suche)
+2. **Browse** — „Your whole library next to what plays.“
+3. **Nearby** — „Finds your Mac on its own. No account.“
+4. **Pairing** — „Pair once with a code from the Mac.“
+
+Texte in `marketing/app-store/screenshots-ipad.txt`, Rohaufnahmen in `raw-ipad/`. Neu erzeugen: `marketing/app-store/build-ipad.sh --capture`; `compose-iphone.swift` setzt beide Formate zusammen.
+
 ### 11.7 Review notes iOS (an Apple)
 
 ```
-Audio Harbor for iPhone is the remote control for Audio Harbor for Mac, the same app record (Universal Purchase). It plays no audio itself.
+Audio Harbor for iPhone and iPad is the remote control for Audio Harbor for Mac, the same app record (Universal Purchase). It plays no audio itself.
 
 To review:
 1. Install the Mac build from this same submission on a Mac and add a folder with a few audio files.
 2. On the Mac: Settings → Remote → turn on "Allow Remote Control", then "New Code".
-3. On the iPhone (same Wi-Fi): allow local network access, tap the Mac, enter the six-digit code.
-4. Play, browse, search, and change the volume. The iPhone's volume buttons change the Mac's output volume while the remote is open.
+3. On the iPhone or iPad (same Wi-Fi): allow local network access, tap the Mac, enter the six-digit code.
+4. Play, browse, search, and change the volume. The device's volume buttons change the Mac's output volume while the remote is open. On iPad, Now Playing with the queue and the library are shown side by side.
 
 A screen recording of this flow is here: <URL>
 
@@ -472,5 +482,5 @@ xcodegen generate
 | Remote | Bonjour `_audioharbor._tcp`, TCP im lokalen Netz, 6-stelliger Code (3 min gültig) |
 | App-Preis | Free — jeder darf installieren |
 | IAP product | `com.gerov.audioharbor.unlock` |
-| Trial | 7 Tage ab erster Installation — nur am Mac; der iPhone-Remote ist frei |
+| Trial | 7 Tage ab erster Installation — nur am Mac; der Remote auf iPhone und iPad ist frei |
 | Unlock | 9,90 € einmalig |

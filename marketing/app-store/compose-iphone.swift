@@ -1,19 +1,21 @@
 import AppKit
 
-// compose-iphone <raw 1320x2868.png> <eyebrow> <headline> <out 1320x2868.png>
+// compose-iphone <raw.png> <eyebrow> <headline> <out.png> [width height]
 //
-// iPhone App Store screenshot (6.9″): the app's dark chassis as a background, an amber eyebrow
+// iPhone / iPad App Store screenshot: the app's dark chassis as a background, an amber eyebrow
 // and a serif headline on top, the simulator capture below as a rounded screen with a hairline
 // bezel and a soft shadow. Same look as compose.swift for the Mac.
-// Run from marketing/app-store: `./build-iphone.sh`.
+// Default canvas is the iPhone 6.9″ (1320 × 2868); build-ipad.sh passes 2064 2752 for the iPad 13″.
+// Run from marketing/app-store: `./build-iphone.sh` or `./build-ipad.sh`.
 let a = CommandLine.arguments
-guard a.count == 5, let screen = NSImage(contentsOfFile: a[1]) else {
+guard a.count == 5 || a.count == 7, let screen = NSImage(contentsOfFile: a[1]) else {
     FileHandle.standardError.write(Data("compose-iphone: bad arguments\n".utf8)); exit(2)
 }
 // A literal "\\n" in the headline forces a line break.
 let eyebrow = a[2], headline = a[3].replacingOccurrences(of: "\\n", with: "\n")
 
-let width = 1320, height = 2868
+let width = a.count == 7 ? Int(a[5]) ?? 1320 : 1320
+let height = a.count == 7 ? Int(a[6]) ?? 2868 : 2868
 let canvas = NSSize(width: width, height: height)
 
 let amber = NSColor(calibratedRed: 0.98, green: 0.72, blue: 0.22, alpha: 1)
@@ -66,10 +68,13 @@ func render() -> NSBitmapImageRep {
     headlineText.draw(in: NSRect(x: 90, y: canvas.height - 520, width: canvas.width - 180, height: 270))
 
     // The screen, scaled to fit under the text: rounded like the device, hairline bezel, shadow.
-    let screenHeight: CGFloat = 2180
+    // Phone screens have deep corners; the iPad's are much flatter. The iPad's wider screen
+    // also needs a shorter frame, or its top runs into the headline.
+    let isTablet = screen.size.width / screen.size.height > 0.6
+    let screenHeight: CGFloat = isTablet ? canvas.height - 700 : 2180
     let screenWidth = screenHeight * screen.size.width / screen.size.height
     let screenRect = NSRect(x: (canvas.width - screenWidth) / 2, y: 110, width: screenWidth, height: screenHeight)
-    let radius = screenWidth * 0.125
+    let radius = screenWidth * (isTablet ? 0.035 : 0.125)
     let bezel = screenRect.insetBy(dx: -14, dy: -14)
     let bezelPath = NSBezierPath(roundedRect: bezel, xRadius: radius + 14, yRadius: radius + 14)
 

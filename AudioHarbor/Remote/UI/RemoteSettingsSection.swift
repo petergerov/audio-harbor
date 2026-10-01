@@ -38,7 +38,7 @@ struct RemoteSettingsSection: View {
         #if os(macOS)
         "LAN only for now. Pairing uses a one-time code; transport encryption comes next."
         #else
-        "Find a Mac running Audio Harbor with Remote enabled. Music plays on the Mac DAC — this phone steers."
+        "Find a Mac running Audio Harbor with Remote enabled. Music plays on the Mac DAC — this \(Brand.remoteDevice) steers."
         #endif
     }
 

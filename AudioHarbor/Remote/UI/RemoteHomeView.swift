@@ -54,7 +54,7 @@ struct RemoteHomeView: View {
                             .foregroundStyle(HarborColor.ivory)
                         LabeledContent("Version", value: Brand.versionLabel)
                             .foregroundStyle(HarborColor.ivory)
-                        Text("This iPhone steers Audio Harbor on your Mac. Playback stays on the Mac DAC.")
+                        Text("This \(Brand.remoteDevice) steers Audio Harbor on your Mac. Playback stays on the Mac DAC.")
                             .font(HarborFont.body(13))
                             .foregroundStyle(HarborColor.ivoryDim)
                     }
@@ -90,7 +90,7 @@ struct RemoteHomeView: View {
                         Text("Remote")
                             .font(HarborFont.title(16))
                             .foregroundStyle(HarborColor.amber)
-                        Text("Music plays on your Mac. This phone steers.")
+                        Text("Music plays on your Mac. This \(Brand.remoteDevice) steers.")
                             .font(HarborFont.body(14))
                             .foregroundStyle(HarborColor.ivoryDim)
                             .fixedSize(horizontal: false, vertical: true)
@@ -178,6 +178,7 @@ struct RemoteHomeView: View {
 
                 Spacer(minLength: 0)
             }
+            .remoteReadableWidth()
         }
     }
 

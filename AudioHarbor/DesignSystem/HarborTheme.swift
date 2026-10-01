@@ -82,6 +82,24 @@ enum Brand {
     static var versionLabel: String {
         build.isEmpty || build == version ? version : "\(version) (\(build))"
     }
+
+    /// The device the remote runs on, for copy like "This iPad steers."
+    @MainActor
+    static var remoteDevice: String {
+        #if os(iOS)
+        UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
+        #else
+        "Mac"
+        #endif
+    }
+}
+
+extension View {
+    /// Centres short remote screens (discovery, pairing) at a readable width on iPad.
+    func remoteReadableWidth() -> some View {
+        frame(maxWidth: 600)
+            .frame(maxWidth: .infinity)
+    }
 }
 
 struct BrandMark: View {
