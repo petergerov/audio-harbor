@@ -6,6 +6,9 @@ struct ExpandableTrackGroup<Thumbnail: View>: View {
     let title: String
     var subtitle: String?
     let tracks: [Track]
+    /// What the header's Add to Playlist / Labels act on — the whole group, not just the
+    /// tracks a search leaves visible.
+    let menuTracks: () -> [Track]
     let isExpanded: Bool
     /// Help text for the play button, e.g. "Play album".
     let playHelp: String
@@ -16,6 +19,10 @@ struct ExpandableTrackGroup<Thumbnail: View>: View {
 
     var body: some View {
         header
+            .tracksContextMenu(tracks: menuTracks) {
+                Button(playHelp) { onPlay(nil) }
+                Divider()
+            }
             .harborListRow()
         if isExpanded {
             ForEach(tracks) { track in

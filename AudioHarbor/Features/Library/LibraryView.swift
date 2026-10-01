@@ -197,6 +197,10 @@ struct LibraryView: View {
                 onOpen: { model.reveal(hit.entry.url) },
                 onPlay: { model.playDirectory(hit.entry.url, name: hit.entry.name) }
             )
+            .tracksContextMenu(tracks: { appModel.library.tracks(under: hit.entry.url) }) {
+                Button("Play") { model.playDirectory(hit.entry.url, name: hit.entry.name) }
+                Divider()
+            }
 
         case .audioFile(let track):
             let folderName = hit.entry.url.deletingLastPathComponent().lastPathComponent
@@ -262,8 +266,14 @@ struct LibraryView: View {
                         onOpen: { appModel.library.openFolderRoot(bookmark) },
                         onPlay: { model.playRoot(bookmark) }
                     )
-                    .contextMenu {
+                    .tracksContextMenu(tracks: {
+                        appModel.library.accessibleFolderURLs[bookmark.id]
+                            .map(appModel.library.tracks(under:)) ?? []
+                    }) {
                         Button("Play") { model.playRoot(bookmark) }
+                        Divider()
+                    } trailing: {
+                        Divider()
                         Button("Remove Directory", role: .destructive) {
                             appModel.library.removeFolder(bookmark)
                         }
@@ -371,8 +381,9 @@ struct LibraryView: View {
                 onOpen: { appModel.library.enterFolder(entry) },
                 onPlay: { model.playDirectory(entry.url, name: entry.name) }
             )
-            .contextMenu {
+            .tracksContextMenu(tracks: { appModel.library.tracks(under: entry.url) }) {
                 Button("Play") { model.playDirectory(entry.url, name: entry.name) }
+                Divider()
             }
 
         case .audioFile(let track):
@@ -469,6 +480,7 @@ private struct CatalogueAlbumList: View {
                     title: album.title,
                     subtitle: album.artist,
                     tracks: appModel.library.visibleTracks(in: album),
+                    menuTracks: { album.tracks },
                     isExpanded: model.expandedAlbumID == album.id,
                     playHelp: "Play album",
                     onToggle: { model.toggleAlbum(album) },
@@ -493,6 +505,7 @@ private struct CatalogueArtistList: View {
                 ExpandableTrackGroup(
                     title: facet.name,
                     tracks: appModel.library.visibleTracks(forArtist: facet.name),
+                    menuTracks: { appModel.library.tracks(forArtist: facet.name) },
                     isExpanded: model.expandedArtistName == facet.name,
                     playHelp: "Play artist",
                     onToggle: { model.toggleArtist(facet.name) },

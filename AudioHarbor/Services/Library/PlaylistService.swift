@@ -224,12 +224,18 @@ final class PlaylistService {
     }
 
     func add(_ track: Track, to playlist: Playlist) {
+        add([track], to: playlist)
+    }
+
+    /// Appends the tracks in order, skipping ones the playlist already holds.
+    func add(_ tracks: [Track], to playlist: Playlist) {
         guard let idx = playlists.firstIndex(where: { $0.id == playlist.id }),
               !playlists[idx].isSmart
         else { return }
-        let path = track.cataloguePath
-        guard !playlists[idx].trackPaths.contains(path) else { return }
-        playlists[idx].trackPaths.append(path)
+        var known = Set(playlists[idx].trackPaths)
+        let added = tracks.map(\.cataloguePath).filter { known.insert($0).inserted }
+        guard !added.isEmpty else { return }
+        playlists[idx].trackPaths.append(contentsOf: added)
         save()
     }
 

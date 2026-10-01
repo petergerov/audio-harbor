@@ -322,39 +322,57 @@ final class LibraryService {
             return (first, immediate)
         }
 
-        let prefix = normalizedPrefix(url.path)
-        let nested = tracks
-            .filter { $0.url.path.hasPrefix(prefix) }
-            .sorted { $0.url.path.localizedStandardCompare($1.url.path) == .orderedAscending }
+        let nested = tracks(under: url)
         guard let first = nested.first else { return nil }
         return (first, nested)
+    }
+
+    /// Every indexed track below `url`, subfolders included, in path order.
+    func tracks(under url: URL) -> [Track] {
+        let prefix = normalizedPrefix(url.path)
+        return tracks
+            .filter { $0.url.path.hasPrefix(prefix) }
+            .sorted { $0.url.path.localizedStandardCompare($1.url.path) == .orderedAscending }
     }
 
     // MARK: - Labels
 
     func addLabel(_ label: String, to track: Track) {
-        guard labelStore.add(label, to: track) else { return }
-        labelsDidChange(for: track)
+        addLabel(label, to: [track])
     }
 
     func removeLabel(_ label: String, from track: Track) {
-        labelStore.remove(label, from: track)
-        labelsDidChange(for: track)
+        removeLabel(label, from: [track])
+    }
+
+    func addLabel(_ label: String, to tracks: [Track]) {
+        let changed = labelStore.add(label, to: tracks)
+        guard !changed.isEmpty else { return }
+        labelsDidChange(for: changed)
+    }
+
+    func removeLabel(_ label: String, from tracks: [Track]) {
+        guard !tracks.isEmpty else { return }
+        labelStore.remove(label, from: tracks)
+        labelsDidChange(for: tracks)
     }
 
     func setLabels(_ labels: [String], for track: Track) {
         labelStore.set(labels, for: track)
-        labelsDidChange(for: track)
+        labelsDidChange(for: [track])
     }
 
-    /// Re-apply stored labels to the catalogue and mirror the edited track's labels into SQLite.
-    private func labelsDidChange(for track: Track) {
+    /// Re-apply stored labels to the catalogue and mirror the edited tracks' labels into SQLite.
+    private func labelsDidChange(for edited: [Track]) {
         tracks = tracks.map(labeled)
         catalogueDidChange()
 
-        let path = track.cataloguePath
-        let labels = labelStore.labels(forPath: path)
-        Task { await CatalogueIndexStore.shared.updateLabels(path: path, labels: labels) }
+        let updates = edited.map { ($0.cataloguePath, labelStore.labels(forPath: $0.cataloguePath)) }
+        Task {
+            for (path, labels) in updates {
+                await CatalogueIndexStore.shared.updateLabels(path: path, labels: labels)
+            }
+        }
     }
 
     private func labeled(_ track: Track) -> Track {
