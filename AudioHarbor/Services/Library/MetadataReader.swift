@@ -8,6 +8,7 @@ struct TrackMetadata: Sendable {
     var title: String
     var artist: String
     var album: String
+    var albumArtist: String?
     var trackNumber: Int?
     var year: Int?
     var duration: TimeInterval
@@ -131,6 +132,12 @@ enum MetadataReader {
                         meta.trackNumber = number.intValue
                     }
                 }
+                if id == .id3MetadataBand || id == .iTunesMetadataAlbumArtist {
+                    if let value = try await item.load(.stringValue)?.trimmingCharacters(in: .whitespaces),
+                       !value.isEmpty {
+                        meta.albumArtist = value
+                    }
+                }
                 if id == .id3MetadataYear || id == .iTunesMetadataReleaseDate {
                     if let value = try await item.load(.stringValue) {
                         meta.year = parseYear(value)
@@ -178,6 +185,7 @@ enum MetadataReader {
         case "TITLE": meta.title = value
         case "ARTIST": meta.artist = value
         case "ALBUM": meta.album = value
+        case "ALBUMARTIST", "ALBUM ARTIST": meta.albumArtist = value
         case "TRACKNUMBER": meta.trackNumber = parseTrackNumber(value)
         case "DATE", "YEAR": meta.year = parseYear(value)
         default: break

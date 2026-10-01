@@ -616,17 +616,32 @@ final class LibraryService {
     }
 
     nonisolated private static func makeAlbums(from tracks: [Track]) -> [Album] {
-        Dictionary(grouping: tracks) { track -> String in
-            if CatalogueUnknown.isAlbum(track.album) { return "unknown|" }
-            return "\(track.album)|\(track.artist)"
+        // Compilations without an album artist tag: one title, several artists, one folder.
+        func folderKey(_ track: Track) -> String {
+            "\(track.album)|dir:\(track.url.deletingLastPathComponent().path)"
         }
-            .values
-            .map { list in
+        let untaggedCompilations = Set(
+            Dictionary(grouping: tracks.filter { $0.albumArtist == nil }, by: folderKey)
+                .filter { Set($0.value.map(\.artist)).count > 1 }
+                .keys
+        )
+
+        return Dictionary(grouping: tracks) { track -> String in
+            if CatalogueUnknown.isAlbum(track.album) { return "unknown|" }
+            if let albumArtist = track.albumArtist { return "\(track.album)|\(albumArtist)" }
+            let folder = folderKey(track)
+            return untaggedCompilations.contains(folder) ? folder : "\(track.album)|\(track.artist)"
+        }
+            .map { key, list in
                 let first = list[0]
                 let unknownAlbum = CatalogueUnknown.isAlbum(first.album)
+                let artist = first.albumArtist
+                    ?? (Set(list.map(\.artist)).count > 1 ? "Various Artists" : first.artist)
                 return Album(
+                    // Folder-keyed, so same-titled samplers in different folders stay distinct.
+                    id: untaggedCompilations.contains(key) ? Album.stableID(title: first.album, artist: key) : nil,
                     title: unknownAlbum ? CatalogueUnknown.display : first.album,
-                    artist: unknownAlbum ? CatalogueUnknown.display : first.artist,
+                    artist: unknownAlbum ? CatalogueUnknown.display : artist,
                     year: unknownAlbum ? nil : first.year,
                     tracks: list.sorted { ($0.trackNumber ?? 9999) < ($1.trackNumber ?? 9999) },
                     artworkHash: list.first(where: { $0.artworkHash != nil })?.artworkHash

@@ -38,6 +38,8 @@ struct Track: Identifiable, Hashable, Sendable {
     var title: String
     var artist: String
     var album: String
+    /// ALBUMARTIST / TPE2 / aART — groups compilations into one album; nil when untagged.
+    var albumArtist: String?
     var trackNumber: Int?
     var year: Int?
     var duration: TimeInterval
@@ -60,6 +62,7 @@ struct Track: Identifiable, Hashable, Sendable {
         title: String,
         artist: String,
         album: String,
+        albumArtist: String? = nil,
         trackNumber: Int? = nil,
         year: Int? = nil,
         duration: TimeInterval,
@@ -79,6 +82,7 @@ struct Track: Identifiable, Hashable, Sendable {
         self.title = title
         self.artist = artist
         self.album = album
+        self.albumArtist = albumArtist
         self.trackNumber = trackNumber
         self.year = year
         self.duration = duration
