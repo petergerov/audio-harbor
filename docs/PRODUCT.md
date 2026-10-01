@@ -15,13 +15,13 @@
 | One job | Play local high-res audio correctly |
 | Honest quality | Prefer bit-perfect over marketing upsampling |
 | Calm UI | Brand + library + now playing — nothing else competing |
-| Shared soul | Same engine philosophy on Mac and iPhone; Mac leads on DAC depth |
+| Shared soul | One product on Mac and iPhone: the Mac plays on the DAC, the iPhone steers it |
 
 ---
 
 ## MVP (v1.0) — Ship this first
 
-**Goal:** Daily-driver local player on Mac; capable companion on iOS.
+**Goal:** Daily-driver local player on Mac. The iPhone follows as its remote (Mac 1.1 + iOS).
 
 ### Playback
 - [x] Gapless PCM playback
@@ -91,6 +91,7 @@ Ship only after MVP feels effortless. Pro adds power *behind* the same calm UI.
 - iCloud / folder sync of playlists (not the audio files)
 
 ### Platform Pro
+- [x] iPhone remote for the Mac engine — Bonjour + pairing code; browse, search, queue, transport; DAC hardware volume from the slider and the iPhone's volume buttons (ships with Mac 1.1)
 - iPad optimized layout
 - Mac menu bar mini player + notch-friendly compact mode
 - Continuity: handoff queue Mac ↔ iPhone (same library roots when possible)
@@ -98,7 +99,6 @@ Ship only after MVP feels effortless. Pro adds power *behind* the same calm UI.
 
 ### Ecosystem (later)
 - Optional Qobuz/Tidal *if* it doesn’t dilute local-first identity
-- Remote control from iPhone → Mac engine
 - Export / convert as a separate “Tools” area — never in the main path
 
 ### Monetization sketch
@@ -125,7 +125,7 @@ Ship only after MVP feels effortless. Pro adds power *behind* the same calm UI.
 ## Release sequencing
 
 ```
-MVP Mac  →  MVP iOS companion  →  Pro audio depth  →  Polish & Continuity
+Mac 1.0  →  Mac 1.1 + iPhone remote  →  Pro audio depth  →  Polish & Continuity
 ```
 
-Mac first: Exclusive mode and DAC behavior define the brand. iOS ships the same library language with platform-honest audio limits.
+Mac first: Exclusive mode and DAC behavior define the brand. The iPhone joins as the Mac's remote, free, under the same App Store listing (Universal Purchase). A player on iPhone / iPad stays a later option. Submission steps: [`APP_STORE_SUBMISSION.md`](../APP_STORE_SUBMISSION.md) § 11.

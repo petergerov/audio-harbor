@@ -6,7 +6,7 @@
 |---|---|
 | UI | SwiftUI (multiplatform) |
 | Language | Swift 5.10+ / Swift 6 concurrency where safe |
-| App shape | One shared target via XcodeGen → iOS + macOS |
+| App shape | One shared target via XcodeGen → macOS (player) + iOS (remote for the Mac) |
 | Persistence | SQLite+FTS5 catalogue in Application Support; portable library file for playlists/labels (see below) |
 | Metadata | AVFoundation + TagLib-style fallback later for exotic tags |
 | Audio | Core Audio / AVAudioEngine; custom DSD path |
@@ -103,6 +103,26 @@ DST frames are 1/75 s of DSD64. Harbor does not play DST bytes as DSD. The commo
 | Shared | System mixer (simple, compatible) |
 | Exclusive | HAL exclusive; rate follows track |
 | DoP | DSD packed in fake high-rate PCM for capable DACs |
+
+### Output volume
+
+The engine follows the hardware volume (`kAudioDevicePropertyVolumeScalar`) of the device playback goes to — `exclusiveTargetDevice`, so the hogged DAC in Exclusive / DoP. The master element is used when settable, else the preferred stereo pair's channels. A property listener reports changes from the DAC's knob or the Mac's keys; the binding moves when the active device changes (`refreshOutputStatus`). `PlaybackService.outputVolume` is nil for a fixed-level DAC. Samples are never scaled, so bit-perfect holds. Only the remote sets it today.
+
+---
+
+## Remote (iPhone → Mac)
+
+The iPhone build is a remote, not a second player (`RootView` shows `RemoteHomeView` on iOS). Same target, `Remote/` folder:
+
+| Part | Where | Job |
+|---|---|---|
+| Protocol | `Remote/Protocol` | Length-prefixed frames (`FrameCodec`): JSON envelopes (`ClientMessage` / `ServerMessage`, versioned) plus binary frames for artwork. Foundation only, shared by both sides. |
+| Server (Mac) | `RemoteControlService`, `RemoteSession`, `RemoteCommandRouter`, `PlaybackObserver` | `NWListener` advertised as `_audioharbor._tcp` (Bonjour). One actor per connection. The router maps commands onto `AppModel` / `PlaybackService`; the observer pushes coalesced `NowPlayingSnapshot` (incl. `outputVolume`, `outputName`) and `QueueSnapshot`. |
+| Client (iPhone) | `RemoteBrowser`, `RemoteClientConnection`, `RemoteController` | `NWBrowser` discovery, connect, pair, mirror snapshots, send commands. |
+| Pairing | `Remote/Security` | 6-digit code (3 min, 5 tries then 60 s lockout) → token per client, stored on both sides (UserDefaults + Data Protection Keychain). Reconnects use the token. |
+| Volume buttons | `VolumeButtonObserver` (iOS) | No API exists for the buttons: with an active `.ambient` session, `outputVolume` is observed via KVO, each press becomes a ±5 % step on the Mac, and a hidden `MPVolumeView` puts the phone back to 50 % (and hides the HUD). Only in the foreground, only while no other app plays; the phone's level is restored on disconnect. |
+
+Compatibility: new optional snapshot fields decode as nil from an older Mac; the client only sends `setVolume` when the snapshot carries a volume. Traffic is plain TCP on the local network — no TLS, hence export compliance `NO`.
 
 ---
 
@@ -242,6 +262,7 @@ AudioHarbor/
                        # CatalogueSearchIndex, TrackLabelStore, FolderNavigation, bookmarks, M3U
     Playback/          # PlaybackService, LicenseService
   Audio/               # PlaybackEngine + CoreAudio impl, HAL player, DSD / SACD decoders, meters
+  Remote/              # LAN remote: Protocol (wire format), Server (Mac), Client + UI (iPhone), Security (pairing)
   Resources/           # Assets (AppIcon, BrandLogo, deck photos), Info.plist, entitlements
 design/icons/          # Icon and logo masters + render tools (build-appicon.sh)
 docs/
