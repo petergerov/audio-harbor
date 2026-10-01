@@ -51,6 +51,11 @@ struct NowPlayingSnapshot: Codable, Sendable, Equatable {
     var isShuffled: Bool
     var activeFormatLabel: String?
     var pathLabel: String
+    /// Hardware volume of the Mac's active output (the DAC), 0…1. Nil when that output has no
+    /// volume control, or from a Mac that predates remote volume.
+    var outputVolume: Double?
+    /// Name of the output the Mac plays to.
+    var outputName: String?
 
     /// Equality ignoring continuous position fields — used to coalesce tick updates.
     func equalsIgnoringPosition(_ other: NowPlayingSnapshot) -> Bool {
@@ -308,15 +313,18 @@ enum TransportCommand: Codable, Sendable, Equatable {
     case playQueueIndex(index: Int)
     case setRepeat(mode: String)
     case setShuffle(on: Bool)
+    /// Hardware volume of the Mac's active output, 0…1. Only sent when the snapshot has one.
+    case setVolume(level: Double)
 
     enum CodingKeys: String, CodingKey {
-        case playPause, next, previous, seek, playQueueIndex, setRepeat, setShuffle
+        case playPause, next, previous, seek, playQueueIndex, setRepeat, setShuffle, setVolume
     }
 
     enum SeekKeys: String, CodingKey { case seconds }
     enum IndexKeys: String, CodingKey { case index }
     enum RepeatKeys: String, CodingKey { case mode }
     enum ShuffleKeys: String, CodingKey { case on }
+    enum VolumeKeys: String, CodingKey { case level }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -341,6 +349,11 @@ enum TransportCommand: Codable, Sendable, Equatable {
         if container.contains(.setShuffle) {
             let nested = try container.nestedContainer(keyedBy: ShuffleKeys.self, forKey: .setShuffle)
             self = .setShuffle(on: try nested.decode(Bool.self, forKey: .on))
+            return
+        }
+        if container.contains(.setVolume) {
+            let nested = try container.nestedContainer(keyedBy: VolumeKeys.self, forKey: .setVolume)
+            self = .setVolume(level: try nested.decode(Double.self, forKey: .level))
             return
         }
         throw DecodingError.dataCorrupted(
@@ -369,6 +382,9 @@ enum TransportCommand: Codable, Sendable, Equatable {
         case .setShuffle(let on):
             var nested = container.nestedContainer(keyedBy: ShuffleKeys.self, forKey: .setShuffle)
             try nested.encode(on, forKey: .on)
+        case .setVolume(let level):
+            var nested = container.nestedContainer(keyedBy: VolumeKeys.self, forKey: .setVolume)
+            try nested.encode(level, forKey: .level)
         }
     }
 }

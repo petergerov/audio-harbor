@@ -42,6 +42,7 @@ private struct BrowseDrill: Equatable {
 /// Remote Now Playing surface — controls a Harbor engine over the LAN.
 struct RemoteControllerView: View {
     @Bindable var controller: RemoteController
+    @Environment(\.scenePhase) private var scenePhase
     @State private var pane: RemotePane = .now
     @State private var seekDraft: Double = 0
     @State private var isSeeking = false
@@ -90,6 +91,9 @@ struct RemoteControllerView: View {
             }
         }
         .onReceive(tickTimer) { tick = $0 }
+        .onChange(of: scenePhase, initial: true) { _, phase in
+            controller.isInForeground = phase != .background
+        }
         .onChange(of: controller.phase) { _, phase in
             if phase == .connected {
                 reloadBrowseRoot()
@@ -242,6 +246,12 @@ struct RemoteControllerView: View {
                     .foregroundStyle(HarborColor.ivoryDim)
                     .frame(width: 36, alignment: .trailing)
             }
+
+            RemoteVolumeRow(
+                volume: controller.outputVolume,
+                outputName: snap?.outputName,
+                onChange: controller.setVolume
+            )
         }
         .padding(10)
         .background(HarborColor.faceplateLift)
@@ -621,5 +631,38 @@ struct RemoteControllerView: View {
         let m = total / 60
         let s = total % 60
         return String(format: "%d:%02d", m, s)
+    }
+}
+
+/// Hardware volume of the Mac's output — the DAC when it has a volume control.
+/// The phone's volume buttons step the same level.
+private struct RemoteVolumeRow: View {
+    let volume: Double?
+    let outputName: String?
+    let onChange: (Double) -> Void
+
+    var body: some View {
+        if let volume {
+            HStack(spacing: 8) {
+                Image(systemName: "speaker.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(HarborColor.ivoryDim)
+                    .frame(width: 36, alignment: .leading)
+                Slider(value: Binding(get: { volume }, set: onChange), in: 0...1)
+                    .tint(HarborColor.amber)
+                Text("\(Int((volume * 100).rounded()))")
+                    .font(HarborFont.mono(10))
+                    .foregroundStyle(HarborColor.ivoryDim)
+                    .frame(width: 36, alignment: .trailing)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Volume\(outputName.map { " on \($0)" } ?? "")")
+        } else if let outputName {
+            Text("\(outputName) has no volume control — set the level on the amp")
+                .font(HarborFont.mono(10))
+                .foregroundStyle(HarborColor.ivoryDim)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 }

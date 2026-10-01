@@ -38,6 +38,7 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
     private var preferredOutputUID: String?
     private var outputStatus = OutputStatus()
     private var outputStatusHandler: ((OutputStatus) -> Void)?
+    private var outputVolumeHandler: ((Double?) -> Void)?
     private var usingHAL = false
     private var activeRender: RenderBuffer?
     private var seekOffset: TimeInterval = 0
@@ -54,6 +55,9 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
     private var sharedAnchorOffset: TimeInterval = 0
     #if os(macOS)
     private var exclusiveDeviceID: AudioDeviceID?
+    /// The device whose volume is followed, and how to stop following it.
+    private var volumeDevice: AudioDeviceID?
+    private var stopObservingVolume: (() -> Void)?
     #endif
     /// Exclusive · FX: the plugin graph plays into the hogged DAC at the file's rate.
     private var exclusiveFX = false
@@ -102,6 +106,7 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
     }
 
     private func refreshOutputStatus() {
+        bindOutputVolume()
         let status = currentOutputStatus()
         guard status != outputStatus else { return }
         outputStatus = status
@@ -120,6 +125,49 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
 
     func setTrackEndedHandler(_ handler: @escaping (Track) -> Void) {
         onTrackEnded = handler
+    }
+
+    // MARK: - Output volume
+
+    func setOutputVolume(_ level: Double) {
+        #if os(macOS)
+        guard let device = exclusiveTargetDevice else { return }
+        deviceController.setVolume(level, device: device)
+        #endif
+    }
+
+    func setOutputVolumeHandler(_ handler: @escaping (Double?) -> Void) {
+        outputVolumeHandler = handler
+        bindOutputVolume()
+    }
+
+    /// Follows the volume of the device playback goes to — the hogged DAC included — and
+    /// moves over when that device changes.
+    private func bindOutputVolume() {
+        #if os(macOS)
+        let device = exclusiveTargetDevice
+        if device != volumeDevice {
+            stopObservingVolume?()
+            stopObservingVolume = nil
+            volumeDevice = device
+            if let device {
+                stopObservingVolume = deviceController.observeVolume(device: device) { [weak self] in
+                    MainActor.assumeIsolated {
+                        self?.reportOutputVolume()
+                    }
+                }
+            }
+        }
+        reportOutputVolume()
+        #else
+        outputVolumeHandler?(nil)
+        #endif
+    }
+
+    private func reportOutputVolume() {
+        #if os(macOS)
+        outputVolumeHandler?(volumeDevice.flatMap { deviceController.volume(device: $0) })
+        #endif
     }
 
     // MARK: - Transport

@@ -260,6 +260,86 @@ final class MacAudioDeviceController: @unchecked Sendable {
         return false
     }
 
+    // MARK: - Volume
+
+    /// The device's own output volume, 0…1 — on a DAC with a volume control that is the DAC
+    /// itself, so the samples stay untouched. Nil when the device has none (fixed-level output).
+    func volume(device: AudioDeviceID) -> Double? {
+        let levels = volumeElements(device: device).compactMap { element -> Float32? in
+            var level = Float32(0)
+            var size = UInt32(MemoryLayout<Float32>.size)
+            var address = volumeAddress(element)
+            guard AudioObjectGetPropertyData(device, &address, 0, nil, &size, &level) == noErr else { return nil }
+            return level
+        }
+        guard !levels.isEmpty else { return nil }
+        return Double(levels.reduce(0, +)) / Double(levels.count)
+    }
+
+    func setVolume(_ level: Double, device: AudioDeviceID) {
+        var value = Float32(min(1, max(0, level)))
+        for element in volumeElements(device: device) {
+            var address = volumeAddress(element)
+            _ = AHPerformWithExceptionHandling({
+                _ = AudioObjectSetPropertyData(device, &address, 0, nil, UInt32(MemoryLayout<Float32>.size), &value)
+            }, nil)
+        }
+    }
+
+    /// Calls `handler` on the main queue whenever the device's volume moves — from us, the
+    /// DAC's own knob, or the Mac's volume keys. Call the returned closure to stop.
+    func observeVolume(device: AudioDeviceID, _ handler: @escaping () -> Void) -> () -> Void {
+        let block: AudioObjectPropertyListenerBlock = { _, _ in handler() }
+        let elements = volumeElements(device: device)
+        for element in elements {
+            var address = volumeAddress(element)
+            AudioObjectAddPropertyListenerBlock(device, &address, .main, block)
+        }
+        return {
+            for element in elements {
+                var address = self.volumeAddress(element)
+                AudioObjectRemovePropertyListenerBlock(device, &address, .main, block)
+            }
+        }
+    }
+
+    /// The master volume if the device has a settable one, otherwise its stereo pair's channels.
+    private func volumeElements(device: AudioDeviceID) -> [AudioObjectPropertyElement] {
+        if hasSettableVolume(device: device, element: kAudioObjectPropertyElementMain) {
+            return [kAudioObjectPropertyElementMain]
+        }
+        return stereoChannels(device: device).filter { hasSettableVolume(device: device, element: $0) }
+    }
+
+    private func hasSettableVolume(device: AudioDeviceID, element: AudioObjectPropertyElement) -> Bool {
+        var address = volumeAddress(element)
+        guard AudioObjectHasProperty(device, &address) else { return false }
+        var settable: DarwinBoolean = false
+        return AudioObjectIsPropertySettable(device, &address, &settable) == noErr && settable.boolValue
+    }
+
+    private func stereoChannels(device: AudioDeviceID) -> [AudioObjectPropertyElement] {
+        var channels: (UInt32, UInt32) = (1, 2)
+        var size = UInt32(MemoryLayout<(UInt32, UInt32)>.size)
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyPreferredChannelsForStereo,
+            mScope: kAudioDevicePropertyScopeOutput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        guard AudioObjectGetPropertyData(device, &address, 0, nil, &size, &channels) == noErr else {
+            return [1, 2]
+        }
+        return [channels.0, channels.1]
+    }
+
+    private func volumeAddress(_ element: AudioObjectPropertyElement) -> AudioObjectPropertyAddress {
+        AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyVolumeScalar,
+            mScope: kAudioDevicePropertyScopeOutput,
+            mElement: element
+        )
+    }
+
     private func setHogMode(device: AudioDeviceID, enabled: Bool) throws {
         var pid: pid_t = enabled ? hogPID : pid_t(-1)
         var address = AudioObjectPropertyAddress(

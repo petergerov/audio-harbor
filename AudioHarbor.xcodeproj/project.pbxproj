@@ -40,6 +40,7 @@
 		5FC40BA03A1E8DC0E96BEC95 /* CoreAudioPlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2DCF3754E5DF184BE6DDD50 /* CoreAudioPlaybackEngine.swift */; };
 		616BE6BCE128C9B98DD385C1 /* CatalogueRecords.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E7F5C4FC1AA0BCED261047 /* CatalogueRecords.swift */; };
 		63757066341FC5AEDB3C2745 /* TrackRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41CD8B5C14348DDE0695FB45 /* TrackRow.swift */; };
+		66F9D573F419B994C7928738 /* VolumeButtonObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BE62BADFA1B5A0B77546E25 /* VolumeButtonObserver.swift */; };
 		69F93CBC5B562D9ED0EE6C78 /* RemoteControllerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF181C0F4160B4BBDD394100 /* RemoteControllerView.swift */; };
 		6C7F048533CE23F5A2620788 /* PlaylistsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9D1D098AE67C516C2C0C5E1 /* PlaylistsViewModel.swift */; };
 		6CBE7A47E2B1FADF3C9D8867 /* HarborListStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19A0E5116FBE3B1AF9104F0B /* HarborListStyle.swift */; };
@@ -98,6 +99,7 @@
 		341644E7480CF17C8FCECB6C /* LibraryQueryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryQueryService.swift; sourceTree = "<group>"; };
 		39554B53A77D1827EF86E62D /* AHExceptionCatcher.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AHExceptionCatcher.m; sourceTree = "<group>"; };
 		39783E66128487305A0C7D56 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		3BE62BADFA1B5A0B77546E25 /* VolumeButtonObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeButtonObserver.swift; sourceTree = "<group>"; };
 		40A45E5B8213AE05D262F470 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		41CD8B5C14348DDE0695FB45 /* TrackRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackRow.swift; sourceTree = "<group>"; };
 		448B1EF5E4AB4488CBF7A8C7 /* MiniPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniPlayer.swift; sourceTree = "<group>"; };
@@ -365,6 +367,7 @@
 				960FF27C79E985CE0EF387AA /* RemoteClientConnection.swift */,
 				F9A830868C6B12BBBBA743A6 /* RemoteClientStore.swift */,
 				EAB455A40308B519E01C8897 /* RemoteController.swift */,
+				3BE62BADFA1B5A0B77546E25 /* VolumeButtonObserver.swift */,
 			);
 			path = Client;
 			sourceTree = "<group>";
@@ -569,6 +572,7 @@
 				912BE7238ACA65FEF8FF38BC /* TrackLabelStore.swift in Sources */,
 				63757066341FC5AEDB3C2745 /* TrackRow.swift in Sources */,
 				7E9EB22964905811D62EADDD /* UnlockPanel.swift in Sources */,
+				66F9D573F419B994C7928738 /* VolumeButtonObserver.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

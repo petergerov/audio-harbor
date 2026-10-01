@@ -17,12 +17,20 @@ enum RemoteControllerPhase: Equatable, Sendable {
 @Observable
 @MainActor
 final class RemoteController {
-    private(set) var phase: RemoteControllerPhase = .idle
+    private(set) var phase: RemoteControllerPhase = .idle {
+        didSet { updateVolumeButtons() }
+    }
     private(set) var statusText = "Not connected"
     private(set) var serverName: String?
     private(set) var serverID: UUID?
     private(set) var capabilities: [RemoteCapability] = []
-    private(set) var nowPlaying: NowPlayingSnapshot?
+    private(set) var nowPlaying: NowPlayingSnapshot? {
+        didSet {
+            if (oldValue?.outputVolume == nil) != (nowPlaying?.outputVolume == nil) {
+                updateVolumeButtons()
+            }
+        }
+    }
     private(set) var queue: QueueSnapshot?
     private(set) var searchResults: [TrackDTO] = []
     private(set) var browseItems: [BrowseItem] = []
@@ -39,6 +47,22 @@ final class RemoteController {
     private var browseAppend = false
     private var lastBrowseRequest: BrowseRequest?
 
+    /// Size of one volume-button press on the Mac's output.
+    static let volumeStep = 0.05
+    /// The level last asked for — shown and stepped from until the Mac's report catches up.
+    private var requestedVolume: Double?
+    private var requestedVolumeAt = Date.distantPast
+    /// False while the app is in the background; the buttons then belong to the phone again.
+    var isInForeground = true {
+        didSet { updateVolumeButtons() }
+    }
+    #if os(iOS)
+    @ObservationIgnored
+    private lazy var volumeButtons = VolumeButtonObserver { [weak self] direction in
+        self?.stepVolume(by: Double(direction) * Self.volumeStep)
+    }
+    #endif
+
     var displayedPosition: TimeInterval {
         guard let snap = nowPlaying else { return 0 }
         guard snap.rate > 0 else { return snap.position }
@@ -48,6 +72,32 @@ final class RemoteController {
 
     var isPlaying: Bool {
         nowPlaying?.state == "playing"
+    }
+
+    /// Hardware volume of the Mac's output, 0…1; nil when that output has no volume control.
+    var outputVolume: Double? {
+        guard let reported = nowPlaying?.outputVolume else { return nil }
+        if let requestedVolume, Date().timeIntervalSince(requestedVolumeAt) < 1.5 {
+            return requestedVolume
+        }
+        return reported
+    }
+
+    func setVolume(_ level: Double) {
+        guard nowPlaying?.outputVolume != nil else { return }
+        let clamped = min(1, max(0, level))
+        if let requestedVolume, abs(requestedVolume - clamped) < 0.005,
+           Date().timeIntervalSince(requestedVolumeAt) < 1.5 {
+            return
+        }
+        requestedVolume = clamped
+        requestedVolumeAt = Date()
+        sendTransport(.setVolume(level: clamped))
+    }
+
+    func stepVolume(by delta: Double) {
+        guard let current = outputVolume else { return }
+        setVolume(current + delta)
     }
 
     func connect(to server: RemoteServerEndpoint, pairingCode: String? = nil) {
@@ -331,6 +381,18 @@ final class RemoteController {
         phase = .connected
         statusText = "Connected to \(serverName ?? "Audio Harbor")"
         await send(.subscribe(topics: [.nowPlaying, .queue]), on: connection)
+    }
+
+    /// The phone's volume buttons steer the Mac while connected to an output with a volume control.
+    private func updateVolumeButtons() {
+        #if os(iOS)
+        let wanted = isInForeground && phase == .connected && nowPlaying?.outputVolume != nil
+        if wanted {
+            volumeButtons.start()
+        } else if volumeButtons.isActive {
+            volumeButtons.stop()
+        }
+        #endif
     }
 
     private func sendTransport(_ command: TransportCommand) {

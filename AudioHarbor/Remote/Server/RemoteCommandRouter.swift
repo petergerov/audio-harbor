@@ -89,6 +89,8 @@ final class RemoteCommandRouter {
             if playback.isShuffled != on {
                 playback.toggleShuffle()
             }
+        case .setVolume(let level):
+            playback.setOutputVolume(level)
         }
     }
 

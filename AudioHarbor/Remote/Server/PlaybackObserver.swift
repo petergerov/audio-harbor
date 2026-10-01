@@ -63,6 +63,8 @@ final class PlaybackObserver {
             _ = playback.isShuffled
             _ = playback.activeFormatLabel
             _ = playback.pathLabel
+            _ = playback.outputVolume
+            _ = playback.outputStatus.activeDevice?.name
         } onChange: { [weak self] in
             Task { @MainActor in
                 guard let self else { return }
@@ -119,7 +121,9 @@ final class PlaybackObserver {
             repeatMode: playback.repeatMode.rawValue,
             isShuffled: playback.isShuffled,
             activeFormatLabel: playback.activeFormatLabel,
-            pathLabel: playback.pathLabel
+            pathLabel: playback.pathLabel,
+            outputVolume: playback.outputVolume,
+            outputName: playback.outputStatus.activeDevice?.name
         )
     }
 
