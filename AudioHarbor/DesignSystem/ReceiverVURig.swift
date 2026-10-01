@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Large stereo receiver faceplate with dual bouncing VU needles.
 struct ReceiverVURig: View {
+    let artwork: Image?
     let isPlaying: Bool
     let progress: Double
     var leftLevel: Double = 0
@@ -21,7 +22,11 @@ struct ReceiverVURig: View {
                 }
             }
 
-            HStack(spacing: 16) {
+            HStack(alignment: .bottom, spacing: 16) {
+                if let artwork {
+                    // Same height as a meter plus its label row.
+                    DeckArtworkChip(artwork: artwork, size: 108, tilt: 0)
+                }
                 AnalogVUMeter(label: "L", level: leftLevel)
                 AnalogVUMeter(label: "R", level: rightLevel)
             }

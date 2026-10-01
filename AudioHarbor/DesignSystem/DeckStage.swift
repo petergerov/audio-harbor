@@ -48,9 +48,15 @@ struct DeckStage<Trailing: View>: View {
                         stageHeight: heroHeight
                     )
                 case .reelToReel:
-                    ReelToReelRig(isPlaying: isPlaying, progress: progress, stageHeight: heroHeight)
+                    ReelToReelRig(
+                        artwork: artwork,
+                        isPlaying: isPlaying,
+                        progress: progress,
+                        stageHeight: heroHeight
+                    )
                 case .receiver:
                     ReceiverVURig(
+                        artwork: artwork,
                         isPlaying: isPlaying,
                         progress: progress,
                         leftLevel: meterLeft,
@@ -99,5 +105,32 @@ struct DeckStage<Trailing: View>: View {
         }
         .scrollClipDisabled()
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Album cover laid on the deck — a sleeve on the photo stages, a window on the receiver.
+struct DeckArtworkChip: View {
+    let artwork: Image
+    let size: CGFloat
+    var tilt: Double = -3
+
+    /// Scales with the photo stage so the cover reads at every hero height.
+    static func size(forStageHeight height: CGFloat) -> CGFloat {
+        min(max(height * 0.34, 64), 168)
+    }
+
+    var body: some View {
+        artwork
+            .resizable()
+            .scaledToFill()
+            .frame(width: size, height: size)
+            .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .stroke(Color(red: 0.72, green: 0.55, blue: 0.32).opacity(0.55), lineWidth: 1)
+            )
+            .rotationEffect(.degrees(tilt))
+            .shadow(color: .black.opacity(0.7), radius: 14, y: 7)
+            .allowsHitTesting(false)
     }
 }

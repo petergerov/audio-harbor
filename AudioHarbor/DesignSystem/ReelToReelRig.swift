@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Photoreal reel-to-reel: `tonband_2` wide, `tonband_3` portrait / tight width.
 struct ReelToReelRig: View {
+    let artwork: Image?
     let isPlaying: Bool
     let progress: Double
     var stageHeight: CGFloat? = nil
@@ -9,6 +10,7 @@ struct ReelToReelRig: View {
     var body: some View {
         if let stageHeight {
             ReelHeroView(
+                artwork: artwork,
                 isPlaying: isPlaying,
                 progress: progress,
                 layout: .wide,
@@ -17,10 +19,10 @@ struct ReelToReelRig: View {
             .frame(maxWidth: .infinity)
         } else {
             ViewThatFits(in: .horizontal) {
-                ReelHeroView(isPlaying: isPlaying, progress: progress, layout: .wide)
+                ReelHeroView(artwork: artwork, isPlaying: isPlaying, progress: progress, layout: .wide)
                     .frame(minWidth: 480)
                     .frame(maxWidth: .infinity)
-                ReelHeroView(isPlaying: isPlaying, progress: progress, layout: .portrait)
+                ReelHeroView(artwork: artwork, isPlaying: isPlaying, progress: progress, layout: .portrait)
                     .frame(maxWidth: .infinity)
             }
         }
@@ -62,6 +64,7 @@ private enum ReelHeroLayout {
 }
 
 private struct ReelHeroView: View {
+    let artwork: Image?
     let isPlaying: Bool
     let progress: Double
     let layout: ReelHeroLayout
@@ -149,6 +152,12 @@ private struct ReelHeroView: View {
                 endRadius: size.width * 0.78
             )
             .allowsHitTesting(false)
+        }
+        .overlay(alignment: .bottomLeading) {
+            if let artwork {
+                DeckArtworkChip(artwork: artwork, size: DeckArtworkChip.size(forStageHeight: size.height))
+                    .padding(18)
+            }
         }
         .overlay(alignment: .topTrailing) {
             Circle()
