@@ -89,8 +89,24 @@ struct RemoteControllerView: View {
                         .foregroundStyle(HarborColor.ivoryDim)
                 }
             }
+            // Short panels (pairing, errors) start under the header instead of floating mid-screen.
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .onReceive(tickTimer) { tick = $0 }
+        #if DEBUG && os(iOS)
+        .onAppear {
+            if let raw = controller.fixturePane, let fixturePane = RemotePane(rawValue: raw) {
+                pane = fixturePane
+                if fixturePane == .browse {
+                    browseRoot = .albums
+                    reloadBrowseRoot()
+                }
+            }
+            if let text = controller.fixtureSearchText {
+                searchText = text
+            }
+        }
+        #endif
         .onChange(of: scenePhase, initial: true) { _, phase in
             controller.isInForeground = phase != .background
         }

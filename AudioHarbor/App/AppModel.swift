@@ -39,6 +39,12 @@ final class AppModel {
         self.playback = PlaybackService(engine: engine, license: license)
         self.playlists = PlaylistService()
         self.remote = RemoteControlService(appModel: self)
+        #if DEBUG && os(iOS)
+        if let fixture = RemoteScreenshotFixture.fromLaunchArguments() {
+            remoteBrowser.showFixture(fixture.nearbyServers)
+            remoteController.showFixture(fixture)
+        }
+        #endif
     }
 }
 

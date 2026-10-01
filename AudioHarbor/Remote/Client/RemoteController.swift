@@ -56,6 +56,12 @@ final class RemoteController {
     var isInForeground = true {
         didSet { updateVolumeButtons() }
     }
+    #if DEBUG && os(iOS)
+    /// Screenshot mode (`-remoteScreenshot <scene>`): fixture data instead of a Mac.
+    @ObservationIgnored private var fixture: RemoteScreenshotFixture?
+    private(set) var fixturePane: String?
+    private(set) var fixtureSearchText: String?
+    #endif
     #if os(iOS)
     @ObservationIgnored
     private lazy var volumeButtons = VolumeButtonObserver { [weak self] direction in
@@ -190,6 +196,9 @@ final class RemoteController {
     }
 
     func search(_ query: String) {
+        #if DEBUG && os(iOS)
+        if fixture != nil { return }
+        #endif
         send(.search(query: query, limit: 200))
     }
 
@@ -197,6 +206,13 @@ final class RemoteController {
         browseAppend = append
         let request = BrowseRequest(scope: scope, parentID: parentID, offset: offset, limit: 50)
         lastBrowseRequest = request
+        #if DEBUG && os(iOS)
+        if let fixture {
+            browseItems = fixture.browseItems(scope: scope, parentID: parentID)
+            browseHasMore = false
+            return
+        }
+        #endif
         if !append {
             browseItems = []
             browseHasMore = false
@@ -222,6 +238,30 @@ final class RemoteController {
         guard artworkByHash[hash] == nil else { return }
         send(.artwork(hash: hash, maxPixel: maxPixel))
     }
+
+    #if DEBUG && os(iOS)
+    func showFixture(_ fixture: RemoteScreenshotFixture) {
+        self.fixture = fixture
+        serverName = RemoteScreenshotFixture.serverName
+        artworkByHash = fixture.artwork()
+        switch fixture.scene {
+        case .nearby:
+            break
+        case .pairing:
+            pairingCodeInput = fixture.pairingCode
+            statusText = "Enter the pairing code from the Mac"
+            phase = .needsPairing
+        case .now, .browse, .queue:
+            nowPlaying = fixture.nowPlaying
+            queue = fixture.queue
+            searchResults = fixture.searchResults
+            fixturePane = fixture.pane
+            fixtureSearchText = fixture.searchQuery
+            statusText = "Connected to \(RemoteScreenshotFixture.serverName)"
+            phase = .connected
+        }
+    }
+    #endif
 
     // MARK: - Receive
 
@@ -385,6 +425,9 @@ final class RemoteController {
 
     /// The phone's volume buttons steer the Mac while connected to an output with a volume control.
     private func updateVolumeButtons() {
+        #if DEBUG && os(iOS)
+        if fixture != nil { return }
+        #endif
         #if os(iOS)
         let wanted = isInForeground && phase == .connected && nowPlaying?.outputVolume != nil
         if wanted {

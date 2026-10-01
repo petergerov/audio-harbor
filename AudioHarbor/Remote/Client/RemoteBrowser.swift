@@ -19,8 +19,21 @@ final class RemoteBrowser {
     private(set) var isBrowsing = false
 
     private var browser: NWBrowser?
+    #if DEBUG
+    private var showsFixture = false
+
+    /// Screenshot mode: list these servers and do not browse.
+    func showFixture(_ servers: [RemoteServerEndpoint]) {
+        showsFixture = true
+        self.servers = servers
+        statusText = "\(servers.count) Harbors nearby"
+    }
+    #endif
 
     func start() {
+        #if DEBUG
+        if showsFixture { return }
+        #endif
         guard browser == nil else { return }
         let descriptor = NWBrowser.Descriptor.bonjourWithTXTRecord(
             type: RemoteProtocol.serviceType,

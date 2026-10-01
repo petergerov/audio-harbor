@@ -403,7 +403,15 @@ The remote is free. Playback on the Mac follows the Mac app's trial and one-time
 | iPhone 6,9″ | 1320 × 2868 (oder 1290 × 2796) | Ja |
 | iPad 13″ | 2064 × 2752 (oder 2048 × 2732) | Nein — Target ist iPhone-only |
 
-Vorschlag (3–5 Bilder): Suche nach dem Mac → Pairing-Code → Now Playing mit Lautstärke → Browse (Alben) → Queue. Den Mac-Namen im Bild neutral halten („Studio Mac“), keine echten Gerätenamen.
+Fertiger Satz (Oktober 2026): [`marketing/app-store/iphone-1320x2868/`](marketing/app-store/iphone-1320x2868/), 5 Bilder, opak, 1320 × 2868:
+
+1. **Remote** — „Your Mac plays. Your iPhone steers.“ (Now Playing mit DAC-Lautstärke, Suche)
+2. **Browse** — „Every album on your Mac, in your hand.“
+3. **Queue** — „Jump anywhere in what plays next.“
+4. **Nearby** — „Finds your Mac on its own. No account.“
+5. **Pairing** — „Pair once with a code from the Mac.“
+
+Die Daten sind erfunden (Künstler, Alben, generierte Cover — keine echte Musik, keine echten Gerätenamen). Sie kommen aus dem Fixture-Modus des Debug-Builds (`RemoteScreenshotFixture.swift`, Launch-Argument `-remoteScreenshot <scene>`), der im Release-Build nicht existiert. Texte stehen in `marketing/app-store/screenshots-iphone.txt`, die Rohaufnahmen in `raw-iphone/`. Neu erzeugen: `marketing/app-store/build-iphone.sh --capture` (baut, startet den Simulator „iPhone 17 Pro Max“, nimmt auf, setzt zusammen); ohne `--capture` nur neu zusammensetzen.
 
 ### 11.7 Review notes iOS (an Apple)
 
