@@ -21,10 +21,15 @@ enum ClientMessage: Codable, Sendable, Equatable {
     case browse(request: BrowseRequest)
     case search(query: String, limit: Int)
     case artwork(hash: String, maxPixel: Int)
+    /// Version 2 on: the playlists and labels for one track, answered with `trackOptions`.
+    case trackOptions(cataloguePath: String)
+    /// Version 2 on: also answered with `trackOptions`, as they stand after the edit.
+    case editTrack(cataloguePath: String, edit: TrackEdit)
     case ping
 
     enum CodingKeys: String, CodingKey {
-        case hello, subscribe, transport, playSelection, browse, search, artwork, ping
+        case hello, subscribe, transport, playSelection, browse, search, artwork
+        case trackOptions, editTrack, ping
     }
 
     enum HelloKeys: String, CodingKey {
@@ -37,6 +42,8 @@ enum ClientMessage: Codable, Sendable, Equatable {
     enum BrowseKeys: String, CodingKey { case request }
     enum SearchKeys: String, CodingKey { case query, limit }
     enum ArtworkKeys: String, CodingKey { case hash, maxPixel }
+    enum TrackOptionsKeys: String, CodingKey { case cataloguePath }
+    enum EditTrackKeys: String, CodingKey { case cataloguePath, edit }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -87,6 +94,19 @@ enum ClientMessage: Codable, Sendable, Equatable {
             )
             return
         }
+        if container.contains(.trackOptions) {
+            let nested = try container.nestedContainer(keyedBy: TrackOptionsKeys.self, forKey: .trackOptions)
+            self = .trackOptions(cataloguePath: try nested.decode(String.self, forKey: .cataloguePath))
+            return
+        }
+        if container.contains(.editTrack) {
+            let nested = try container.nestedContainer(keyedBy: EditTrackKeys.self, forKey: .editTrack)
+            self = .editTrack(
+                cataloguePath: try nested.decode(String.self, forKey: .cataloguePath),
+                edit: try nested.decode(TrackEdit.self, forKey: .edit)
+            )
+            return
+        }
         if container.contains(.ping) {
             self = .ping
             return
@@ -126,6 +146,13 @@ enum ClientMessage: Codable, Sendable, Equatable {
             var nested = container.nestedContainer(keyedBy: ArtworkKeys.self, forKey: .artwork)
             try nested.encode(hash, forKey: .hash)
             try nested.encode(maxPixel, forKey: .maxPixel)
+        case .trackOptions(let cataloguePath):
+            var nested = container.nestedContainer(keyedBy: TrackOptionsKeys.self, forKey: .trackOptions)
+            try nested.encode(cataloguePath, forKey: .cataloguePath)
+        case let .editTrack(cataloguePath, edit):
+            var nested = container.nestedContainer(keyedBy: EditTrackKeys.self, forKey: .editTrack)
+            try nested.encode(cataloguePath, forKey: .cataloguePath)
+            try nested.encode(edit, forKey: .edit)
         case .ping:
             try container.encode(true, forKey: .ping)
         }
@@ -141,11 +168,13 @@ enum ServerMessage: Codable, Sendable, Equatable {
     case searchResult(tracks: [TrackDTO])
     /// Followed immediately by a binary frame of JPEG/PNG bytes.
     case artworkHeader(hash: String, byteCount: Int)
+    case trackOptions(options: TrackOptionsDTO)
     case error(code: RemoteErrorCode, message: String)
     case pong
 
     enum CodingKeys: String, CodingKey {
-        case hello, paired, nowPlaying, queue, browseResult, searchResult, artworkHeader, error, pong
+        case hello, paired, nowPlaying, queue, browseResult, searchResult, artworkHeader
+        case trackOptions, error, pong
     }
 
     enum HelloKeys: String, CodingKey {
@@ -158,6 +187,7 @@ enum ServerMessage: Codable, Sendable, Equatable {
     enum BrowseResultKeys: String, CodingKey { case items, hasMore }
     enum SearchResultKeys: String, CodingKey { case tracks }
     enum ArtworkHeaderKeys: String, CodingKey { case hash, byteCount }
+    enum TrackOptionsKeys: String, CodingKey { case options }
     enum ErrorKeys: String, CodingKey { case code, message }
 
     init(from decoder: Decoder) throws {
@@ -208,6 +238,11 @@ enum ServerMessage: Codable, Sendable, Equatable {
             )
             return
         }
+        if container.contains(.trackOptions) {
+            let nested = try container.nestedContainer(keyedBy: TrackOptionsKeys.self, forKey: .trackOptions)
+            self = .trackOptions(options: try nested.decode(TrackOptionsDTO.self, forKey: .options))
+            return
+        }
         if container.contains(.error) {
             let nested = try container.nestedContainer(keyedBy: ErrorKeys.self, forKey: .error)
             self = .error(
@@ -254,6 +289,9 @@ enum ServerMessage: Codable, Sendable, Equatable {
             var nested = container.nestedContainer(keyedBy: ArtworkHeaderKeys.self, forKey: .artworkHeader)
             try nested.encode(hash, forKey: .hash)
             try nested.encode(byteCount, forKey: .byteCount)
+        case .trackOptions(let options):
+            var nested = container.nestedContainer(keyedBy: TrackOptionsKeys.self, forKey: .trackOptions)
+            try nested.encode(options, forKey: .options)
         case let .error(code, message):
             var nested = container.nestedContainer(keyedBy: ErrorKeys.self, forKey: .error)
             try nested.encode(code, forKey: .code)

@@ -51,6 +51,8 @@ struct RemoteControllerView: View {
     @State private var drill: BrowseDrill?
     @State private var tick = Date()
     @State private var searchTask: Task<Void, Never>?
+    /// Track whose playlists or labels are being edited.
+    @State private var optionsRequest: RemoteTrackOptionsRequest?
 
     private let tickTimer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
 
@@ -95,6 +97,9 @@ struct RemoteControllerView: View {
             .remoteReadableWidth()
         }
         .onReceive(tickTimer) { tick = $0 }
+        .sheet(item: $optionsRequest) { request in
+            RemoteTrackOptionsSheet(controller: controller, track: request.track, kind: request.kind)
+        }
         #if DEBUG && os(iOS)
         .onAppear {
             if let raw = controller.fixturePane, let fixturePane = RemotePane(rawValue: raw) {
@@ -237,6 +242,20 @@ struct RemoteControllerView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
+                if controller.canEditTracks, let track {
+                    Menu {
+                        trackOptionsButtons(track)
+                    } label: {
+                        Image(systemName: "text.badge.plus")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(HarborColor.ivoryDim)
+                            .frame(width: 26, height: 30)
+                    }
+                    .menuStyle(.button)
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Playlist and Labels")
+                }
+
                 HStack(spacing: 6) {
                     compactTransport("backward.end.fill") { controller.previous() }
                     compactTransport(controller.isPlaying ? "pause.fill" : "play.fill", emphasized: true) {
@@ -364,48 +383,10 @@ struct RemoteControllerView: View {
 
     private var browsePanel: some View {
         VStack(alignment: .leading, spacing: 10) {
+            // The roots stay while drilling in; choosing one goes back to its top level.
+            browseRootPicker
             if let drill {
-                HStack {
-                    Button {
-                        navigateBrowseBack(from: drill)
-                    } label: {
-                        Label(drill.title, systemImage: "chevron.left")
-                            .font(HarborFont.title(13))
-                            .foregroundStyle(HarborColor.amber)
-                            .lineLimit(1)
-                    }
-                    .buttonStyle(.plain)
-                    Spacer()
-                    Button("Play all") {
-                        playAll(for: drill)
-                    }
-                    .buttonStyle(.plain)
-                    .font(HarborFont.body(13))
-                    .foregroundStyle(HarborColor.amber)
-                }
-            } else {
-                HStack(spacing: 0) {
-                    ForEach(BrowseRoot.allCases) { root in
-                        Button {
-                            browseRoot = root
-                            reloadBrowseRoot()
-                        } label: {
-                            Text(root.title)
-                                .font(HarborFont.body(12))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 7)
-                                .foregroundStyle(browseRoot == root ? HarborColor.amber : HarborColor.ivoryDim)
-                                .background(
-                                    browseRoot == root
-                                        ? HarborColor.amber.opacity(0.12)
-                                        : Color.clear
-                                )
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .background(HarborColor.faceplateLift)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                browseDrillHeader(drill)
             }
 
             ScrollView {
@@ -426,6 +407,52 @@ struct RemoteControllerView: View {
                     }
                 }
             }
+        }
+    }
+
+    private var browseRootPicker: some View {
+        HStack(spacing: 0) {
+            ForEach(BrowseRoot.allCases) { root in
+                Button {
+                    browseRoot = root
+                    reloadBrowseRoot()
+                } label: {
+                    Text(root.title)
+                        .font(HarborFont.body(12))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 7)
+                        .foregroundStyle(browseRoot == root ? HarborColor.amber : HarborColor.ivoryDim)
+                        .background(
+                            browseRoot == root
+                                ? HarborColor.amber.opacity(0.12)
+                                : Color.clear
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .background(HarborColor.faceplateLift)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private func browseDrillHeader(_ drill: BrowseDrill) -> some View {
+        HStack {
+            Button {
+                navigateBrowseBack(from: drill)
+            } label: {
+                Label(drill.title, systemImage: "chevron.left")
+                    .font(HarborFont.title(13))
+                    .foregroundStyle(HarborColor.amber)
+                    .lineLimit(1)
+            }
+            .buttonStyle(.plain)
+            Spacer()
+            Button("Play all") {
+                playAll(for: drill)
+            }
+            .buttonStyle(.plain)
+            .font(HarborFont.body(13))
+            .foregroundStyle(HarborColor.amber)
         }
     }
 
@@ -470,6 +497,9 @@ struct RemoteControllerView: View {
                                     .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
+                                .contextMenu {
+                                    trackMenu(track) { controller.playQueueIndex(index) }
+                                }
                                 Divider().overlay(HarborColor.aluminumDark.opacity(0.4))
                             }
                         }
@@ -486,7 +516,19 @@ struct RemoteControllerView: View {
 
     @ViewBuilder
     private func browseRow(_ item: BrowseItem) -> some View {
-        Button {
+        if case .track(let dto) = item {
+            browseRowButton(item)
+                .contextMenu {
+                    trackMenu(dto) { handleBrowseTap(item) }
+                }
+        } else {
+            browseRowButton(item)
+        }
+    }
+
+    private func browseRowButton(_ item: BrowseItem) -> some View {
+        let current: Bool = if case .track(let dto) = item { isCurrent(dto) } else { false }
+        return Button {
             handleBrowseTap(item)
         } label: {
             HStack(spacing: 12) {
@@ -508,7 +550,7 @@ struct RemoteControllerView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.title)
                         .font(HarborFont.body(13))
-                        .foregroundStyle(HarborColor.ivory)
+                        .foregroundStyle(current ? HarborColor.amber : HarborColor.ivory)
                         .lineLimit(1)
                     Text(item.subtitle)
                         .font(HarborFont.body(11))
@@ -517,9 +559,7 @@ struct RemoteControllerView: View {
                 }
                 Spacer()
                 if case .track = item {
-                    Image(systemName: "play.fill")
-                        .font(.system(size: 11))
-                        .foregroundStyle(HarborColor.amber)
+                    trackStateIcon(isCurrent: current)
                 } else {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 11, weight: .semibold))
@@ -533,14 +573,15 @@ struct RemoteControllerView: View {
     }
 
     private func trackRow(_ track: TrackDTO) -> some View {
-        Button {
+        let current = isCurrent(track)
+        return Button {
             controller.play(cataloguePath: track.cataloguePath)
         } label: {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(track.title)
                         .font(HarborFont.body(13))
-                        .foregroundStyle(HarborColor.ivory)
+                        .foregroundStyle(current ? HarborColor.amber : HarborColor.ivory)
                         .lineLimit(1)
                     Text("\(track.artist) — \(track.album)")
                         .font(HarborFont.body(11))
@@ -548,14 +589,51 @@ struct RemoteControllerView: View {
                         .lineLimit(1)
                 }
                 Spacer()
-                Image(systemName: "play.fill")
-                    .font(.system(size: 11))
-                    .foregroundStyle(HarborColor.amber)
+                trackStateIcon(isCurrent: current)
             }
             .padding(.vertical, 8)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .contextMenu {
+            trackMenu(track) { controller.play(cataloguePath: track.cataloguePath) }
+        }
+    }
+
+    /// The track the Mac has loaded — marked in the lists, since choosing a song stays in them.
+    private func isCurrent(_ track: TrackDTO) -> Bool {
+        controller.nowPlaying?.track?.cataloguePath == track.cataloguePath
+    }
+
+    private func trackStateIcon(isCurrent: Bool) -> some View {
+        let name = isCurrent
+            ? (controller.isPlaying ? "speaker.wave.2.fill" : "speaker.fill")
+            : "play.fill"
+        return Image(systemName: name)
+            .font(.system(size: 11))
+            .foregroundStyle(HarborColor.amber)
+    }
+
+    /// Long-press menu on a track row: Play, then Add to Playlist and Labels when the Mac takes edits.
+    @ViewBuilder
+    private func trackMenu(_ track: TrackDTO, play: @escaping () -> Void) -> some View {
+        Button(action: play) {
+            Label("Play", systemImage: "play.fill")
+        }
+        if controller.canEditTracks {
+            trackOptionsButtons(track)
+        }
+    }
+
+    @ViewBuilder
+    private func trackOptionsButtons(_ track: TrackDTO) -> some View {
+        ForEach([RemoteTrackOptionsKind.playlists, .labels], id: \.self) { kind in
+            Button {
+                optionsRequest = RemoteTrackOptionsRequest(track: track, kind: kind)
+            } label: {
+                Label("\(kind.title)…", systemImage: kind.systemImage)
+            }
+        }
     }
 
     private func handleBrowseTap(_ item: BrowseItem) {
@@ -573,8 +651,8 @@ struct RemoteControllerView: View {
             drill = BrowseDrill(title: name, scope: .folders, parentID: id)
             controller.browse(scope: .folders, parentID: id)
         case .track(let dto):
+            // Stay in the list; the row marks the track once the Mac plays it.
             controller.play(cataloguePath: dto.cataloguePath)
-            pane = .now
         }
     }
 
@@ -590,24 +668,21 @@ struct RemoteControllerView: View {
         reloadBrowseRoot()
     }
 
+    /// Stays in the list, like choosing a single song; the playing row is marked.
     private func playAll(for drill: BrowseDrill) {
         switch drill.scope {
         case .albumTracks:
             if let id = UUID(uuidString: drill.parentID) {
                 controller.play(albumID: id)
-                pane = .now
             }
         case .playlistTracks:
             if let id = UUID(uuidString: drill.parentID) {
                 controller.play(playlistID: id)
-                pane = .now
             }
         case .artistTracks:
             controller.playArtist(name: drill.parentID)
-            pane = .now
         case .folders:
             controller.playFolder(id: drill.parentID)
-            pane = .now
         default:
             break
         }

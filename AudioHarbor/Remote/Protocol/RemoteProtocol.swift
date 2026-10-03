@@ -3,8 +3,12 @@ import Foundation
 /// Wire format constants for Audio Harbor LAN remote.
 /// Keep this file Foundation-only — it will be shared with the iOS destination.
 enum RemoteProtocol {
-    static let version = 1
+    /// 2: track options and edits — add to a playlist, add or remove a label.
+    static let version = 2
     static let minimumSupported = 1
+    /// First version whose Mac answers `trackOptions` and `editTrack`. Gated on the version, not a
+    /// capability: remotes on version 1 reject a capability list with a case they do not know.
+    static let trackEditsVersion = 2
     /// Bonjour service type. Must also appear in Info.plist `NSBonjourServices`.
     static let serviceType = "_audioharbor._tcp"
     static let maxFrameBytes = 4 << 20 // 4 MiB

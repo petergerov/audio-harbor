@@ -1,7 +1,7 @@
 import Foundation
 
 /// Wire-safe track identity. Never includes filesystem `url` or artwork bytes.
-struct TrackDTO: Codable, Sendable, Hashable, Equatable {
+struct TrackDTO: Codable, Sendable, Hashable, Equatable, Identifiable {
     var id: UUID
     var cataloguePath: String
     var title: String
@@ -387,6 +387,90 @@ enum TransportCommand: Codable, Sendable, Equatable {
         case .setVolume(let level):
             var nested = container.nestedContainer(keyedBy: VolumeKeys.self, forKey: .setVolume)
             try nested.encode(level, forKey: .level)
+        }
+    }
+}
+
+/// A manual playlist the remote can add a track to.
+struct PlaylistChoiceDTO: Codable, Sendable, Equatable, Identifiable {
+    var id: UUID
+    var name: String
+    var containsTrack: Bool
+}
+
+/// What the remote needs to file one track: the Mac's manual playlists and its labels.
+struct TrackOptionsDTO: Codable, Sendable, Equatable {
+    var cataloguePath: String
+    var playlists: [PlaylistChoiceDTO]
+    /// Every label in the Mac's library, the track's own included.
+    var labels: [String]
+    var trackLabels: [String]
+}
+
+enum TrackEdit: Codable, Sendable, Equatable {
+    case addToPlaylist(id: UUID)
+    case removeFromPlaylist(id: UUID)
+    case addToNewPlaylist(name: String)
+    case addLabel(name: String)
+    case removeLabel(name: String)
+
+    enum CodingKeys: String, CodingKey {
+        case addToPlaylist, removeFromPlaylist, addToNewPlaylist, addLabel, removeLabel
+    }
+
+    enum PlaylistKeys: String, CodingKey { case id }
+    enum NameKeys: String, CodingKey { case name }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if container.contains(.addToPlaylist) {
+            let nested = try container.nestedContainer(keyedBy: PlaylistKeys.self, forKey: .addToPlaylist)
+            self = .addToPlaylist(id: try nested.decode(UUID.self, forKey: .id))
+            return
+        }
+        if container.contains(.removeFromPlaylist) {
+            let nested = try container.nestedContainer(keyedBy: PlaylistKeys.self, forKey: .removeFromPlaylist)
+            self = .removeFromPlaylist(id: try nested.decode(UUID.self, forKey: .id))
+            return
+        }
+        if container.contains(.addToNewPlaylist) {
+            let nested = try container.nestedContainer(keyedBy: NameKeys.self, forKey: .addToNewPlaylist)
+            self = .addToNewPlaylist(name: try nested.decode(String.self, forKey: .name))
+            return
+        }
+        if container.contains(.addLabel) {
+            let nested = try container.nestedContainer(keyedBy: NameKeys.self, forKey: .addLabel)
+            self = .addLabel(name: try nested.decode(String.self, forKey: .name))
+            return
+        }
+        if container.contains(.removeLabel) {
+            let nested = try container.nestedContainer(keyedBy: NameKeys.self, forKey: .removeLabel)
+            self = .removeLabel(name: try nested.decode(String.self, forKey: .name))
+            return
+        }
+        throw DecodingError.dataCorrupted(
+            .init(codingPath: decoder.codingPath, debugDescription: "Unknown TrackEdit")
+        )
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .addToPlaylist(let id):
+            var nested = container.nestedContainer(keyedBy: PlaylistKeys.self, forKey: .addToPlaylist)
+            try nested.encode(id, forKey: .id)
+        case .removeFromPlaylist(let id):
+            var nested = container.nestedContainer(keyedBy: PlaylistKeys.self, forKey: .removeFromPlaylist)
+            try nested.encode(id, forKey: .id)
+        case .addToNewPlaylist(let name):
+            var nested = container.nestedContainer(keyedBy: NameKeys.self, forKey: .addToNewPlaylist)
+            try nested.encode(name, forKey: .name)
+        case .addLabel(let name):
+            var nested = container.nestedContainer(keyedBy: NameKeys.self, forKey: .addLabel)
+            try nested.encode(name, forKey: .name)
+        case .removeLabel(let name):
+            var nested = container.nestedContainer(keyedBy: NameKeys.self, forKey: .removeLabel)
+            try nested.encode(name, forKey: .name)
         }
     }
 }

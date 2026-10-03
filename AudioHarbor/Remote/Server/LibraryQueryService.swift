@@ -173,6 +173,31 @@ enum LibraryQueryService {
         }
     }
 
+    /// The manual playlists and labels for one track — what the Mac's Add to Playlist and
+    /// Labels menus offer for it.
+    static func trackOptions(
+        cataloguePath: String,
+        library: LibraryService,
+        playlists: PlaylistService
+    ) -> TrackOptionsDTO? {
+        guard let track = library.track(forCataloguePath: cataloguePath) else { return nil }
+        let choices = playlists.playlists.filter { !$0.isSmart }.map { playlist in
+            PlaylistChoiceDTO(
+                id: playlist.id,
+                name: playlist.name,
+                containsTrack: playlist.trackPaths.contains(cataloguePath)
+            )
+        }
+        let labels = Array(Set(library.allLabels + track.labels))
+            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+        return TrackOptionsDTO(
+            cataloguePath: cataloguePath,
+            playlists: choices,
+            labels: labels,
+            trackLabels: track.labels
+        )
+    }
+
     private static func pageTracks(_ tracks: [Track], offset: Int, limit: Int) -> ([BrowseItem], Bool) {
         let slice = Array(tracks.dropFirst(offset).prefix(limit + 1))
         let hasMore = slice.count > limit

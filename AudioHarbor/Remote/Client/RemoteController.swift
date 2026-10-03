@@ -24,6 +24,7 @@ final class RemoteController {
     private(set) var serverName: String?
     private(set) var serverID: UUID?
     private(set) var capabilities: [RemoteCapability] = []
+    private(set) var serverVersion = 0
     private(set) var nowPlaying: NowPlayingSnapshot? {
         didSet {
             if (oldValue?.outputVolume == nil) != (nowPlaying?.outputVolume == nil) {
@@ -36,6 +37,8 @@ final class RemoteController {
     private(set) var browseItems: [BrowseItem] = []
     private(set) var browseHasMore = false
     private(set) var artworkByHash: [String: Data] = [:]
+    /// Playlists and labels for the track last asked about.
+    private(set) var trackOptions: TrackOptionsDTO?
 
     var pairingCodeInput = ""
 
@@ -74,6 +77,11 @@ final class RemoteController {
         guard snap.rate > 0 else { return snap.position }
         let elapsed = Date().timeIntervalSince(snap.positionTimestamp)
         return min(snap.duration, max(0, snap.position + elapsed * snap.rate))
+    }
+
+    /// Macs on protocol version 2 and later take playlist and label edits.
+    var canEditTracks: Bool {
+        phase == .connected && serverVersion >= RemoteProtocol.trackEditsVersion
     }
 
     var isPlaying: Bool {
@@ -169,6 +177,8 @@ final class RemoteController {
         browseItems = []
         browseHasMore = false
         lastBrowseRequest = nil
+        trackOptions = nil
+        serverVersion = 0
         didAuthenticate = false
     }
 
@@ -228,6 +238,27 @@ final class RemoteController {
             offset: last.offset + last.limit,
             append: true
         )
+    }
+
+    func loadTrackOptions(cataloguePath: String) {
+        if trackOptions?.cataloguePath != cataloguePath {
+            trackOptions = nil
+        }
+        send(.trackOptions(cataloguePath: cataloguePath))
+    }
+
+    /// The Mac answers with the track's playlists and labels as they stand after the edit.
+    func editTrack(cataloguePath: String, _ edit: TrackEdit) {
+        send(.editTrack(cataloguePath: cataloguePath, edit: edit))
+        // Playlist rows carry track counts; reload them behind the edit.
+        switch edit {
+        case .addToPlaylist, .removeFromPlaylist, .addToNewPlaylist:
+            if let last = lastBrowseRequest, last.scope == .playlists || last.scope == .playlistTracks {
+                browse(scope: last.scope, parentID: last.parentID)
+            }
+        case .addLabel, .removeLabel:
+            break
+        }
     }
 
     func clearSearch() {
@@ -316,6 +347,7 @@ final class RemoteController {
             serverName = name
             self.serverID = serverID
             self.capabilities = capabilities
+            serverVersion = version
             guard version >= RemoteProtocol.minimumSupported else {
                 phase = .failed("Unsupported protocol \(version)")
                 statusText = "Unsupported protocol \(version)"
@@ -356,6 +388,9 @@ final class RemoteController {
 
         case .searchResult(let tracks):
             searchResults = tracks
+
+        case .trackOptions(let options):
+            trackOptions = options
 
         case .browseResult(let items, let hasMore):
             if browseAppend {
