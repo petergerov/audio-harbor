@@ -3,9 +3,13 @@ import SwiftUI
 /// A list header for a group of tracks (an album, an artist) that expands in place to show
 /// them. Produces several list rows: the header, then one per track while expanded.
 struct ExpandableTrackGroup<Thumbnail: View>: View {
+    @Environment(AppModel.self) private var appModel
     let title: String
     var subtitle: String?
     let tracks: [Track]
+    /// What the header's Add to Playlist / Labels act on — the whole group, not just the
+    /// tracks a search leaves visible.
+    let menuTracks: () -> [Track]
     let isExpanded: Bool
     /// Help text for the play button, e.g. "Play album".
     let playHelp: String
@@ -16,6 +20,14 @@ struct ExpandableTrackGroup<Thumbnail: View>: View {
 
     var body: some View {
         header
+            .tracksContextMenu(tracks: menuTracks, leading: {
+                Button(playHelp) { onPlay(nil) }
+                Button("\(playHelp) and Show Deck") {
+                    onPlay(nil)
+                    appModel.showDeck()
+                }
+                Divider()
+            })
             .harborListRow()
         if isExpanded {
             ForEach(tracks) { track in

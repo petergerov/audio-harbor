@@ -17,22 +17,29 @@ struct TrackLabelStore {
         labelsByPath[path] ?? []
     }
 
-    /// Returns `false` when nothing changed: the label is blank or the track already has it.
-    mutating func add(_ label: String, to track: Track) -> Bool {
+    /// Returns the tracks that changed — none when the label is blank or every track has it.
+    mutating func add(_ label: String, to tracks: [Track]) -> [Track] {
         let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return false }
-        var current = labelsByPath[track.cataloguePath] ?? track.labels
-        guard !current.contains(where: { $0.caseInsensitiveCompare(trimmed) == .orderedSame }) else { return false }
-        current.append(trimmed)
-        labelsByPath[track.cataloguePath] = current.sorted(by: Self.alphabetical)
-        save()
-        return true
+        guard !trimmed.isEmpty else { return [] }
+        var changed: [Track] = []
+        for track in tracks {
+            var current = labelsByPath[track.cataloguePath] ?? track.labels
+            guard !current.contains(where: { $0.caseInsensitiveCompare(trimmed) == .orderedSame }) else { continue }
+            current.append(trimmed)
+            labelsByPath[track.cataloguePath] = current.sorted(by: Self.alphabetical)
+            changed.append(track)
+        }
+        if !changed.isEmpty { save() }
+        return changed
     }
 
-    mutating func remove(_ label: String, from track: Track) {
-        var current = labelsByPath[track.cataloguePath] ?? track.labels
-        current.removeAll { $0.caseInsensitiveCompare(label) == .orderedSame }
-        store(current, for: track.cataloguePath)
+    mutating func remove(_ label: String, from tracks: [Track]) {
+        for track in tracks {
+            var current = labelsByPath[track.cataloguePath] ?? track.labels
+            current.removeAll { $0.caseInsensitiveCompare(label) == .orderedSame }
+            labelsByPath[track.cataloguePath] = current.isEmpty ? nil : current
+        }
+        save()
     }
 
     mutating func set(_ labels: [String], for track: Track) {

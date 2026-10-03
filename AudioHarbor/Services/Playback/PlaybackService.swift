@@ -74,6 +74,10 @@ final class PlaybackService {
     /// The outputs on this Mac and what the active one can do. Empty on iOS.
     private(set) var outputStatus = OutputStatus()
 
+    /// Hardware volume (0…1) of the output playback goes to — the DAC, or the Mac's own output.
+    /// Nil when that output has no volume control (a fixed-level DAC).
+    private(set) var outputVolume: Double?
+
     /// The picked output is not plugged in, so playback goes to the system output.
     var isOutputDeviceMissing: Bool {
         guard let outputDeviceUID else { return false }
@@ -104,6 +108,8 @@ final class PlaybackService {
     }
 
     var state: PlaybackState { playbackState }
+    /// The trial has ended without an unlock — play requests open the unlock sheet instead.
+    var requiresUnlock: Bool { !license.canPlay }
     var isPlaying: Bool { playbackState == .playing }
 
     private var syncTimer: Timer?
@@ -138,7 +144,16 @@ final class PlaybackService {
         engine.setTrackEndedHandler { [weak self] endedTrack in
             self?.advanceAfterTrackEnd(after: endedTrack)
         }
+        engine.setOutputVolumeHandler { [weak self] level in
+            guard let self, self.outputVolume != level else { return }
+            self.outputVolume = level
+        }
         syncFromEngine()
+    }
+
+    func setOutputVolume(_ level: Double) {
+        guard level.isFinite, outputVolume != nil else { return }
+        engine.setOutputVolume(min(1, max(0, level)))
     }
 
     func play(track: Track, in queueTracks: [Track]? = nil, from source: QueueSource? = nil) {

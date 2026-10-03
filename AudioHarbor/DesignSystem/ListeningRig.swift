@@ -177,7 +177,12 @@ private struct TurntableMacroView: View {
             .allowsHitTesting(false)
         }
         .clipped()
-        .overlay(alignment: .bottomLeading) { artworkChip }
+        .overlay(alignment: .bottomLeading) {
+            if let artwork {
+                DeckArtworkChip(artwork: artwork, size: DeckArtworkChip.size(forStageHeight: size.height))
+                    .padding(18)
+            }
+        }
         .overlay(alignment: .topTrailing) {
             Circle()
                 .fill(isPlaying ? HarborColor.powerLED : HarborColor.aluminumDark)
@@ -264,24 +269,6 @@ private struct TurntableMacroView: View {
             )
         }
         .allowsHitTesting(false)
-    }
-
-    @ViewBuilder private var artworkChip: some View {
-        if let artwork {
-            artwork
-                .resizable()
-                .scaledToFill()
-                .frame(width: 52, height: 52)
-                .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 2, style: .continuous)
-                        .stroke(Color(red: 0.72, green: 0.55, blue: 0.32).opacity(0.55), lineWidth: 0.8)
-                )
-                .rotationEffect(.degrees(-3))
-                .shadow(color: .black.opacity(0.7), radius: 10, y: 5)
-                .padding(16)
-                .allowsHitTesting(false)
-        }
     }
 
     private var clampedProgress: CGFloat {

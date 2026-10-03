@@ -1,19 +1,29 @@
 import SwiftUI
 
 /// A playable track line: title, artist · year · length, labels and format badge.
-/// Right-click offers Add to Playlist and Labels.
+/// The loaded track is marked, since playing no longer leaves the list.
+/// Right-click offers Play and Show Deck, Add to Playlist and Labels.
 struct TrackRow: View {
+    @Environment(AppModel.self) private var appModel
     let track: Track
     let onPlay: () -> Void
 
     var body: some View {
+        let isCurrent = appModel.playback.currentTrack?.cataloguePath == track.cataloguePath
         Button(action: onPlay) {
             HStack(spacing: 14) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(track.title)
-                        .font(HarborFont.title(14))
-                        .foregroundStyle(HarborColor.ivory)
-                        .lineLimit(1)
+                    HStack(spacing: 6) {
+                        if isCurrent {
+                            Image(systemName: appModel.playback.isPlaying ? "speaker.wave.2.fill" : "speaker.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(HarborColor.amber)
+                        }
+                        Text(track.title)
+                            .font(HarborFont.title(14))
+                            .foregroundStyle(isCurrent ? HarborColor.amber : HarborColor.ivory)
+                            .lineLimit(1)
+                    }
                     Text(durationArtistLine)
                         .font(HarborFont.body(12))
                         .foregroundStyle(HarborColor.ivoryDim)
@@ -36,7 +46,13 @@ struct TrackRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .trackContextMenu(for: track)
+        .trackContextMenu(for: track) {
+            Button("Play and Show Deck") {
+                onPlay()
+                appModel.showDeck()
+            }
+            Divider()
+        }
     }
 
     private var durationArtistLine: String {
@@ -59,15 +75,32 @@ extension View {
         includesLabels: Bool = true,
         @ViewBuilder leading: () -> Leading = { EmptyView() }
     ) -> some View {
-        modifier(TrackContextMenu(track: track, includesLabels: includesLabels, leading: leading()))
+        tracksContextMenu(includesLabels: includesLabels, tracks: { [track] }, leading: leading)
+    }
+
+    /// The same menu for a group — a directory, an album, an artist. `tracks` is resolved
+    /// only when the menu opens or an item runs, so long lists stay cheap.
+    func tracksContextMenu<Leading: View, Trailing: View>(
+        includesLabels: Bool = true,
+        tracks: @escaping () -> [Track],
+        @ViewBuilder leading: () -> Leading = { EmptyView() },
+        @ViewBuilder trailing: () -> Trailing = { EmptyView() }
+    ) -> some View {
+        modifier(TrackContextMenu(
+            tracks: tracks,
+            includesLabels: includesLabels,
+            leading: leading(),
+            trailing: trailing()
+        ))
     }
 }
 
-private struct TrackContextMenu<Leading: View>: ViewModifier {
+private struct TrackContextMenu<Leading: View, Trailing: View>: ViewModifier {
     @Environment(AppModel.self) private var appModel
-    let track: Track
+    let tracks: () -> [Track]
     let includesLabels: Bool
     let leading: Leading
+    let trailing: Trailing
 
     @State private var isNamingPlaylist = false
     @State private var newPlaylistName = ""
@@ -78,17 +111,26 @@ private struct TrackContextMenu<Leading: View>: ViewModifier {
         content
             .contextMenu {
                 leading
-                playlistMenu
-                if includesLabels {
-                    labelsMenu
-                }
+                TrackMenuItems(
+                    tracks: tracks,
+                    includesLabels: includesLabels,
+                    onNewPlaylist: {
+                        newPlaylistName = ""
+                        isNamingPlaylist = true
+                    },
+                    onNewLabel: {
+                        newLabel = ""
+                        isNamingLabel = true
+                    }
+                )
+                trailing
             }
             .alert("New Playlist", isPresented: $isNamingPlaylist) {
                 TextField("Name", text: $newPlaylistName)
                 Button("Cancel", role: .cancel) {}
                 Button("Create") {
                     if let playlist = appModel.playlists.createPlaylist(named: newPlaylistName) {
-                        appModel.playlists.add(track, to: playlist)
+                        appModel.playlists.add(tracks(), to: playlist)
                     }
                     newPlaylistName = ""
                 }
@@ -97,50 +139,65 @@ private struct TrackContextMenu<Leading: View>: ViewModifier {
                 TextField("Label", text: $newLabel)
                 Button("Cancel", role: .cancel) {}
                 Button("Add") {
-                    appModel.library.addLabel(newLabel, to: track)
+                    appModel.library.addLabel(newLabel, to: tracks())
                 }
             }
     }
+}
 
-    private var playlistMenu: some View {
+/// Add to Playlist and Labels. A separate view so `tracks` resolves when the menu is built,
+/// not on every redraw of the row it hangs on.
+private struct TrackMenuItems: View {
+    @Environment(AppModel.self) private var appModel
+    let tracks: () -> [Track]
+    let includesLabels: Bool
+    let onNewPlaylist: () -> Void
+    let onNewLabel: () -> Void
+
+    var body: some View {
+        let tracks = tracks()
+        playlistMenu(tracks)
+            .disabled(tracks.isEmpty)
+        if includesLabels {
+            labelsMenu(tracks)
+                .disabled(tracks.isEmpty)
+        }
+    }
+
+    private func playlistMenu(_ tracks: [Track]) -> some View {
         Menu("Add to Playlist") {
-            Button("New Playlist…") {
-                newPlaylistName = ""
-                isNamingPlaylist = true
-            }
+            Button("New Playlist…", action: onNewPlaylist)
             let manual = appModel.playlists.playlists.filter { !$0.isSmart }
             if !manual.isEmpty {
                 Divider()
                 ForEach(manual) { playlist in
                     Button(playlist.name) {
-                        appModel.playlists.add(track, to: playlist)
+                        appModel.playlists.add(tracks, to: playlist)
                     }
                 }
             }
         }
     }
 
-    private var labelsMenu: some View {
+    private func labelsMenu(_ tracks: [Track]) -> some View {
         Menu("Labels") {
-            Button("New Label…") {
-                newLabel = ""
-                isNamingLabel = true
-            }
-            let suggestions = labelSuggestions
+            Button("New Label…", action: onNewLabel)
+            let suggestions = labelSuggestions(tracks)
             if !suggestions.isEmpty {
                 Divider()
                 ForEach(suggestions, id: \.self) { label in
-                    let hasLabel = track.labels.contains {
-                        $0.caseInsensitiveCompare(label) == .orderedSame
+                    // Checked when every track carries it; choosing it then clears it from all.
+                    let everyTrackHasIt = tracks.allSatisfy { track in
+                        track.labels.contains { $0.caseInsensitiveCompare(label) == .orderedSame }
                     }
                     Button {
-                        if hasLabel {
-                            appModel.library.removeLabel(label, from: track)
+                        if everyTrackHasIt {
+                            appModel.library.removeLabel(label, from: tracks)
                         } else {
-                            appModel.library.addLabel(label, to: track)
+                            appModel.library.addLabel(label, to: tracks)
                         }
                     } label: {
-                        if hasLabel {
+                        if everyTrackHasIt {
                             Label(label, systemImage: "checkmark")
                         } else {
                             Text(label)
@@ -151,9 +208,9 @@ private struct TrackContextMenu<Leading: View>: ViewModifier {
         }
     }
 
-    /// Every label in the catalogue plus this track's own, alphabetically.
-    private var labelSuggestions: [String] {
-        Array(Set(appModel.library.allLabels + track.labels))
+    /// Every label in the catalogue plus the tracks' own, alphabetically.
+    private func labelSuggestions(_ tracks: [Track]) -> [String] {
+        Array(Set(appModel.library.allLabels + tracks.flatMap(\.labels)))
             .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
 }

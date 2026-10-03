@@ -5,6 +5,7 @@ struct IndexedTrackRecord: Sendable {
     var title: String
     var artist: String
     var album: String
+    var albumArtist: String?
     var trackNumber: Int?
     var year: Int?
     var duration: TimeInterval
@@ -24,6 +25,7 @@ struct IndexedTrackRecord: Sendable {
             title: title,
             artist: artist,
             album: album,
+            albumArtist: albumArtist,
             trackNumber: trackNumber,
             year: year,
             duration: duration,

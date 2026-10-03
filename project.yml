@@ -3,21 +3,23 @@ options:
   bundleIdPrefix: com.gerov.audioharbor
   deploymentTarget:
     macOS: "14.0"
+    iOS: "17.0"
   createIntermediateGroups: true
   groupSortPosition: top
 settings:
   SWIFT_VERSION: "5.0"
-  CURRENT_PROJECT_VERSION: "16"
-  MARKETING_VERSION: "1.0.0"
+  CURRENT_PROJECT_VERSION: "17"
+  MARKETING_VERSION: "1.1.0"
 targets:
   AudioHarbor:
     type: application
-    supportedDestinations: [macOS]
+    supportedDestinations: [macOS, iOS]
     sources:
       - path: AudioHarbor
         excludes:
           - Resources/Info.plist
           - Resources/AudioHarbor.entitlements
+          - Resources/AudioHarbor-iOS.entitlements
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.gerov.audioharbor.player
@@ -27,10 +29,20 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_FILE: AudioHarbor/Resources/Info.plist
         CODE_SIGN_ENTITLEMENTS: AudioHarbor/Resources/AudioHarbor.entitlements
+        # The macOS file holds App Sandbox keys iOS rejects. The remote needs none
+        # (Bonjour only needs NSBonjourServices in Info.plist).
+        CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]: AudioHarbor/Resources/AudioHarbor-iOS.entitlements
+        CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]: AudioHarbor/Resources/AudioHarbor-iOS.entitlements
+        # iPhone and iPad — both are remotes for the Mac.
+        TARGETED_DEVICE_FAMILY: "1,2"
+        # Not offered on Apple Vision Pro as "Designed for iPad".
+        SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
         INFOPLIST_KEY_CFBundleDisplayName: Audio Harbor
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.music
         INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         ENABLE_HARDENED_RUNTIME: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
@@ -38,6 +50,7 @@ targets:
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: "-"
         CODE_SIGN_IDENTITY[sdk=macosx*]: Apple Development
+        CODE_SIGN_IDENTITY[sdk=iphoneos*]: Apple Development
         AD_HOC_CODE_SIGNING_ALLOWED: YES
     # XcodeGen writes this file on every generate. The keys MUST live here --
     # an `entitlements:` block without `properties` emits an empty <dict/>, which
@@ -48,6 +61,8 @@ targets:
         com.apple.security.app-sandbox: true
         com.apple.security.files.user-selected.read-write: true
         com.apple.security.files.bookmarks.app-scope: true
+        com.apple.security.network.server: true
+        com.apple.security.network.client: true
 schemes:
   AudioHarbor:
     build:

@@ -50,6 +50,9 @@ struct DeckContextRail: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 12)
+        .contentShape(Rectangle())
+        // The whole context — folder, album or playlist — in its listed order, not shuffle order.
+        .tracksContextMenu(tracks: { playback.queue })
     }
 
     private var contextTitle: String {
@@ -102,6 +105,7 @@ struct DeckContextRail: View {
                         ) {
                             playback.playQueueItem(at: index)
                         }
+                        .trackContextMenu(for: track)
                         .id(track.id)
                     }
                 }

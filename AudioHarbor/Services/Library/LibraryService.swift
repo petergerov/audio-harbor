@@ -73,7 +73,46 @@ final class LibraryService {
         return hits.sorted().compactMap { tracks.indices.contains($0) ? tracks[$0] : nil }
     }
 
+    /// Full-catalogue search for remote / APIs — does not touch the Mac UI search field.
+    func searchAllTracks(query: String, limit: Int = 200) -> [Track] {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return [] }
+        let cap = min(max(1, limit), 500)
+        guard let hits = searchIndex.matchingIndices(query: q, trackCount: tracks.count) else {
+            return []
+        }
+        return hits.sorted().prefix(cap).compactMap { tracks.indices.contains($0) ? tracks[$0] : nil }
+    }
+
     var allTracks: [Track] { tracks }
+
+    /// Lookup by catalogue identity — used by remote play / browse.
+    func track(forCataloguePath path: String) -> Track? {
+        tracksByPath[path]
+    }
+
+    /// Folder listing for remote — does not move the Mac Directories tab.
+    func remoteFolderRoots() -> [(bookmark: FolderBookmark, url: URL)] {
+        folders.compactMap { bookmark in
+            guard let url = accessibleFolderURLs[bookmark.id] else { return nil }
+            return (bookmark, url)
+        }
+    }
+
+    func remoteFolderListing(rootID: UUID, components: [String]) -> [FolderBrowseEntry]? {
+        guard let rootURL = accessibleFolderURLs[rootID] else { return nil }
+        let url = components.reduce(rootURL) { partial, component in
+            partial.appendingPathComponent(component, isDirectory: true)
+        }
+        return listFolderContents(at: url)
+    }
+
+    func remoteFolderURL(rootID: UUID, components: [String]) -> URL? {
+        guard let rootURL = accessibleFolderURLs[rootID] else { return nil }
+        return components.reduce(rootURL) { partial, component in
+            partial.appendingPathComponent(component, isDirectory: true)
+        }
+    }
 
     var allArtists: [String] { artistFacets.map(\.name) }
 
@@ -283,39 +322,57 @@ final class LibraryService {
             return (first, immediate)
         }
 
-        let prefix = normalizedPrefix(url.path)
-        let nested = tracks
-            .filter { $0.url.path.hasPrefix(prefix) }
-            .sorted { $0.url.path.localizedStandardCompare($1.url.path) == .orderedAscending }
+        let nested = tracks(under: url)
         guard let first = nested.first else { return nil }
         return (first, nested)
+    }
+
+    /// Every indexed track below `url`, subfolders included, in path order.
+    func tracks(under url: URL) -> [Track] {
+        let prefix = normalizedPrefix(url.path)
+        return tracks
+            .filter { $0.url.path.hasPrefix(prefix) }
+            .sorted { $0.url.path.localizedStandardCompare($1.url.path) == .orderedAscending }
     }
 
     // MARK: - Labels
 
     func addLabel(_ label: String, to track: Track) {
-        guard labelStore.add(label, to: track) else { return }
-        labelsDidChange(for: track)
+        addLabel(label, to: [track])
     }
 
     func removeLabel(_ label: String, from track: Track) {
-        labelStore.remove(label, from: track)
-        labelsDidChange(for: track)
+        removeLabel(label, from: [track])
+    }
+
+    func addLabel(_ label: String, to tracks: [Track]) {
+        let changed = labelStore.add(label, to: tracks)
+        guard !changed.isEmpty else { return }
+        labelsDidChange(for: changed)
+    }
+
+    func removeLabel(_ label: String, from tracks: [Track]) {
+        guard !tracks.isEmpty else { return }
+        labelStore.remove(label, from: tracks)
+        labelsDidChange(for: tracks)
     }
 
     func setLabels(_ labels: [String], for track: Track) {
         labelStore.set(labels, for: track)
-        labelsDidChange(for: track)
+        labelsDidChange(for: [track])
     }
 
-    /// Re-apply stored labels to the catalogue and mirror the edited track's labels into SQLite.
-    private func labelsDidChange(for track: Track) {
+    /// Re-apply stored labels to the catalogue and mirror the edited tracks' labels into SQLite.
+    private func labelsDidChange(for edited: [Track]) {
         tracks = tracks.map(labeled)
         catalogueDidChange()
 
-        let path = track.cataloguePath
-        let labels = labelStore.labels(forPath: path)
-        Task { await CatalogueIndexStore.shared.updateLabels(path: path, labels: labels) }
+        let updates = edited.map { ($0.cataloguePath, labelStore.labels(forPath: $0.cataloguePath)) }
+        Task {
+            for (path, labels) in updates {
+                await CatalogueIndexStore.shared.updateLabels(path: path, labels: labels)
+            }
+        }
     }
 
     private func labeled(_ track: Track) -> Track {
@@ -577,17 +634,32 @@ final class LibraryService {
     }
 
     nonisolated private static func makeAlbums(from tracks: [Track]) -> [Album] {
-        Dictionary(grouping: tracks) { track -> String in
-            if CatalogueUnknown.isAlbum(track.album) { return "unknown|" }
-            return "\(track.album)|\(track.artist)"
+        // Compilations without an album artist tag: one title, several artists, one folder.
+        func folderKey(_ track: Track) -> String {
+            "\(track.album)|dir:\(track.url.deletingLastPathComponent().path)"
         }
-            .values
-            .map { list in
+        let untaggedCompilations = Set(
+            Dictionary(grouping: tracks.filter { $0.albumArtist == nil }, by: folderKey)
+                .filter { Set($0.value.map(\.artist)).count > 1 }
+                .keys
+        )
+
+        return Dictionary(grouping: tracks) { track -> String in
+            if CatalogueUnknown.isAlbum(track.album) { return "unknown|" }
+            if let albumArtist = track.albumArtist { return "\(track.album)|\(albumArtist)" }
+            let folder = folderKey(track)
+            return untaggedCompilations.contains(folder) ? folder : "\(track.album)|\(track.artist)"
+        }
+            .map { key, list in
                 let first = list[0]
                 let unknownAlbum = CatalogueUnknown.isAlbum(first.album)
+                let artist = first.albumArtist
+                    ?? (Set(list.map(\.artist)).count > 1 ? "Various Artists" : first.artist)
                 return Album(
+                    // Folder-keyed, so same-titled samplers in different folders stay distinct.
+                    id: untaggedCompilations.contains(key) ? Album.stableID(title: first.album, artist: key) : nil,
                     title: unknownAlbum ? CatalogueUnknown.display : first.album,
-                    artist: unknownAlbum ? CatalogueUnknown.display : first.artist,
+                    artist: unknownAlbum ? CatalogueUnknown.display : artist,
                     year: unknownAlbum ? nil : first.year,
                     tracks: list.sorted { ($0.trackNumber ?? 9999) < ($1.trackNumber ?? 9999) },
                     artworkHash: list.first(where: { $0.artworkHash != nil })?.artworkHash

@@ -116,13 +116,14 @@ enum CatalogueIndexer {
         let chunkSize = max(4, min(8, ProcessInfo.processInfo.activeProcessorCount))
         var records: [IndexedTrackRecord] = []
         records.reserveCapacity(files.count)
+        let folderArtwork = FolderArtworkLookup()
 
         var processed = 0
         for chunk in files.chunked(into: chunkSize) {
             let batch = await withTaskGroup(of: [IndexedTrackRecord].self, returning: [IndexedTrackRecord].self) { group in
                 for file in chunk {
                     group.addTask {
-                        await readOne(file: file, labelsByPath: labelsByPath)
+                        await readOne(file: file, labelsByPath: labelsByPath, folderArtwork: folderArtwork)
                     }
                 }
                 var out: [IndexedTrackRecord] = []
@@ -139,25 +140,34 @@ enum CatalogueIndexer {
         return records
     }
 
-    private static func readOne(file: FileFingerprint, labelsByPath: [String: [String]]) async -> [IndexedTrackRecord] {
+    private static func readOne(
+        file: FileFingerprint,
+        labelsByPath: [String: [String]],
+        folderArtwork: FolderArtworkLookup
+    ) async -> [IndexedTrackRecord] {
         await ICloudItem.ensureDownloaded(file.url)
         let ext = file.url.pathExtension.lowercased()
         if ext == "iso" {
-            return indexSACD(file: file, labelsByPath: labelsByPath)
+            return indexSACD(file: file, labelsByPath: labelsByPath, folderArtwork: folderArtwork)
         }
         if ext == "dff" {
-            let chapters = indexDFFChapters(file: file, labelsByPath: labelsByPath)
+            let chapters = indexDFFChapters(file: file, labelsByPath: labelsByPath, folderArtwork: folderArtwork)
             if chapters.count > 1 {
                 return chapters
             }
         }
-        return [await indexSingle(file: file, labelsByPath: labelsByPath)]
+        return [await indexSingle(file: file, labelsByPath: labelsByPath, folderArtwork: folderArtwork)]
     }
 
-    private static func indexSACD(file: FileFingerprint, labelsByPath: [String: [String]]) -> [IndexedTrackRecord] {
+    private static func indexSACD(
+        file: FileFingerprint,
+        labelsByPath: [String: [String]],
+        folderArtwork: FolderArtworkLookup
+    ) -> [IndexedTrackRecord] {
         guard let tracks = try? SACDISO.listTracks(url: file.url), !tracks.isEmpty else {
             return []
         }
+        let artworkHash = folderArtwork.hash(forDirectory: file.url.deletingLastPathComponent())
         return tracks.map { track in
             let identity = VirtualTrackPath.sacd(file.path, track: track.number)
             return IndexedTrackRecord(
@@ -165,6 +175,7 @@ enum CatalogueIndexer {
                 title: track.title,
                 artist: track.artist,
                 album: track.album,
+                albumArtist: track.albumArtist,
                 trackNumber: track.number,
                 year: track.year,
                 duration: track.duration,
@@ -174,18 +185,23 @@ enum CatalogueIndexer {
                 channelCount: track.channelCount,
                 fileSize: file.fileSize,
                 mtime: file.mtime,
-                artworkHash: nil,
+                artworkHash: artworkHash,
                 filename: file.url.lastPathComponent,
                 labels: labelsByPath[identity] ?? []
             )
         }
     }
 
-    private static func indexDFFChapters(file: FileFingerprint, labelsByPath: [String: [String]]) -> [IndexedTrackRecord] {
+    private static func indexDFFChapters(
+        file: FileFingerprint,
+        labelsByPath: [String: [String]],
+        folderArtwork: FolderArtworkLookup
+    ) -> [IndexedTrackRecord] {
         guard let header = try? DSDDecoder.probe(url: file.url) else { return [] }
         let chapters = DFFChapters.list(url: file.url, header: header)
         guard chapters.count > 1 else { return [] }
         let album = "Unknown Album"
+        let artworkHash = folderArtwork.hash(forDirectory: file.url.deletingLastPathComponent())
         return chapters.map { chapter in
             let identity = VirtualTrackPath.dff(file.path, track: chapter.number)
             return IndexedTrackRecord(
@@ -202,21 +218,27 @@ enum CatalogueIndexer {
                 channelCount: header.channelCount,
                 fileSize: file.fileSize,
                 mtime: file.mtime,
-                artworkHash: nil,
+                artworkHash: artworkHash,
                 filename: file.url.lastPathComponent,
                 labels: labelsByPath[identity] ?? []
             )
         }
     }
 
-    private static func indexSingle(file: FileFingerprint, labelsByPath: [String: [String]]) async -> IndexedTrackRecord {
+    private static func indexSingle(
+        file: FileFingerprint,
+        labelsByPath: [String: [String]],
+        folderArtwork: FolderArtworkLookup
+    ) async -> IndexedTrackRecord {
         let meta = await MetadataReader.read(url: file.url)
         let artworkHash = meta.artworkData.flatMap { ArtworkCache.shared.store($0) }
+            ?? folderArtwork.hash(forDirectory: file.url.deletingLastPathComponent())
         return IndexedTrackRecord(
             path: file.path,
             title: meta.title,
             artist: meta.artist,
             album: meta.album,
+            albumArtist: meta.albumArtist,
             trackNumber: meta.trackNumber,
             year: meta.year,
             duration: meta.duration,
@@ -245,5 +267,54 @@ private extension Array {
             index = next
         }
         return chunks
+    }
+}
+
+/// Folder cover per directory, resolved once per scan and shared by every track in it.
+final class FolderArtworkLookup: @unchecked Sendable {
+    private static let imageExtensions: Set<String> = ["jpg", "jpeg", "png"]
+
+    private let lock = NSLock()
+    private var hashByDirectory: [String: String?] = [:]
+
+    func hash(forDirectory directory: URL) -> String? {
+        let key = directory.path
+        if let cached = lock.withLock({ hashByDirectory[key] }) {
+            return cached
+        }
+        let hash = Self.coverURL(in: directory)
+            .flatMap(MetadataReader.folderArtwork(at:))
+            .flatMap { ArtworkCache.shared.store($0) }
+        lock.withLock { hashByDirectory[key] = hash }
+        return hash
+    }
+
+    /// Best-named image (`cover`, `folder`, `front`, `AlbumArt…Large`), else the folder's only image.
+    static func coverURL(in directory: URL) -> URL? {
+        let images = ((try? FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        )) ?? []).filter { imageExtensions.contains($0.pathExtension.lowercased()) }
+
+        let ranked = images.compactMap { url -> (rank: Int, url: URL)? in
+            rank(url.deletingPathExtension().lastPathComponent.lowercased()).map { ($0, url) }
+        }
+        if let best = ranked.min(by: { ($0.rank, $0.url.lastPathComponent) < ($1.rank, $1.url.lastPathComponent) }) {
+            return best.url
+        }
+        return images.count == 1 ? images[0] : nil
+    }
+
+    private static func rank(_ stem: String) -> Int? {
+        switch stem {
+        case "cover": return 0
+        case "folder": return 1
+        case "front": return 2
+        default: break
+        }
+        if stem.hasPrefix("cover") || stem.hasPrefix("front") { return 3 }
+        if stem.hasPrefix("albumart") { return stem.contains("large") ? 4 : 5 }
+        return nil
     }
 }

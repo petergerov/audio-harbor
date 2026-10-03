@@ -16,14 +16,9 @@ struct RootView: View {
                 detail
             }
             #else
-            TabView(selection: $appModel.selectedTab) {
-                ForEach(AppTab.allCases) { tab in
-                    tabRoot(tab)
-                        .tabItem { Label(tab.title, systemImage: tab.systemImage) }
-                        .tag(tab)
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // iPhone is the remote: Mac plays on the DAC, this UI steers.
+            RemoteHomeView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             #endif
         }
         .tint(HarborColor.amber)

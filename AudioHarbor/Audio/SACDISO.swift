@@ -41,6 +41,7 @@ struct SACDDiscTrack: Sendable {
     var title: String
     var artist: String
     var album: String
+    var albumArtist: String
     var year: Int?
     var duration: TimeInterval
     var startLSN: UInt32
@@ -163,6 +164,7 @@ enum SACDISO {
                 title: title,
                 artist: trackArtist,
                 album: album,
+                albumArtist: artist,
                 year: safeYear,
                 duration: duration,
                 startLSN: start,

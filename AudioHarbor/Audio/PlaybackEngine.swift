@@ -25,6 +25,12 @@ protocol PlaybackEngine: AnyObject {
     func setOutputDevice(uid: String?)
     /// Called now and whenever outputs come and go or the active output changes.
     func setOutputStatusHandler(_ handler: @escaping (OutputStatus) -> Void)
+    /// Sets the hardware volume (0…1) of the output playback goes to — the DAC when it has a
+    /// volume control. The samples stay untouched.
+    func setOutputVolume(_ level: Double)
+    /// Called now and whenever that volume moves or the output changes; nil while the output
+    /// has no volume control.
+    func setOutputVolumeHandler(_ handler: @escaping (Double?) -> Void)
     /// Called once when the loaded track reaches its end (not on pause/stop/seek),
     /// with the track that ended so late signals can be matched against it.
     func setTrackEndedHandler(_ handler: @escaping (Track) -> Void)

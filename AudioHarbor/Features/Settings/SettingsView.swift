@@ -58,6 +58,14 @@ struct SettingsView: View {
                         directoriesSection
                     }
 
+                    panel(title: "Remote") {
+                        RemoteSettingsSection(
+                            remote: appModel.remote,
+                            browser: appModel.remoteBrowser,
+                            controller: appModel.remoteController
+                        )
+                    }
+
                     panel(title: "About") {
                         LabeledContent("App", value: Brand.name)
                             .foregroundStyle(HarborColor.ivory)

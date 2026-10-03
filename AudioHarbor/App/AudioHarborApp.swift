@@ -85,6 +85,19 @@ struct AudioHarborApp: App {
                     .keyboardShortcut("0", modifiers: [.command])
                 Divider()
             }
+            CommandGroup(before: .toolbar) {
+                // ⌘1–⌘3 like tabs; Settings keeps the standard ⌘,.
+                ForEach(Array(AppTab.allCases.enumerated()), id: \.element) { index, tab in
+                    Button(tab.title) {
+                        appModel.selectedTab = tab
+                    }
+                    .keyboardShortcut(
+                        tab == .settings ? "," : KeyEquivalent(Character(String(index + 1))),
+                        modifiers: [.command]
+                    )
+                }
+                Divider()
+            }
             CommandMenu("Catalogue") {
                 Button("Rebuild Index") {
                     appModel.requestIndexRebuild()

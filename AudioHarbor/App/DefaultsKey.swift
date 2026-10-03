@@ -24,4 +24,8 @@ enum DefaultsKey {
     static let deckStyle = "audioharbor.deckStyle"
     static let deckContextRailVisible = "audioharbor.deck.contextRailVisible"
     static let deckContextRailWidth = "audioharbor.deck.contextRailWidth"
+
+    // Remote
+    static let remoteEnabled = "audioharbor.remote.enabled"
+    static let remoteServerID = "audioharbor.remote.serverID"
 }

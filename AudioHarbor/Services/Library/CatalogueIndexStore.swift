@@ -7,7 +7,7 @@ actor CatalogueIndexStore {
 
     private var db: OpaquePointer?
     private let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
-    private static let schemaVersion = "2"
+    private static let schemaVersion = "4"
 
     init() {
         db = Self.connect()
@@ -23,7 +23,8 @@ actor CatalogueIndexStore {
         guard let db else { return [] }
         let sql = """
         SELECT path, title, artist, album, track_number, year, duration, format,
-               sample_rate, bit_depth, channel_count, file_size, mtime, artwork_hash, filename, labels
+               sample_rate, bit_depth, channel_count, file_size, mtime, artwork_hash, filename, labels,
+               album_artist
         FROM tracks
         ORDER BY artist COLLATE NOCASE, album COLLATE NOCASE, track_number ASC, title COLLATE NOCASE
         """
@@ -72,8 +73,9 @@ actor CatalogueIndexStore {
         let sql = """
         INSERT INTO tracks (
             path, title, artist, album, track_number, year, duration, format,
-            sample_rate, bit_depth, channel_count, file_size, mtime, artwork_hash, filename, labels
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            sample_rate, bit_depth, channel_count, file_size, mtime, artwork_hash, filename, labels,
+            album_artist
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(path) DO UPDATE SET
             title=excluded.title,
             artist=excluded.artist,
@@ -89,7 +91,8 @@ actor CatalogueIndexStore {
             mtime=excluded.mtime,
             artwork_hash=excluded.artwork_hash,
             filename=excluded.filename,
-            labels=excluded.labels
+            labels=excluded.labels,
+            album_artist=excluded.album_artist
         """
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK, let stmt else {
@@ -121,6 +124,11 @@ actor CatalogueIndexStore {
             }
             bindText(stmt, 15, record.filename)
             bindText(stmt, 16, encodeLabels(record.labels))
+            if let albumArtist = record.albumArtist {
+                bindText(stmt, 17, albumArtist)
+            } else {
+                sqlite3_bind_null(stmt, 17)
+            }
             sqlite3_step(stmt)
         }
         sqlite3_exec(db, "COMMIT", nil, nil, nil)
@@ -298,7 +306,8 @@ actor CatalogueIndexStore {
             mtime REAL NOT NULL,
             artwork_hash TEXT,
             filename TEXT NOT NULL,
-            labels TEXT NOT NULL DEFAULT ''
+            labels TEXT NOT NULL DEFAULT '',
+            album_artist TEXT
         );
         CREATE INDEX IF NOT EXISTS idx_tracks_album_artist ON tracks(album, artist);
         CREATE INDEX IF NOT EXISTS idx_tracks_artist ON tracks(artist);
@@ -389,6 +398,7 @@ actor CatalogueIndexStore {
             title: string(stmt, 1),
             artist: string(stmt, 2),
             album: string(stmt, 3),
+            albumArtist: optionalString(stmt, 16),
             trackNumber: optionalInt(stmt, 4),
             year: optionalInt(stmt, 5),
             duration: sqlite3_column_double(stmt, 6),
