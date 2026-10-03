@@ -30,6 +30,8 @@ Steckst du den DAC wieder an, wählt die App automatisch wieder deine vorherige 
 
 **Lautstärke:** In Exclusive und DoP regelst du die Lautstärke am DAC oder Verstärker.
 Die Lautstärketasten des Mac wirken dann nicht, weil die App das Gerät allein nutzt.
+Mit dem iPhone-Remote geht es trotzdem vom Sofa aus: Er stellt die Lautstärke am DAC selbst ein
+(siehe [Remote](#remote-iphone-steuert-den-mac)).
 
 ## DSD: Was ist DoP?
 
@@ -77,16 +79,34 @@ mit Plugins für sich (**Exclusive · FX**):
 Kurz: Plugins werfen dich nicht mehr auf Shared zurück. Du behältst den DAC und die richtige Abtastrate,
 nur das Plugin verändert den Klang — so wie bei Audirvāna und Fidelia.
 
-- Unterstützt werden AUv3 und klassische AU-Plugins (Stereo).- Unterstützt werden AUv3 und klassische AU-Plugins (Stereo).
+- Unterstützt werden AUv3 und klassische AU-Plugins (Stereo).
   Klassische Plugins, die nicht „sandbox-safe“ sind (z. B. UAD, Valhalla), laufen in einem eigenen Prozess von macOS.
 
 ## Directories
 
 Hier fügst du die Ordner mit deiner Musik hinzu. Die App liest nur. Sie verschiebt und verändert keine Dateien.
 
+## Remote: iPhone steuert den Mac
+
+Die Musik spielt auf dem Mac, das iPhone ist die Fernbedienung.
+
+- **Allow Remote Control** einschalten. Der Mac ist dann im lokalen Netz sichtbar.
+- **New Code** zeigt einen 6-stelligen Code, 3 Minuten gültig. Am iPhone den Mac antippen und den Code eingeben.
+  Einmal gekoppelt, verbindet sich das iPhone danach ohne Code.
+- **Paired devices** listet die gekoppelten iPhones. **Revoke** wirft eines raus, **Revoke All** alle.
+- Mit dem iPhone: abspielen, springen, suchen, Ordner, Alben, Playlists und die Queue durchgehen.
+- **Lautstärke:** Regler im iPhone und die Lautstärketasten am iPhone stellen die Lautstärke des Geräts ein,
+  auf dem der Mac gerade spielt — den DAC selbst, wenn er eine Lautstärkeregelung hat, sonst den Mac-Ausgang.
+  Der DAC regelt selbst, die Musik bleibt bit-perfect, auch in Exclusive und DoP.
+  Drehst du am DAC, zieht das iPhone mit. DACs mit festem Ausgangspegel haben keine Regelung — dann gibt es
+  am iPhone keinen Regler, und du regelst am Verstärker.
+- Die Lautstärketasten steuern den Mac nur, solange die Remote-App offen ist und keine andere App auf dem
+  iPhone Musik spielt. Nach dem Trennen hat das iPhone wieder seine eigene Lautstärke.
+
 ## License
 
 7 Tage kostenlos ab der ersten Installation, danach einmalig freischalten.
 Nach einer Neuinstallation oder auf einem neuen Mac stellst du den Kauf mit „Restore Purchases“ wieder her.
+Der iPhone-Remote ist kostenlos. Ein Kauf am iPhone schaltet den Mac derselben Apple-ID frei.
 
 Mehr Fragen und Antworten (englisch): [FAQ](https://petergerov.github.io/audio-harbor/faq.html)

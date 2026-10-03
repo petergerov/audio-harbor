@@ -6,7 +6,7 @@
 |---|---|
 | UI | SwiftUI (multiplatform) |
 | Language | Swift 5.10+ / Swift 6 concurrency where safe |
-| App shape | One shared target via XcodeGen → iOS + macOS |
+| App shape | One shared target via XcodeGen → macOS (player) + iOS (remote for the Mac) |
 | Persistence | SQLite+FTS5 catalogue in Application Support; portable library file for playlists/labels (see below) |
 | Metadata | AVFoundation + TagLib-style fallback later for exotic tags |
 | Audio | Core Audio / AVAudioEngine; custom DSD path |
@@ -104,14 +104,34 @@ DST frames are 1/75 s of DSD64. Harbor does not play DST bytes as DSD. The commo
 | Exclusive | HAL exclusive; rate follows track |
 | DoP | DSD packed in fake high-rate PCM for capable DACs |
 
+### Output volume
+
+The engine follows the hardware volume (`kAudioDevicePropertyVolumeScalar`) of the device playback goes to — `exclusiveTargetDevice`, so the hogged DAC in Exclusive / DoP. The master element is used when settable, else the preferred stereo pair's channels. A property listener reports changes from the DAC's knob or the Mac's keys; the binding moves when the active device changes (`refreshOutputStatus`). `PlaybackService.outputVolume` is nil for a fixed-level DAC. Samples are never scaled, so bit-perfect holds. Only the remote sets it today.
+
+---
+
+## Remote (iPhone → Mac)
+
+The iPhone build is a remote, not a second player (`RootView` shows `RemoteHomeView` on iOS). Same target, `Remote/` folder:
+
+| Part | Where | Job |
+|---|---|---|
+| Protocol | `Remote/Protocol` | Length-prefixed frames (`FrameCodec`): JSON envelopes (`ClientMessage` / `ServerMessage`, versioned) plus binary frames for artwork. Foundation only, shared by both sides. |
+| Server (Mac) | `RemoteControlService`, `RemoteSession`, `RemoteCommandRouter`, `PlaybackObserver` | `NWListener` advertised as `_audioharbor._tcp` (Bonjour). One actor per connection. The router maps commands onto `AppModel` / `PlaybackService`; the observer pushes coalesced `NowPlayingSnapshot` (incl. `outputVolume`, `outputName`) and `QueueSnapshot`. |
+| Client (iPhone) | `RemoteBrowser`, `RemoteClientConnection`, `RemoteController` | `NWBrowser` discovery, connect, pair, mirror snapshots, send commands. |
+| Pairing | `Remote/Security` | 6-digit code (3 min, 5 tries then 60 s lockout) → token per client, stored on both sides (UserDefaults + Data Protection Keychain). Reconnects use the token. |
+| Volume buttons | `VolumeButtonObserver` (iOS) | No API exists for the buttons: with an active `.ambient` session, `outputVolume` is observed via KVO, each press becomes a ±5 % step on the Mac, and a hidden `MPVolumeView` puts the phone back to 50 % (and hides the HUD). Only in the foreground, only while no other app plays; the phone's level is restored on disconnect. |
+
+Compatibility: new optional snapshot fields decode as nil from an older Mac; the client only sends `setVolume` when the snapshot carries a volume. Traffic is plain TCP on the local network — no TLS, hence export compliance `NO`.
+
 ---
 
 ## Library architecture
 
 1. **Folder roots** stored as security-scoped bookmarks (this Mac + this app only).
-2. **Scanner** walks trees, hashes path+mtime, extracts tags/artwork. Incremental; Rebuild is explicit.
+2. **Scanner** walks trees, hashes path+mtime, extracts tags/artwork. Incremental; Rebuild is explicit. FLAC tags come from Vorbis comments (AVFoundation leaves `commonMetadata` empty for them). Files without embedded art take a folder image (`FolderArtworkLookup`), once per directory per scan. A schema bump in `CatalogueIndexStore` forces a full re-read.
 3. **Catalogue** is SQLite+FTS5 (`catalogue.sqlite` in Application Support). UI never scans live on every open.
-4. **Artwork** on-disk cache keyed by file hash.
+4. **Artwork** on-disk cache keyed by content hash of the downscaled image (512 px JPEG).
 5. **Search** via FTS5.
 
 Identity of a track is `cataloguePath` (file path, plus virtual suffixes for SACD ISO / DFF chapters). Playlists and labels must key off that, never off scan UUIDs.
@@ -214,8 +234,10 @@ Hero rule for UI: **first viewport = brand + music**, not a control panel. Now P
 - Screens with their own state and actions have a view model (`LibraryViewModel`,
   `PlaylistsViewModel`), owned as `@State` and created in the view's `init(appModel:)`.
   Views stay layout; logic goes to the view model or the services.
-- Start playback through `AppModel.play(_:startingAt:from:)` with a `QueueSource`, so the Deck
-  opens and shows where the queue came from.
+- Start playback through `AppModel.play(_:startingAt:from:showDeck:)` with a `QueueSource`, so the
+  Deck shows where the queue came from. Playing keeps the user where they are; the Deck opens when
+  `showDeck` is `true`, or — left `nil` — when ⌘ is held (`PlayGesture`). The remote passes `false`.
+  `AppModel.showDeck()` is the one way to switch to it (mini player, *Play and Show Deck*, ⌘3).
 - Nothing expensive in `body`: folder listings are stored and refreshed on change, artwork is
   decoded once per track in `.task(id:)`.
 - Audio engine callbacks hop to MainActor for state publish.
@@ -242,6 +264,7 @@ AudioHarbor/
                        # CatalogueSearchIndex, TrackLabelStore, FolderNavigation, bookmarks, M3U
     Playback/          # PlaybackService, LicenseService
   Audio/               # PlaybackEngine + CoreAudio impl, HAL player, DSD / SACD decoders, meters
+  Remote/              # LAN remote: Protocol (wire format), Server (Mac), Client + UI (iPhone), Security (pairing)
   Resources/           # Assets (AppIcon, BrandLogo, deck photos), Info.plist, entitlements
 design/icons/          # Icon and logo masters + render tools (build-appicon.sh)
 docs/

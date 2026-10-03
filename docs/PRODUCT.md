@@ -15,13 +15,13 @@
 | One job | Play local high-res audio correctly |
 | Honest quality | Prefer bit-perfect over marketing upsampling |
 | Calm UI | Brand + library + now playing — nothing else competing |
-| Shared soul | Same engine philosophy on Mac and iPhone; Mac leads on DAC depth |
+| Shared soul | One product on Mac and iPhone: the Mac plays on the DAC, the iPhone steers it |
 
 ---
 
 ## MVP (v1.0) — Ship this first
 
-**Goal:** Daily-driver local player on Mac; capable companion on iOS.
+**Goal:** Daily-driver local player on Mac. The iPhone follows as its remote (Mac 1.1 + iOS).
 
 ### Playback
 - [x] Gapless PCM playback
@@ -39,13 +39,17 @@
 - [x] Search
 - [x] Simple playlists (local)
 - [x] M3U / M3U8 playlist import and export
+- [x] Add a directory, album, artist or the Deck queue to a playlist or label (right-click)
+- [x] Album artist grouping; untagged compilations stay one album
+- [x] Cover art from the file, else from the album folder (`cover` / `folder` / `front`)
 
 ### UI / UX
 - [x] SwiftUI multiplatform shell (Mac + iPhone; iPad adaptive)
 - [x] Three primary surfaces: Library · Now Playing · Settings
 - [x] Large artwork Now Playing, minimal chrome
 - [x] Dark, quiet visual language (no dashboard clutter)
-- [x] Keyboard shortcuts on Mac (space, arrows, ⌘O)
+- [x] Keyboard shortcuts on Mac (Space, ⌘← / ⌘→, ⌘O; ⌘1 Catalogue, ⌘2 Playlists, ⌘3 Deck, ⌘, Settings)
+- [x] Play from the Catalogue without leaving it; ⌘-click, *Play and Show Deck* or the mini player open the Deck
 
 ### Settings (MVP-thin)
 - [x] Output device (Mac)
@@ -91,14 +95,35 @@ Ship only after MVP feels effortless. Pro adds power *behind* the same calm UI.
 - iCloud / folder sync of playlists (not the audio files)
 
 ### Platform Pro
-- iPad optimized layout
+- [x] iPhone remote for the Mac engine — Bonjour + pairing code; browse, search, queue, transport; DAC hardware volume from the slider and the iPhone's volume buttons (ships with Mac 1.1)
+- Listen on iPhone — the Mac streams to the paired iPhone on the home network (see below)
+- [x] iPad as a remote too — the same layout as the iPhone, centred
 - Mac menu bar mini player + notch-friendly compact mode
 - Continuity: handoff queue Mac ↔ iPhone (same library roots when possible)
 - CarPlay (iOS) — later, carefully
 
+#### Listen on iPhone (LAN)
+
+**Why:** The library stays on the Mac (or NAS); you take it to the bedroom, kitchen or garden on headphones. The remote already browses, searches and queues the Mac's catalogue, so a stream is cheaper than a standalone iPhone player with its own library, file access and sync.
+
+**Scope:**
+- Home network only, over the existing pairing (token). No relay, no port forwarding, no TLS — leaving the LAN is a different project.
+- The Mac sends the original file; the iPhone decodes with `AVAudioEngine`. No transcoding, except DSF / DFF / SACD ISO → PCM on the Mac.
+- The Mac stays silent while the iPhone plays; one output at a time.
+- Gapless across tracks, buffering against Wi-Fi jitter, background audio, Now Playing / lock screen, interruptions (calls).
+- Bandwidth is not a constraint: 24/192 stereo ≈ 9.2 Mbit/s.
+
+**Honesty:** Labelled “Listen on iPhone”, never bit-perfect. The iOS mixer may resample, Bluetooth is lossy. The Mac + DAC stays the bit-perfect path.
+
+**Open questions:**
+- Transfer whole files ahead vs. chunked streaming (seek, storage, gapless).
+- Hand back to the Mac mid-track (ties into Continuity).
+- App Review: the iPhone becomes a player — background audio needs fresh justification.
+
+**When:** After Pro audio depth. Covers or precedes a standalone iPhone player.
+
 ### Ecosystem (later)
 - Optional Qobuz/Tidal *if* it doesn’t dilute local-first identity
-- Remote control from iPhone → Mac engine
 - Export / convert as a separate “Tools” area — never in the main path
 
 ### Monetization sketch
@@ -125,7 +150,7 @@ Ship only after MVP feels effortless. Pro adds power *behind* the same calm UI.
 ## Release sequencing
 
 ```
-MVP Mac  →  MVP iOS companion  →  Pro audio depth  →  Polish & Continuity
+Mac 1.0  →  Mac 1.1 + iPhone remote  →  Pro audio depth  →  Polish & Continuity
 ```
 
-Mac first: Exclusive mode and DAC behavior define the brand. iOS ships the same library language with platform-honest audio limits.
+Mac first: Exclusive mode and DAC behavior define the brand. The iPhone joins as the Mac's remote, free, under the same App Store listing (Universal Purchase). A player on iPhone / iPad stays a later option; streaming from the Mac (“Listen on iPhone”) is the likely first step. Submission steps: [`APP_STORE_SUBMISSION.md`](../APP_STORE_SUBMISSION.md) § 11.

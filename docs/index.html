@@ -294,6 +294,7 @@
       background: var(--bg2);
     }
     .shot.wide { flex: 0 0 420px; }
+    .shot.tall { flex: 0 0 220px; }
     .shot img { width: 100%; height: auto; display: block; background: #0a0908; }
     .shot-label {
       padding: 10px 14px;
@@ -550,9 +551,9 @@
     <div class="device">
       <div class="device-screen">
         <button class="hero-open" type="button"
-                data-full="images/web/lb/1.Turntable.webp"
+                data-full="images/web/store/lb/hero-deck.webp"
                 data-caption="The Deck in its turntable face — needle down, groove position, the folder on the right">
-          <img src="images/web/1.Turntable.webp" width="1200" height="854" alt="Audio Harbor on macOS: the Deck in its turntable face, a record playing, the folder listing on the right" />
+          <img src="images/web/store/hero-deck.webp" width="1200" height="854" alt="Audio Harbor on macOS: the Deck in its turntable face, a record playing, the folder listing on the right" />
         </button>
       </div>
       <div class="device-base"></div>
@@ -634,45 +635,97 @@
     <p class="section-sub">The player is a listening room, not a mixer. Catalogue, Deck, Settings. Large artwork. Analog VU when the music is moving. Nothing competing for the downbeat.</p>
   </div>
   <div class="shots-scroll">
-    <div class="shot">
+    <div class="shot wide">
       <button class="shot-open" type="button"
-              data-full="images/web/lb/1.Turntable.webp"
-              data-caption="Turntable — needle down, groove position, folder on the right">
-        <img src="images/web/1.Turntable.webp" width="1200" height="854" alt="The Deck in its turntable face, showing needle-down position and groove progress" loading="lazy" />
+              data-full="images/web/store/lb/mac-01-deck.webp"
+              data-caption="The Deck — open a folder, hear the file">
+        <img src="images/web/store/mac-01-deck.webp" width="840" height="525" alt="The Deck playing a record, with the queue on the right" loading="lazy" />
       </button>
-      <div class="shot-label">Turntable — needle down, groove position, folder on the right</div>
+      <div class="shot-label">The Deck</div>
     </div>
-    <div class="shot">
+    <div class="shot wide">
       <button class="shot-open" type="button"
-              data-full="images/web/lb/2.Reel-To-Reel.webp"
-              data-caption="Reel-to-reel — same transport, tape position instead of groove">
-        <img src="images/web/2.Reel-To-Reel.webp" width="1200" height="854" alt="The Deck in its reel-to-reel face, showing open reel and tape position" loading="lazy" />
+              data-full="images/web/store/lb/mac-02-albums.webp"
+              data-caption="Catalogue — the music you already own, by album and artist">
+        <img src="images/web/store/mac-02-albums.webp" width="840" height="525" alt="The Catalogue listing albums with artist and track count" loading="lazy" />
       </button>
-      <div class="shot-label">Reel-to-reel — same transport, tape position instead of groove</div>
+      <div class="shot-label">Catalogue</div>
     </div>
-    <div class="shot">
+    <div class="shot wide">
       <button class="shot-open" type="button"
-              data-full="images/web/lb/3.Reciever.webp"
-              data-caption="Receiver — analog VU, left and right, when the music moves">
-        <img src="images/web/3.Reciever.webp" width="1200" height="854" alt="The Deck in its receiver face, with analog VU meters for left and right" loading="lazy" />
+              data-full="images/web/store/lb/mac-03-directories.webp"
+              data-caption="Directories — browse your disks as they are, search all of them at once">
+        <img src="images/web/store/mac-03-directories.webp" width="840" height="525" alt="The Catalogue browsing directories, with a search field and a folder listing" loading="lazy" />
       </button>
-      <div class="shot-label">Receiver — analog VU, left and right, when the music moves</div>
+      <div class="shot-label">Directories</div>
     </div>
-    <div class="shot">
+    <div class="shot wide">
       <button class="shot-open" type="button"
-              data-full="images/web/lb/4.Catalogue.webp"
-              data-caption="Catalogue — your directories, indexed and searchable">
-        <img src="images/web/4.Catalogue.webp" width="1200" height="854" alt="The Catalogue browsing directories, with a search field and a folder listing" loading="lazy" />
+              data-full="images/web/store/lb/mac-04-rack.webp"
+              data-caption="AU and AUv3 — your own plugins, right on the Deck">
+        <img src="images/web/store/mac-04-rack.webp" width="840" height="525" alt="The Deck in its receiver face with VU meters and an EQ plugin in the rack" loading="lazy" />
       </button>
-      <div class="shot-label">Catalogue — your directories, indexed and searchable</div>
+      <div class="shot-label">AU and AUv3</div>
     </div>
-    <div class="shot">
+    <div class="shot wide">
       <button class="shot-open" type="button"
-              data-full="images/web/lb/5.Playlists.webp"
-              data-caption="Playlists — your lists and labels, the player in reach on every screen">
-        <img src="images/web/5.Playlists.webp" width="1200" height="854" alt="The Playlists view: user playlists on the left, the selected list on the right, a compact player above" loading="lazy" />
+              data-full="images/web/store/lb/mac-05-settings.webp"
+              data-caption="Output — Shared, Exclusive or DoP, explained in plain words">
+        <img src="images/web/store/mac-05-settings.webp" width="840" height="525" alt="Settings explaining the Shared, Exclusive and DoP output modes" loading="lazy" />
       </button>
-      <div class="shot-label">Playlists — your lists and labels, the player in reach on every screen</div>
+      <div class="shot-label">Output</div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<section class="shots-section" id="remote">
+  <div class="shots-header">
+    <div class="section-eyebrow">Next · iPhone &amp; iPad remote · not yet released</div>
+    <h2 class="section-title">The music stays on the Mac. Your iPhone or iPad steers.</h2>
+    <p class="section-sub">Browse, search, queue, and play from the couch. The volume buttons on your iPhone or iPad set the DAC's own level, so the file stays bit-perfect. Local network only, no account, free.</p>
+  </div>
+  <div class="shots-scroll">
+    <div class="shot tall">
+      <button class="shot-open" type="button"
+              data-full="images/web/store/lb/iphone-01-now.webp"
+              data-caption="Remote — your Mac plays, your iPhone steers, the DAC's volume included">
+        <img src="images/web/store/iphone-01-now.webp" width="480" height="1043" alt="Now Playing on iPhone: the track on the Mac, transport, seek bar, DAC volume, and search" loading="lazy" />
+      </button>
+      <div class="shot-label">Remote</div>
+    </div>
+    <div class="shot tall">
+      <button class="shot-open" type="button"
+              data-full="images/web/store/lb/iphone-02-browse.webp"
+              data-caption="Browse — every album on your Mac, in your hand">
+        <img src="images/web/store/iphone-02-browse.webp" width="480" height="1043" alt="The remote browsing the Mac's albums" loading="lazy" />
+      </button>
+      <div class="shot-label">Browse</div>
+    </div>
+    <div class="shot tall">
+      <button class="shot-open" type="button"
+              data-full="images/web/store/lb/iphone-03-queue.webp"
+              data-caption="Queue — jump anywhere in what plays next">
+        <img src="images/web/store/iphone-03-queue.webp" width="480" height="1043" alt="The remote showing the Mac's queue with the playing track marked" loading="lazy" />
+      </button>
+      <div class="shot-label">Queue</div>
+    </div>
+    <div class="shot tall">
+      <button class="shot-open" type="button"
+              data-full="images/web/store/lb/iphone-04-nearby.webp"
+              data-caption="Nearby — finds your Mac on its own, no account">
+        <img src="images/web/store/iphone-04-nearby.webp" width="480" height="1043" alt="The remote listing two Macs found on the local network" loading="lazy" />
+      </button>
+      <div class="shot-label">Nearby</div>
+    </div>
+    <div class="shot tall">
+      <button class="shot-open" type="button"
+              data-full="images/web/store/lb/iphone-05-pairing.webp"
+              data-caption="Pairing — once, with a code from the Mac">
+        <img src="images/web/store/iphone-05-pairing.webp" width="480" height="1043" alt="The remote asking for the six-digit pairing code" loading="lazy" />
+      </button>
+      <div class="shot-label">Pairing</div>
     </div>
   </div>
 </section>
@@ -802,7 +855,7 @@
   <div class="container">
     <div class="section-eyebrow">One product</div>
     <h2 class="section-title">Mac leads. The pocket follows.</h2>
-    <p class="section-sub">The Mac ships first and ships alone. iPad and iPhone are planned, not available — we say that on the box, not in a footnote.</p>
+    <p class="section-sub">The Mac ships first, with a free remote for iPhone and iPad. An iPad player is planned. None of it is available yet — we say that on the box, not in a footnote.</p>
     <div class="hosts-grid">
       <div class="host-card">
         <div class="lead">Lead platform</div>
@@ -812,12 +865,12 @@
       <div class="host-card">
         <div class="lead">Planned, not yet released</div>
         <h3>iPad</h3>
-        <p>The same Deck and library, laid out for a larger canvas. Shared playback, <strong>AUv3</strong> inserts on the rack. Not in the first release — the Mac ships first.</p>
+        <p>The same Deck and library, laid out for a larger canvas. Shared playback, <strong>AUv3</strong> inserts on the rack. Not in the first release — until then the iPad works as the remote.</p>
       </div>
       <div class="host-card">
-        <div class="lead">Planned, not yet released</div>
-        <h3>iPhone</h3>
-        <p>Open the folder, find the album, listen. Shared session, <strong>AUv3</strong> on the rack if you want it. Exclusive is not faked on a phone DAC. Also not in the first release.</p>
+        <div class="lead">Next, free · not yet released</div>
+        <h3>iPhone &amp; iPad remote</h3>
+        <p>The music stays on the Mac and its DAC; your iPhone or iPad steers. Browse, search, queue, play — and set the <strong>DAC’s own volume</strong> with its volume buttons, still bit-perfect. Local network only, no account.</p>
       </div>
     </div>
   </div>
@@ -862,7 +915,7 @@
            alt="" width="76" height="76" loading="lazy" />
     </picture>
   <h2>Put the library in harbor.</h2>
-  <p>macOS first, and for now macOS only — iPad and iPhone are planned. Local files, AUv3 on the Deck, no account. Source is on GitHub while we finish the Mac App Store listing.</p>
+  <p>macOS first — with a remote for iPhone and iPad, and an iPad player later. Local files, AUv3 on the Deck, no account. Source is on GitHub while we finish the Mac App Store listing.</p>
   <a href="https://github.com/petergerov/audio-harbor" class="btn-cta">View on GitHub</a>
 </section>
 
