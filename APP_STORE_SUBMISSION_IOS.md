@@ -130,6 +130,21 @@ The remote is free. Playback on the Mac follows the Mac app's trial and one-time
 
 **Age rating:** 4+ (ganzer Eintrag) · **Copyright:** `2026 Gerov`
 
+### What's New in This Version (1.1.0)
+
+iOS 1.1.0 ist die **erste** iOS-Version — App Store Connect zeigt das Feld dafür nicht. Der Text ist für die Homepage, die Release-Notes und als Vorlage. Ab dem ersten iOS-Update gehört er ins Feld (pro Plattform eigener Text).
+
+```
+The first Audio Harbor for iPhone and iPad: a free remote for Audio Harbor on your Mac.
+
+• Finds your Mac on the local network. Pair once with a six-digit code, and it reconnects on its own.
+• Play, pause, skip, and seek. Browse folders, albums, artists, and playlists, search the whole catalogue, and jump anywhere in the queue.
+• Set your DAC's volume with the slider or the volume buttons. The DAC changes its own level, so the music stays bit-perfect.
+• On iPad, the same layout, centred, in any orientation.
+
+The music plays on the Mac. Nothing is copied to your iPhone or iPad, and there is no account.
+```
+
 ---
 
 ## 7. Screenshots

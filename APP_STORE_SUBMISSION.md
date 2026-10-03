@@ -218,6 +218,24 @@ audiophile,FLAC,DSD,DoP,bit-perfect,DAC,local,player,AUv3,ALAC,SACD,hi-res
 
 **Copyright:** `2026 Gerov`
 
+### What's New in This Version (1.1.0)
+
+App Store Connect zeigt das Feld nur bei einem **Update** einer schon veröffentlichten Version. Mac 1.0.0 ging nie live, also fehlt das Feld bei 1.1.0 vermutlich — dann den Text für die Homepage und die GitHub-Release-Notes nutzen (wer 1.0.0 von GitHub hat, sieht hier die Änderungen). Ab 1.1.1 gehört er ins Feld.
+
+```
+Control Audio Harbor from your iPhone or iPad. The new remote is free.
+
+• iPhone and iPad remote: browse, search, queue, and play from the couch. Turn on Settings → Remote → Allow Remote Control, pair once with a six-digit code, and the remote reconnects on its own.
+• Set your DAC's volume from the remote, with the slider or the volume buttons. In Exclusive and DoP the DAC changes its own level, so playback stays bit-perfect.
+• FLAC tags and embedded cover art are now read. Cover images in the folder (cover.jpg, folder.jpg …) fill in where a file has none.
+• Albums are grouped by album artist. Compilations without tags stay one album.
+• A larger cover on the Deck, in every style.
+• Add to Playlist and Labels from the right-click menu on directories, albums, artists, and the Deck queue.
+• Clicking plays without leaving the list. Play and Show Deck or ⌘-click takes you to the Deck.
+
+On first launch Audio Harbor reads your library once more to pick up the new tags.
+```
+
 ---
 
 ## 5. Screenshots (Mac)
