@@ -95,6 +95,11 @@ Die Musik spielt auf dem Mac, das iPhone ist die Fernbedienung.
   Einmal gekoppelt, verbindet sich das iPhone danach ohne Code.
 - **Paired devices** listet die gekoppelten iPhones. **Revoke** wirft eines raus, **Revoke All** alle.
 - Mit dem iPhone: abspielen, springen, suchen, Ordner, Alben, Playlists und die Queue durchgehen.
+  Ein Song oder **Play all** spielt, ohne die Liste zu verlassen; der laufende Song ist markiert.
+  Dirs / Albums / Artists / Lists bleiben oben, auch tief in einem Ordner — antippen führt an den Anfang.
+- **Playlists und Labels vom iPhone:** Song lange drücken → **Add to Playlist…** oder **Labels…**.
+  Antippen nimmt den Song auf, nochmal antippen nimmt ihn heraus; ein Haken zeigt, wo er drin ist.
+  Neue Playlists und Labels lassen sich dort anlegen. Braucht Mac und iPhone ab 1.1.1.
 - **Lautstärke:** Regler im iPhone und die Lautstärketasten am iPhone stellen die Lautstärke des Geräts ein,
   auf dem der Mac gerade spielt — den DAC selbst, wenn er eine Lautstärkeregelung hat, sonst den Mac-Ausgang.
   Der DAC regelt selbst, die Musik bleibt bit-perfect, auch in Exclusive und DoP.
