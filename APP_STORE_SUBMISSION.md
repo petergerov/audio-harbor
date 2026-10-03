@@ -5,13 +5,13 @@ Eine App, zwei Plattformen, **ein** Eintrag in App Store Connect:
 | Plattform | Rolle | Release |
 |---|---|---|
 | **macOS** | Der Player: Bibliothek, Deck, Exclusive / DoP, Rack. Spielt auf dem DAC. | **1.1.0** — erste Mac-Version, mit Remote-Server |
-| **iOS** (iPhone, iPad) | Die Fernbedienung: findet den Mac per Bonjour, koppelt per 6-stelligem Code, steuert Wiedergabe, Queue, Suche und die Lautstärke des DAC. Spielt selbst nichts. | **1.1.0** — erste iOS-Version, siehe [§ 11](#11-iphone-remote) |
+| **iOS** (iPhone, iPad) | Die Fernbedienung: findet den Mac per Bonjour, koppelt per 6-stelligem Code, steuert Wiedergabe, Queue, Suche und die Lautstärke des DAC. Spielt selbst nichts. | **1.1.0** — erste iOS-Version, siehe [`APP_STORE_SUBMISSION_IOS.md`](APP_STORE_SUBMISSION_IOS.md) |
 
 **Beide gehen in einer Einreichung raus.** Review bekommt Mac und iPhone gleichzeitig und kann den Remote gegen den Mac-Player testen, auch ohne dass der Mac schon im Store ist.
 
-Vorgeschichte: Mac 1.0.0 (16, Branch `release/REL_1.0.0`, ohne Remote) hing im Review. Sie wird aus dem Review genommen und in App Store Connect auf **1.1.0** umbenannt (Schritte in [§ 11.4](#114-app-store-connect--ablauf)). `release/REL_1.0.0` bleibt nur als Archiv. In Build 16 fehlte außerdem das Lesen der FLAC-Tags: jeder FLAC-Track stand als „Unknown Artist“ ohne Cover im Katalog.
+Vorgeschichte: Mac 1.0.0 (16, Branch `release/REL_1.0.0`, ohne Remote) hing im Review. Sie wird aus dem Review genommen und in App Store Connect auf **1.1.0** umbenannt (Schritte in [`APP_STORE_SUBMISSION_IOS.md` § 5](APP_STORE_SUBMISSION_IOS.md#5-app-store-connect--ablauf)). `release/REL_1.0.0` bleibt nur als Archiv. In Build 16 fehlte außerdem das Lesen der FLAC-Tags: jeder FLAC-Track stand als „Unknown Artist“ ohne Cover im Katalog.
 
-Stand der App im Repo: Bundle `com.gerov.audioharbor.player`, Version **1.1.0 (1)** auf `release/REL_1.1.0` (aus `develop`), App Sandbox aktiv, StoreKit 2 (Trial + Unlock) eingebaut. Offen sind vor allem Sandbox-Tests, die Remote-Tests (§ 11.3), Verträge und App Store Connect.
+Stand der App im Repo: Bundle `com.gerov.audioharbor.player`, Version **1.1.0 (17)** auf `release/REL_1.1.0` (aus `develop`), App Sandbox aktiv, StoreKit 2 (Trial + Unlock) eingebaut. Offen sind vor allem Sandbox-Tests, die Remote-Tests ([iOS § 4](APP_STORE_SUBMISSION_IOS.md#4-testen-vor-dem-upload)), Verträge und App Store Connect.
 
 ---
 
@@ -90,8 +90,8 @@ Ordnerzugriff läuft über `NSOpenPanel` / `fileImporter` + security-scoped Book
 
 ### 1.3 Version, Signing, Privacy-URL
 
-- [x] Marketing-Version **1.1.0** — in `project.yml` gesetzt, landet über XcodeGen im Projekt. Aktueller Build **1** (`CURRENT_PROJECT_VERSION`), jeder Upload +1
-- [ ] Mac-Upload mit Build 1 prüfen: Für macOS verlangt App Store Connect womöglich eine höhere Build-Nummer als jede bisher hochgeladene (Build 16 von 1.0.0). Bricht der Upload mit „CFBundleVersion must contain a higher version …“ ab, auf Build **17** gehen — für iOS ist 17 ebenso gültig.
+- [x] Marketing-Version **1.1.0** — in `project.yml` gesetzt, landet über XcodeGen im Projekt. Aktueller Build **17** (`CURRENT_PROJECT_VERSION`), jeder Upload +1
+- [x] Build-Nummer: macOS verlangt eine höhere Build-Nummer als jede bisher hochgeladene (Build 16 von 1.0.0) — Upload mit Build 1 scheiterte mit Fehler 90061. Daher Build **17**, für iOS ebenso gültig. Nie wieder unter die höchste hochgeladene Nummer zurücksetzen.
 - [ ] Team: Apple Developer Program, Signing **Apple Distribution** / Mac App Store (nicht Developer ID)
 - [x] Privacy Policy **live per HTTPS**: <https://petergerov.github.io/audio-harbor/privacy.html>
       (GitHub Pages, Quelle `main` + `/docs`). Geprüft: 200, HTTP wird auf HTTPS umgeleitet, Inhalt identisch mit `main`.
@@ -131,7 +131,7 @@ Erledigt: Der Eintrag existiert seit der Mac-1.0.0-Einreichung. Zur Erinnerung, 
 7. User Access: Full Access
 8. **Pricing and Availability:** Price = **Free**. Availability = die Länder, in denen ihr listen wollt. Nicht versehentlich 9,90 € als App-Preis setzen.
 
-Das iPhone kommt dazu, indem **dieselbe** App um die Plattform **iOS** erweitert wird, keine zweite App — siehe [§ 11.4](#114-app-store-connect--ablauf). Gleiche Bundle ID auf beiden Plattformen = **Universal Purchase**: ein Eintrag, ein Preis, ein IAP `unlock`, gültig für alle Geräte derselben Apple-ID.
+Das iPhone kommt dazu, indem **dieselbe** App um die Plattform **iOS** erweitert wird, keine zweite App — siehe [`APP_STORE_SUBMISSION_IOS.md` § 5](APP_STORE_SUBMISSION_IOS.md#5-app-store-connect--ablauf). Gleiche Bundle ID auf beiden Plattformen = **Universal Purchase**: ein Eintrag, ein Preis, ein IAP `unlock`, gültig für alle Geräte derselben Apple-ID.
 
 ---
 
@@ -285,7 +285,7 @@ xcodegen generate
 # Organizer → Distribute App → App Store Connect → Upload
 ```
 
-- Zweimal archivieren: einmal **Any Mac**, einmal **Any iOS Device (arm64)** — siehe [§ 11.9](#119-archive--upload)
+- Zweimal archivieren: einmal **Any Mac**, einmal **Any iOS Device (arm64)** — siehe [`APP_STORE_SUBMISSION_IOS.md` § 10](APP_STORE_SUBMISSION_IOS.md#10-archive--upload)
 - Nach Processing: jeden Build seiner Version 1.1.0 zuweisen (Mac-Build → macOS, iOS-Build → iOS), IAP an die Mac-Version anhängen (IAP muss **Ready to Submit** sein)
 - Export Compliance: `ITSAppUsesNonExemptEncryption = NO` steht in Info.plist / project.yml (HTTPS + Hashing only). Damit fällt „Missing Compliance“ nach dem Upload weg. Nur ändern, wenn ihr eigene nicht-exempt Verschlüsselung einbaut.
 
@@ -328,145 +328,9 @@ Data Used to Track You: **No**.
 
 ---
 
-## 11. iPhone-Remote
+## 11. iPhone- und iPad-Remote
 
-Geht in **derselben** Einreichung wie Mac 1.1.0 raus (siehe oben). Review prüft beide zusammen. Die iOS-App läuft auf iPhone **und iPad**; alles hier gilt für beide, wo nicht anders steht.
-
-### 11.1 Was rausgeht
-
-| | Mac 1.1.0 | iOS 1.1.0 |
-|---|---|---|
-| Neu | Remote-Server (Settings → Remote → *Allow Remote Control*), Pairing, DAC-Lautstärke per Remote | Erste iOS-Version: Remote für den Mac |
-| Branch | `release/REL_1.1.0` aus `develop` | derselbe Branch, dasselbe Target |
-| Version | `MARKETING_VERSION` 1.1.0 | ebenfalls 1.1.0 — ein Target, eine Versionsnummer. Eine erste iOS-Version muss nicht 1.0 heißen. |
-| Build | `CURRENT_PROJECT_VERSION` 1 (beim Mac evtl. 17, siehe § 1.3) | derselbe Build-Wert ist ok — Mac und iOS haben getrennte Build-Reihen |
-
-Der iPhone-Remote ist **kostenlos** und hat keine eigene Trial-Sperre. Die Trial-Uhr und die Sperre gibt es nur auf dem Mac, weil nur dort Musik spielt. Das Unlock-Panel in den iPhone-Settings kauft oder stellt denselben IAP wieder her. Durch Universal Purchase schaltet ein Kauf am iPhone den Mac derselben Apple-ID frei (am Mac danach *Restore Purchases*, falls der Status nicht sofort springt).
-
-### 11.2 Blocker im Code vor dem iOS-Archive
-
-- [x] **`UIBackgroundModes` → `audio` aus `AudioHarbor/Resources/Info.plist` entfernt.** Der Remote spielt kein Audio; Hintergrund-Audio ohne Audio ist ein sicherer Ablehnungsgrund (Guideline 2.5.4). Auf dem Mac ist der Key wirkungslos, er kann also ganz raus.
-- [x] **`NSLocalNetworkUsageDescription` neutral formuliert.** Der Text erscheint auch auf dem iPhone, dort passte „on this Mac“ nicht. Jetzt: `Audio Harbor uses your local network so your iPhone can find your Mac and control playback on it.`
-- [x] **Entitlements pro Plattform.** `AudioHarbor.entitlements` enthält macOS-Schlüssel (`com.apple.security.*`), die ein iOS-Upload ablehnen kann (ITMS-90046). iOS signiert jetzt mit `AudioHarbor/Resources/AudioHarbor-iOS.entitlements` (leeres `<dict/>` — Bonjour braucht kein Entitlement, nur `NSBonjourServices`), gesetzt über `CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]` in `project.yml`.
-- [x] **Mac-Entitlements für 1.1.0**: `com.apple.security.network.server` + `network.client` stehen in `project.yml` (in 1.0.0 nicht). Falls Review fragt: „The Mac listens on the local network only so the user’s own paired iPhone can control playback.“
-- [x] **iPhone und iPad.** `TARGETED_DEVICE_FAMILY: "1,2"` in `project.yml`. Das iPad zeigt genau die iPhone-Oberfläche (Now · Browse · Queue), mittig auf höchstens 600 pt Breite — auch Discovery und Pairing. Alle vier Ausrichtungen sind erlaubt (Pflicht für iPad-Multitasking). Achtung: iPad-Unterstützung lässt sich nach dem ersten Release **nicht mehr entfernen**.
-- [x] **Gesperrter Mac sichtbar.** Ist die Trial am Mac abgelaufen, meldet der Snapshot `playbackLocked`, und das iPhone zeigt über Now Playing: „The trial on … has ended. Unlock Audio Harbor in its Settings to keep playing.“
-
-### 11.3 Testen vor dem Upload
-
-- [ ] Echtes iPhone + Mac im selben WLAN: Mac findet sich, Pairing mit Code, Reconnect ohne Code (Token), *Revoke* am Mac wirft das iPhone raus
-- [ ] Dasselbe mit einem iPad: Hoch- und Querformat, Split View, Lautstärketasten am iPad
-- [ ] Local-Network-Abfrage auf dem iPhone erscheint beim ersten Suchen; nach *Ablehnen* zeigt die App einen verständlichen Zustand
-- [ ] Play / Pause / Skip / Seek / Queue / Suche / Ordner, Album, Playlist starten
-- [ ] Lautstärke: Regler und Lautstärketasten am iPhone ändern den DAC (Exclusive **und** DoP), Drehknopf am DAC oder Mac-Lautstärketasten (Shared) wandern zurück aufs iPhone. DAC ohne Hardware-Lautstärke: kein Regler, Hinweistext
-- [ ] Lautstärketasten mit Musik einer anderen App auf dem iPhone: Tasten gehören dann dieser App. Nach dem Trennen hat das iPhone wieder seine alte Lautstärke
-- [ ] App in den Hintergrund und zurück: Verbindung kommt wieder, Tasten gehen wieder
-
-### 11.4 App Store Connect — Ablauf
-
-1. **Mac 1.0.0 aus dem Review nehmen:** Versionsseite → **Remove from Review**. Die Version wird wieder bearbeitbar; Texte, Screenshots und der angehängte IAP bleiben.
-2. **Versionsnummer der Mac-Version auf 1.1.0 ändern.** Eine nicht veröffentlichte Version lässt sich umbenennen — keine zweite Mac-Version anlegen. Build 16 von der Version lösen.
-3. My Apps → **Audio Harbor** → links unter der Plattform-Liste **„+ Add Platform“** → **iOS**. Keine neue App anlegen — sonst gibt es kein Universal Purchase. Es entsteht eine eigene **iOS-App-Version 1.1.0** mit eigener Beschreibung, eigenen Keywords und eigenen Screenshots (§ 11.5, § 11.6). Name, Preis (Free), IAP, App Privacy und Altersfreigabe gelten für den ganzen Eintrag.
-4. Beide Builds hochladen (§ 11.9), je der passenden Version zuweisen.
-5. **Add for Review** an beiden Versionen → **eine** Submission mit Mac 1.1.0 + iOS 1.1.0. Der IAP geht mit der Mac-Version zum ersten Mal ins Review, muss also angehängt sein.
-6. IAP-Beschreibung prüfen — sie erscheint jetzt auch auf dem iPhone. Vorschlag EN: `One-time unlock after the 7-day trial. Plays your local library on your Mac — Exclusive, DoP, and the plugin rack included.`
-
-### 11.5 Listing-Copy iOS (English — so paste)
-
-**Subtitle** (gilt pro Plattform): `Remote for the Mac player`
-
-**Promotional text:**
-
-```
-Steer Audio Harbor on your Mac from the couch. Browse, queue, play, and set your DAC's volume with your iPhone's or iPad's volume buttons. Free.
-```
-
-**Description:**
-
-```
-Audio Harbor for iPhone and iPad is the remote for Audio Harbor on your Mac. The music plays on the Mac and its DAC — your iPhone or iPad steers.
-
-You need Audio Harbor for Mac on the same network. Turn on Settings → Remote → Allow Remote Control on the Mac, then enter the six-digit code on the phone once. After that the phone reconnects on its own.
-
-What you can do
-• Play, pause, skip, and seek
-• Browse your Mac's folders, albums, artists, and playlists
-• Search the whole catalogue on the Mac
-• Jump anywhere in the queue
-• Set the volume of your DAC — with the slider or the volume buttons. The DAC changes its own level, so the music stays bit-perfect.
-
-What it is not
-• Not a player on the iPhone or iPad. Nothing is copied to it.
-• No account and no cloud. Phone and Mac talk directly over your local network.
-
-The remote is free. Playback on the Mac follows the Mac app's trial and one-time unlock.
-```
-
-**Keywords:** `remote,mac,audiophile,DAC,volume,FLAC,DSD,bit-perfect,hi-res,player,control`
-
-### 11.6 Screenshots iOS
-
-| Gerät | Größe (Portrait) | Pflicht |
-|---|---|---|
-| iPhone 6,9″ | 1320 × 2868 (oder 1290 × 2796) | Ja |
-| iPad 13″ | 2064 × 2752 (oder 2048 × 2732) | Ja — das Target unterstützt iPad |
-
-Fertiger Satz (Oktober 2026): [`marketing/app-store/iphone-1320x2868/`](marketing/app-store/iphone-1320x2868/), 5 Bilder, opak, 1320 × 2868:
-
-1. **Remote** — „Your Mac plays. Your iPhone steers.“ (Now Playing mit DAC-Lautstärke, Suche)
-2. **Browse** — „Every album on your Mac, in your hand.“
-3. **Queue** — „Jump anywhere in what plays next.“
-4. **Nearby** — „Finds your Mac on its own. No account.“
-5. **Pairing** — „Pair once with a code from the Mac.“
-
-Die Daten sind erfunden (Künstler, Alben, generierte Cover — keine echte Musik, keine echten Gerätenamen). Sie kommen aus dem Fixture-Modus des Debug-Builds (`RemoteScreenshotFixture.swift`, Launch-Argument `-remoteScreenshot <scene>`), der im Release-Build nicht existiert. Texte stehen in `marketing/app-store/screenshots-iphone.txt`, die Rohaufnahmen in `raw-iphone/`. Neu erzeugen: `marketing/app-store/build-iphone.sh --capture` (baut, startet den Simulator „iPhone 17 Pro Max“, nimmt auf, setzt zusammen); ohne `--capture` nur neu zusammensetzen.
-
-iPad-Satz (Oktober 2026): [`marketing/app-store/ipad-2064x2752/`](marketing/app-store/ipad-2064x2752/), 5 Bilder, opak, 2064 × 2752, gleicher Fixture-Modus auf dem Simulator „iPad Pro 13-inch (M5)“:
-
-1. **Remote** — „Your Mac plays. Your iPad steers.“
-2. **Browse** — „Every album on your Mac, in your hand.“
-3. **Queue** — „Jump anywhere in what plays next.“
-4. **Nearby** — „Finds your Mac on its own. No account.“
-5. **Pairing** — „Pair once with a code from the Mac.“
-
-Texte in `marketing/app-store/screenshots-ipad.txt`, Rohaufnahmen in `raw-ipad/`. Neu erzeugen: `marketing/app-store/build-ipad.sh --capture`; `compose-iphone.swift` setzt beide Formate zusammen.
-
-### 11.7 Review notes iOS (an Apple)
-
-```
-Audio Harbor for iPhone and iPad is the remote control for Audio Harbor for Mac, the same app record (Universal Purchase). It plays no audio itself.
-
-To review:
-1. Install the Mac build from this same submission on a Mac and add a folder with a few audio files.
-2. On the Mac: Settings → Remote → turn on "Allow Remote Control", then "New Code".
-3. On the iPhone or iPad (same Wi-Fi): allow local network access, tap the Mac, enter the six-digit code.
-4. Play, browse, search, and change the volume. The device's volume buttons change the Mac's output volume while the remote is open.
-
-A screen recording of this flow is here: <URL>
-
-Phone and Mac talk directly over the local network (Bonjour, TCP). There is no server, no account, and no data leaves the network.
-```
-
-- [ ] Bildschirmvideo des Ablaufs aufnehmen und als Link in die Notes (Review hat oft keinen Mac im selben Netz). Ohne Video droht die Rückfrage nach Guideline 2.1 bzw. 4.2.3 („App funktioniert nicht allein“).
-
-### 11.8 App Privacy (gilt für beide Plattformen)
-
-Bleibt **Data Not Collected**. Der Remote schickt Titel, Cover, Queue und Befehle nur zwischen eigenem iPhone und eigenem Mac im lokalen Netz; nichts davon erreicht uns. [`docs/privacy.html`](docs/privacy.html) beschreibt das im Abschnitt *iPhone remote and your local network*.
-
-Export Compliance bleibt `NO`: Die Remote-Verbindung ist einfaches TCP mit Pairing-Token, ohne eigene Verschlüsselung.
-
-### 11.9 Archive & Upload
-
-```bash
-git switch release/REL_1.1.0
-xcodegen generate
-# Xcode: Scheme AudioHarbor → Any iOS Device (arm64)
-# Product → Archive (Release) → Distribute App → App Store Connect → Upload
-# Danach dasselbe mit Destination Any Mac
-```
-
-- Signing: Automatic, Team `C9LBGZNZ6P`, Apple Distribution. Die Bundle ID ist dieselbe wie am Mac; Xcode legt das iOS-Profil an.
-- `xcodegen generate` entfernt Versionseinträge, die Xcode direkt im Target gesetzt hat; maßgeblich ist `project.yml`.
+Steht jetzt in [`APP_STORE_SUBMISSION_IOS.md`](APP_STORE_SUBMISSION_IOS.md): Code-Blocker, Tests, App-Store-Connect-Ablauf (Mac 1.0.0 umbenennen, iOS-Plattform hinzufügen), Listing-Copy, Screenshots, Review Notes, Privacy, Archive & Upload.
 
 ---
 
