@@ -35,6 +35,8 @@ targets:
         CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]: AudioHarbor/Resources/AudioHarbor-iOS.entitlements
         # iPhone and iPad — both are remotes for the Mac.
         TARGETED_DEVICE_FAMILY: "1,2"
+        # Not offered on Apple Vision Pro as "Designed for iPad".
+        SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
         INFOPLIST_KEY_CFBundleDisplayName: Audio Harbor
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.music
