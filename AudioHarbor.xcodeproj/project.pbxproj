@@ -30,6 +30,7 @@
 		45123F24370F36D3534914B2 /* AudioHarborApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 089AF7698AE7FC5C84762FE5 /* AudioHarborApp.swift */; };
 		45305B66665A17C994FC6A21 /* RemoteSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FFD1E45E11EFC19D0C52A97 /* RemoteSession.swift */; };
 		480A767A4DBBDFED71D34F75 /* DefaultsKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45322741794DE98AE488713F /* DefaultsKey.swift */; };
+		4BF4C87BB1E893C6914F0CE6 /* DSDToPCMFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44B98B8CC75529BD8DC91D63 /* DSDToPCMFilter.swift */; };
 		4E77DAD93A74C594DC36FDAE /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBA8EC8CD38B2C8BDB195995 /* NowPlayingView.swift */; };
 		4FEAAC709237FAE1172AFEE9 /* DeckContextRail.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFE17E27CBA2B729358E1BD9 /* DeckContextRail.swift */; };
 		506DF53A1A6BDDC2C9B90937 /* DemoLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A078F55C2BF424F0E7140213 /* DemoLibrary.swift */; };
@@ -105,6 +106,7 @@
 		40A45E5B8213AE05D262F470 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		41CD8B5C14348DDE0695FB45 /* TrackRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackRow.swift; sourceTree = "<group>"; };
 		448B1EF5E4AB4488CBF7A8C7 /* MiniPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniPlayer.swift; sourceTree = "<group>"; };
+		44B98B8CC75529BD8DC91D63 /* DSDToPCMFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSDToPCMFilter.swift; sourceTree = "<group>"; };
 		45322741794DE98AE488713F /* DefaultsKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultsKey.swift; sourceTree = "<group>"; };
 		4550215276AF6CABE7EDB5C9 /* UnlockPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnlockPanel.swift; sourceTree = "<group>"; };
 		4FBCD8313019E2311FA8FD2A /* RemoteFolderRef.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteFolderRef.swift; sourceTree = "<group>"; };
@@ -400,6 +402,7 @@
 				39554B53A77D1827EF86E62D /* AHExceptionCatcher.m */,
 				D2DCF3754E5DF184BE6DDD50 /* CoreAudioPlaybackEngine.swift */,
 				CE0277F8E124960C06139C61 /* DSDDecoder.swift */,
+				44B98B8CC75529BD8DC91D63 /* DSDToPCMFilter.swift */,
 				798CED25B49983F451051372 /* HALAudioPlayer.swift */,
 				F5AC60844417CA335B0CDA96 /* MacAudioDeviceController.swift */,
 				53FFE55BC32CF1A7706C1FB8 /* PlaybackEngine.swift */,
@@ -519,6 +522,7 @@
 				189F1FAA379E8353DAD6E0BA /* CatalogueSearchIndex.swift in Sources */,
 				5FC40BA03A1E8DC0E96BEC95 /* CoreAudioPlaybackEngine.swift in Sources */,
 				421C5622F95862C6D870443C /* DSDDecoder.swift in Sources */,
+				4BF4C87BB1E893C6914F0CE6 /* DSDToPCMFilter.swift in Sources */,
 				4FEAAC709237FAE1172AFEE9 /* DeckContextRail.swift in Sources */,
 				DC90E70F88326A380D4E5DAB /* DeckStage.swift in Sources */,
 				480A767A4DBBDFED71D34F75 /* DefaultsKey.swift in Sources */,

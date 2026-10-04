@@ -205,60 +205,6 @@ enum DSDDecoder {
     }
 }
 
-/// Two cascaded RBJ biquads = 4th-order Butterworth. Cheap enough for real-time DSD.
-private struct BiquadCoeffs {
-    let b0: Double
-    let b1: Double
-    let b2: Double
-    let a1: Double
-    let a2: Double
-
-    static func lowpass(fc: Double, fs: Double, q: Double) -> BiquadCoeffs {
-        let w0 = 2 * Double.pi * fc / max(fs, 1)
-        let cosw = cos(w0)
-        let sinw = sin(w0)
-        let alpha = sinw / (2 * max(q, 0.05))
-        let b0 = (1 - cosw) / 2
-        let b1 = 1 - cosw
-        let b2 = (1 - cosw) / 2
-        let a0 = 1 + alpha
-        let a1 = -2 * cosw
-        let a2 = 1 - alpha
-        return BiquadCoeffs(b0: b0 / a0, b1: b1 / a0, b2: b2 / a0, a1: a1 / a0, a2: a2 / a0)
-    }
-}
-
-private struct DSDLowpass {
-    private let c1: BiquadCoeffs
-    private let c2: BiquadCoeffs
-    private var z11 = 0.0
-    private var z12 = 0.0
-    private var z21 = 0.0
-    private var z22 = 0.0
-
-    init(section1: BiquadCoeffs, section2: BiquadCoeffs) {
-        c1 = section1
-        c2 = section2
-    }
-
-    mutating func reset() {
-        z11 = 0
-        z12 = 0
-        z21 = 0
-        z22 = 0
-    }
-
-    mutating func process(_ x: Double) -> Double {
-        let y1 = c1.b0 * x + z11
-        z11 = c1.b1 * x - c1.a1 * y1 + z12
-        z12 = c1.b2 * x - c1.a2 * y1
-        let y2 = c2.b0 * y1 + z21
-        z21 = c2.b1 * y1 - c2.a1 * y2 + z22
-        z22 = c2.b2 * y1 - c2.a2 * y2
-        return y2
-    }
-}
-
 /// Memory-mapped DSF bitstream. Encodes DoP / PCM a render quantum at a time.
 final class DSDStreamSource: @unchecked Sendable {
     let header: DSDDecoder.Header
@@ -282,8 +228,11 @@ final class DSDStreamSource: @unchecked Sendable {
     /// Absolute DSD bit index in the file for clip start (0 for a whole file).
     private let clipStartBit: Int
     private let lock = NSLock()
-    private var filters: [DSDLowpass]
-    private var nextBit: Int
+    /// One per channel; empty for DoP.
+    private var converters: [DSDToPCMConverter]
+    private let settleFrames: Int
+    /// The PCM frame the converters are positioned to produce next.
+    private var nextFrame: Int
     /// Keeps the prefetch reads from being optimised away.
     private var prefetchSink: UInt8 = 0
 
@@ -329,17 +278,14 @@ final class DSDStreamSource: @unchecked Sendable {
         self.totalBits = clippedCount
         self.frameCount = Int(clippedCount / UInt64(bitsPerFrame))
         self.sampleRate = Double(header.sampleRate / bitsPerFrame)
-        self.nextBit = 0
+        self.nextFrame = 0
         if preferDoP {
-            self.filters = []
+            self.converters = []
+            self.settleFrames = 0
         } else {
-            let fs = Double(header.sampleRate)
-            let fc = min(20_000, Double(header.sampleRate / bitsPerFrame) * 0.40)
-            let section1 = BiquadCoeffs.lowpass(fc: fc, fs: fs, q: 0.541196)
-            let section2 = BiquadCoeffs.lowpass(fc: fc, fs: fs, q: 1.306563)
-            self.filters = (0..<header.channelCount).map { _ in
-                DSDLowpass(section1: section1, section2: section2)
-            }
+            let design = DSDToPCMDesign(dsdRate: header.sampleRate, decimation: bitsPerFrame)
+            self.converters = (0..<header.channelCount).map { _ in DSDToPCMConverter(design: design) }
+            self.settleFrames = design.settleFrames
         }
         guard frameCount > 0, channelCount > 0, sampleRate > 0 else { throw DSDError.truncated }
     }
@@ -442,7 +388,7 @@ final class DSDStreamSource: @unchecked Sendable {
         )
     }
 
-    /// Sequential 4th-order Butterworth at the DSD rate, then keep every `bitsPerFrame` sample.
+    /// Multi-stage FIR decimation (see `DSDToPCMDesign`), then the make-up gain from Settings.
     @discardableResult
     private func decodePCM(
         from startFrame: Int,
@@ -451,87 +397,53 @@ final class DSDStreamSource: @unchecked Sendable {
     ) -> Int {
         lock.lock()
         defer { lock.unlock() }
-        guard !filters.isEmpty else { return 0 }
+        guard !converters.isEmpty else { return 0 }
 
-        let startBit = startFrame * bitsPerFrame
-        if startBit != nextBit {
-            preroll(to: startBit)
+        if startFrame != nextFrame {
+            preroll(to: startFrame)
         }
 
+        let gain = DSDConversion.gain
         let src = bytes
         for frame in 0..<count {
-            let base = nextBit
+            let firstByte = nextFrame * bytesPerPCM
             for ch in 0..<channelCount {
-                var y = 0.0
-                var cachedByteIndex = Int.min
-                var cachedByte: UInt8 = 0
-                for i in 0..<bitsPerFrame {
-                    let x = Double(signedBit(
-                        src,
-                        channel: ch,
-                        bitIndex: base + i,
-                        cachedByteIndex: &cachedByteIndex,
-                        cachedByte: &cachedByte
-                    ))
-                    y = filters[ch].process(x)
+                var y: Float = 0
+                for i in 0..<bytesPerPCM {
+                    if let out = converters[ch].push(pcmByte(src, channel: ch, relativeIndex: firstByte + i)) {
+                        y = out
+                    }
                 }
-                emit(ch, frame, Float(max(-1, min(1, y))))
+                emit(ch, frame, max(-1, min(1, y * gain)))
             }
-            nextBit = base + bitsPerFrame
+            nextFrame += 1
         }
         return count
     }
 
-    private func preroll(to startBit: Int) {
-        for i in filters.indices { filters[i].reset() }
-        nextBit = 0
-        guard startBit > 0 else { return }
-        let prerollBits = min(startBit, bitsPerFrame * 48)
-        let from = startBit - prerollBits
+    /// Restart the converters a few frames early so the first frame out is already settled.
+    private func preroll(to startFrame: Int) {
+        for i in converters.indices { converters[i].reset() }
+        let from = max(0, startFrame - settleFrames)
         let src = bytes
-        var bit = from
-        while bit < startBit {
-            let take = min(bitsPerFrame, startBit - bit)
+        for frame in from..<startFrame {
+            let firstByte = frame * bytesPerPCM
             for ch in 0..<channelCount {
-                var cachedByteIndex = Int.min
-                var cachedByte: UInt8 = 0
-                for i in 0..<take {
-                    let x = Double(signedBit(
-                        src,
-                        channel: ch,
-                        bitIndex: bit + i,
-                        cachedByteIndex: &cachedByteIndex,
-                        cachedByte: &cachedByte
-                    ))
-                    _ = filters[ch].process(x)
+                for i in 0..<bytesPerPCM {
+                    _ = converters[ch].push(pcmByte(src, channel: ch, relativeIndex: firstByte + i))
                 }
             }
-            bit += take
         }
-        nextBit = startBit
+        nextFrame = startFrame
     }
 
-    private func signedBit(
-        _ src: UnsafePointer<UInt8>,
-        channel: Int,
-        bitIndex: Int,
-        cachedByteIndex: inout Int,
-        cachedByte: inout UInt8
-    ) -> Float {
-        if bitIndex < 0 || UInt64(bitIndex) >= totalBits { return 0 }
-        let fileBit = clipStartBit + bitIndex
-        let byteIndex = fileBit >> 3
-        if byteIndex != cachedByteIndex {
-            cachedByteIndex = byteIndex
-            cachedByte = byte(src, channel: channel, index: byteIndex)
+    /// Clip-relative DSD byte with the oldest bit in bit 7; silence outside the clip.
+    private func pcmByte(_ src: UnsafePointer<UInt8>, channel: Int, relativeIndex: Int) -> UInt16 {
+        guard relativeIndex >= 0, UInt64(relativeIndex) < totalBits >> 3 else {
+            return DSDToPCMDesign.silentByte
         }
-        let on: Bool
-        if lsbFirst {
-            on = ((cachedByte >> (fileBit & 7)) & 1) != 0
-        } else {
-            on = ((cachedByte >> (7 - (fileBit & 7))) & 1) != 0
-        }
-        return on ? 1 : -1
+        let b = byte(src, channel: channel, index: (clipStartBit >> 3) + relativeIndex)
+        return UInt16(lsbFirst ? b.bitReversed : b)
     }
 
     private static func int24(from sample: Float) -> Int32 {

@@ -48,6 +48,10 @@ struct SettingsView: View {
                         Text("With effects in the rack, Exclusive and DoP keep the DAC but send processed PCM — not bit-perfect, and DSD as PCM. Clear the rack for bit-perfect and DoP.")
                             .font(HarborFont.body(12))
                             .foregroundStyle(HarborColor.ivoryDim)
+
+                        Divider().overlay(HarborColor.aluminumDark.opacity(0.45))
+
+                        DSDLevelRow(level: $playback.dsdPCMLevel)
                     }
 
                     // Up front while the trial runs or has ended; once unlocked, last, under About.
@@ -391,5 +395,38 @@ struct SettingsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .faceplate()
+    }
+}
+
+/// Make-up gain for DSD converted to PCM, so it plays about as loud as through DoP.
+private struct DSDLevelRow: View {
+    @Binding var level: DSDPCMLevel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 12) {
+                Image(systemName: "dial.medium.fill")
+                    .foregroundStyle(HarborColor.amber)
+                    .frame(width: 22)
+                Text("DSD as PCM")
+                    .font(HarborFont.title(14))
+                    .foregroundStyle(HarborColor.ivory)
+                Spacer(minLength: 8)
+                Picker("DSD as PCM", selection: $level) {
+                    ForEach(DSDPCMLevel.allCases) { level in
+                        Text(level.title).tag(level)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+            }
+
+            Text("DSD is mastered 6 dB below PCM full scale, so converted to PCM it plays quieter than through DoP. +3 dB leaves room for almost every disc; +6 dB matches DoP but can clip loud SACDs.")
+                .font(HarborFont.body(12))
+                .foregroundStyle(HarborColor.ivoryDim)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 4)
     }
 }

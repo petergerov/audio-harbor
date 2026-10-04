@@ -333,6 +333,31 @@ enum DSDStrategy: String, Sendable {
     case convertToPCM
 }
 
+/// Make-up gain for DSD played as PCM (Shared, Exclusive, or with effects). SACD's 0 dB is
+/// 50 % modulation, so a plain conversion peaks 6 dB under PCM full scale; DoP leaves the
+/// level to the DAC. +6 dB matches most DACs' DSD level but clips hot SACD masters.
+enum DSDPCMLevel: Int, CaseIterable, Identifiable, Sendable {
+    case unity = 0
+    case plus3 = 3
+    case plus6 = 6
+
+    static let `default`: DSDPCMLevel = .plus3
+
+    var id: Int { rawValue }
+
+    var title: String {
+        switch self {
+        case .unity: "0 dB"
+        case .plus3: "+3 dB"
+        case .plus6: "+6 dB"
+        }
+    }
+
+    var linearGain: Float {
+        Float(pow(10, Double(rawValue) / 20))
+    }
+}
+
 enum RepeatMode: String, CaseIterable, Identifiable, Sendable {
     case off
     case all
