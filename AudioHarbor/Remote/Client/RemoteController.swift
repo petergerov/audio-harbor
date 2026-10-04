@@ -84,6 +84,11 @@ final class RemoteController {
         phase == .connected && serverVersion >= RemoteProtocol.trackEditsVersion
     }
 
+    /// Macs on protocol version 2 and later filter Browse by a search query.
+    var canSearchBrowse: Bool {
+        phase == .connected && serverVersion >= RemoteProtocol.browseSearchVersion
+    }
+
     var isPlaying: Bool {
         nowPlaying?.state == "playing"
     }
@@ -212,9 +217,22 @@ final class RemoteController {
         send(.search(query: query, limit: 200))
     }
 
-    func browse(scope: BrowseScope, parentID: String? = nil, offset: Int = 0, append: Bool = false) {
+    func browse(
+        scope: BrowseScope,
+        parentID: String? = nil,
+        query: String? = nil,
+        offset: Int = 0,
+        append: Bool = false
+    ) {
         browseAppend = append
-        let request = BrowseRequest(scope: scope, parentID: parentID, offset: offset, limit: 50)
+        let trimmed = query?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let request = BrowseRequest(
+            scope: scope,
+            parentID: parentID,
+            offset: offset,
+            limit: 50,
+            query: trimmed?.isEmpty == false ? trimmed : nil
+        )
         lastBrowseRequest = request
         #if DEBUG && os(iOS)
         if let fixture {
@@ -235,6 +253,7 @@ final class RemoteController {
         browse(
             scope: last.scope,
             parentID: last.parentID,
+            query: last.query,
             offset: last.offset + last.limit,
             append: true
         )
@@ -254,7 +273,7 @@ final class RemoteController {
         switch edit {
         case .addToPlaylist, .removeFromPlaylist, .addToNewPlaylist:
             if let last = lastBrowseRequest, last.scope == .playlists || last.scope == .playlistTracks {
-                browse(scope: last.scope, parentID: last.parentID)
+                browse(scope: last.scope, parentID: last.parentID, query: last.query)
             }
         case .addLabel, .removeLabel:
             break

@@ -107,6 +107,37 @@ final class LibraryService {
         return listFolderContents(at: url)
     }
 
+    /// Paths of the tracks the search field would find for `query`, without setting it.
+    func matchingPaths(query: String) -> Set<String> {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let indices = searchIndex.matchingIndices(query: q, trackCount: tracks.count) else { return [] }
+        return Set(indices.compactMap { tracks.indices.contains($0) ? tracks[$0].cataloguePath : nil })
+    }
+
+    /// The Directories search for the remote — every connected directory — without touching
+    /// the Mac's search field.
+    func remoteFolderSearch(query: String) -> [FolderSearchHit] {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return [] }
+        return computeFolderHits(query: q, matchingPaths: matchingPaths(query: q))
+    }
+
+    /// Root and path components of a directory inside a connected folder, for `RemoteFolderRef`.
+    func remoteFolderLocation(of url: URL) -> (rootID: UUID, components: [String])? {
+        let path = normalizedPath(url.path)
+        for bookmark in folders {
+            guard let base = accessibleFolderURLs[bookmark.id] else { continue }
+            let rootPath = normalizedPath(base.path)
+            if path == rootPath { return (bookmark.id, []) }
+            guard path.hasPrefix(rootPath + "/") else { continue }
+            let components = path.dropFirst(rootPath.count + 1)
+                .split(separator: "/", omittingEmptySubsequences: true)
+                .map(String.init)
+            return (bookmark.id, components)
+        }
+        return nil
+    }
+
     func remoteFolderURL(rootID: UUID, components: [String]) -> URL? {
         guard let rootURL = accessibleFolderURLs[rootID] else { return nil }
         return components.reduce(rootURL) { partial, component in
@@ -771,16 +802,12 @@ final class LibraryService {
             folderSearchHits = []
             return
         }
-        if let indices = searchIndex.matchingIndices(query: q, trackCount: tracks.count) {
-            searchHitPaths = Set(indices.compactMap { tracks.indices.contains($0) ? tracks[$0].cataloguePath : nil })
-        } else {
-            searchHitPaths = []
-        }
-        folderSearchHits = computeFolderHits(query: q)
+        searchHitPaths = matchingPaths(query: q)
+        folderSearchHits = computeFolderHits(query: q, matchingPaths: searchHitPaths)
     }
 
     /// Matches across every connected directory, wherever the Directories tab currently is.
-    private func computeFolderHits(query: String) -> [FolderSearchHit] {
+    private func computeFolderHits(query: String, matchingPaths: Set<String>?) -> [FolderSearchHit] {
         let scopes: [(root: FolderBookmark, base: URL)] = folders.compactMap { bookmark in
             guard let url = accessibleFolderURLs[bookmark.id] else { return nil }
             return (bookmark, url)
@@ -789,7 +816,7 @@ final class LibraryService {
         var hits: [FolderSearchHit] = []
         var seen = Set<String>()
         let matchingTracks: [Track]
-        if let paths = searchHitPaths {
+        if let paths = matchingPaths {
             matchingTracks = paths.compactMap { tracksByPath[$0] }
         } else {
             matchingTracks = []

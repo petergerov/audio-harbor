@@ -97,6 +97,9 @@ struct BrowseRequest: Codable, Sendable, Equatable {
     var parentID: String?
     var offset: Int
     var limit: Int
+    /// Version 2 on: filters like the Mac's catalogue search. With `.folders` it searches every
+    /// connected directory and ignores `parentID`.
+    var query: String?
 }
 
 enum BrowseItem: Codable, Sendable, Equatable {

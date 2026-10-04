@@ -23,6 +23,15 @@ private enum BrowseRoot: String, CaseIterable, Identifiable {
         case .playlists: "Lists"
         }
     }
+    /// Same wording as the Mac's catalogue search field.
+    var searchPrompt: String {
+        switch self {
+        case .folders: "Find directories & files"
+        case .albums: "Find album, artist, track"
+        case .artists: "Find artist, album, track"
+        case .playlists: "Find playlist"
+        }
+    }
     var scope: BrowseScope {
         switch self {
         case .folders: .folders
@@ -51,6 +60,9 @@ struct RemoteControllerView: View {
     @State private var drill: BrowseDrill?
     @State private var tick = Date()
     @State private var searchTask: Task<Void, Never>?
+    /// Browse search, under the Dirs / Albums / Artists / Lists tabs.
+    @State private var browseQuery = ""
+    @State private var browseSearchTask: Task<Void, Never>?
     /// Track whose playlists or labels are being edited.
     @State private var optionsRequest: RemoteTrackOptionsRequest?
 
@@ -385,6 +397,9 @@ struct RemoteControllerView: View {
         VStack(alignment: .leading, spacing: 10) {
             // The roots stay while drilling in; choosing one goes back to its top level.
             browseRootPicker
+            if controller.canSearchBrowse {
+                browseSearchField
+            }
             if let drill {
                 browseDrillHeader(drill)
             }
@@ -433,6 +448,55 @@ struct RemoteControllerView: View {
         }
         .background(HarborColor.faceplateLift)
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private var browseSearchField: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(HarborColor.ivoryDim)
+            // Set through the binding so clearing it in code does not reload the list.
+            TextField(browseRoot.searchPrompt, text: Binding(
+                get: { browseQuery },
+                set: { browseQuery = $0; scheduleBrowseSearch() }
+            ))
+            .textFieldStyle(.plain)
+            .foregroundStyle(HarborColor.ivory)
+            .submitLabel(.search)
+            .onSubmit {
+                browseSearchTask?.cancel()
+                reloadBrowseRoot()
+            }
+            if !browseQuery.isEmpty {
+                Button {
+                    browseQuery = ""
+                    browseSearchTask?.cancel()
+                    reloadBrowseRoot()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(HarborColor.ivoryDim)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear search")
+            }
+        }
+        .padding(10)
+        .background(HarborColor.faceplateLift)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    /// A pause after typing, then the current tab's top level, filtered.
+    private func scheduleBrowseSearch() {
+        browseSearchTask?.cancel()
+        browseSearchTask = Task {
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            guard !Task.isCancelled else { return }
+            reloadBrowseRoot()
+        }
+    }
+
+    /// The query the Mac filters by — nil when the Mac predates browse search.
+    private var activeBrowseQuery: String? {
+        controller.canSearchBrowse && !browseQuery.isEmpty ? browseQuery : nil
     }
 
     private func browseDrillHeader(_ drill: BrowseDrill) -> some View {
@@ -640,14 +704,17 @@ struct RemoteControllerView: View {
         switch item {
         case let .album(id, title, _, _, _):
             drill = BrowseDrill(title: title, scope: .albumTracks, parentID: id.uuidString)
-            controller.browse(scope: .albumTracks, parentID: id.uuidString)
+            controller.browse(scope: .albumTracks, parentID: id.uuidString, query: activeBrowseQuery)
         case let .artist(name, _):
             drill = BrowseDrill(title: name, scope: .artistTracks, parentID: name)
-            controller.browse(scope: .artistTracks, parentID: name)
+            controller.browse(scope: .artistTracks, parentID: name, query: activeBrowseQuery)
         case let .playlist(id, name, _):
             drill = BrowseDrill(title: name, scope: .playlistTracks, parentID: id.uuidString)
-            controller.browse(scope: .playlistTracks, parentID: id.uuidString)
+            controller.browse(scope: .playlistTracks, parentID: id.uuidString, query: activeBrowseQuery)
         case let .folder(id, name, _):
+            // As on the Mac, opening a directory from the search clears it.
+            browseSearchTask?.cancel()
+            browseQuery = ""
             drill = BrowseDrill(title: name, scope: .folders, parentID: id)
             controller.browse(scope: .folders, parentID: id)
         case .track(let dto):
@@ -690,11 +757,7 @@ struct RemoteControllerView: View {
 
     private func reloadBrowseRoot() {
         drill = nil
-        if browseRoot == .folders {
-            controller.browse(scope: .folders, parentID: nil)
-        } else {
-            controller.browse(scope: browseRoot.scope)
-        }
+        controller.browse(scope: browseRoot.scope, query: activeBrowseQuery)
     }
 
     @ViewBuilder

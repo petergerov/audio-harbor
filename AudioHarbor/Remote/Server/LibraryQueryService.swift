@@ -10,10 +10,18 @@ enum LibraryQueryService {
     ) -> (items: [BrowseItem], hasMore: Bool) {
         let offset = max(0, request.offset)
         let limit = min(max(1, request.limit), 200)
+        let query = request.query?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        // Like the Mac's search field: albums and artists with a matching track, only those tracks.
+        let hits: Set<String>? = query.isEmpty ? nil : library.matchingPaths(query: query)
+        func visible(_ tracks: [Track]) -> [Track] {
+            guard let hits else { return tracks }
+            return tracks.filter { hits.contains($0.cataloguePath) }
+        }
 
         switch request.scope {
         case .albums:
-            let slice = Array(library.albums.dropFirst(offset).prefix(limit + 1))
+            let albums = hits == nil ? library.albums : library.albums.filter { !visible($0.tracks).isEmpty }
+            let slice = Array(albums.dropFirst(offset).prefix(limit + 1))
             let hasMore = slice.count > limit
             let page = slice.prefix(limit).map { album -> BrowseItem in
                 .album(
@@ -27,14 +35,19 @@ enum LibraryQueryService {
             return (Array(page), hasMore)
 
         case .artists:
-            let facets = library.artistFacets
+            let facets = hits == nil ? library.artistFacets : library.artistFacets.compactMap { facet in
+                let count = visible(library.tracks(forArtist: facet.name)).count
+                return count > 0 ? LibraryFacet(id: facet.id, name: facet.name, count: count) : nil
+            }
             let slice = Array(facets.dropFirst(offset).prefix(limit + 1))
             let hasMore = slice.count > limit
             let page = slice.prefix(limit).map { BrowseItem.artist(name: $0.name, trackCount: $0.count) }
             return (Array(page), hasMore)
 
         case .playlists:
-            let list = playlists.playlists
+            let list = query.isEmpty
+                ? playlists.playlists
+                : playlists.playlists.filter { $0.name.localizedCaseInsensitiveContains(query) }
             let slice = Array(list.dropFirst(offset).prefix(limit + 1))
             let hasMore = slice.count > limit
             let page = slice.prefix(limit).map { playlist -> BrowseItem in
@@ -47,22 +60,51 @@ enum LibraryQueryService {
             guard let raw = request.parentID, let id = UUID(uuidString: raw),
                   let album = library.albums.first(where: { $0.id == id })
             else { return ([], false) }
-            return pageTracks(album.tracks, offset: offset, limit: limit)
+            return pageTracks(visible(album.tracks), offset: offset, limit: limit)
 
         case .artistTracks:
             guard let name = request.parentID else { return ([], false) }
-            return pageTracks(library.tracks(forArtist: name), offset: offset, limit: limit)
+            return pageTracks(visible(library.tracks(forArtist: name)), offset: offset, limit: limit)
 
         case .playlistTracks:
             guard let raw = request.parentID, let id = UUID(uuidString: raw),
                   let playlist = playlists.playlists.first(where: { $0.id == id })
             else { return ([], false) }
             let tracks = playlists.tracks(for: playlist, from: library.allTracks)
-            return pageTracks(tracks, offset: offset, limit: limit)
+            return pageTracks(visible(tracks), offset: offset, limit: limit)
 
         case .folders:
+            if !query.isEmpty {
+                return searchFolders(query, library: library, offset: offset, limit: limit)
+            }
             return browseFolders(request, library: library, offset: offset, limit: limit)
         }
+    }
+
+    /// Directories and files across every connected directory, as the Mac's Directories search.
+    private static func searchFolders(
+        _ query: String,
+        library: LibraryService,
+        offset: Int,
+        limit: Int
+    ) -> (items: [BrowseItem], hasMore: Bool) {
+        let hits = library.remoteFolderSearch(query: query)
+        let slice = Array(hits.dropFirst(offset).prefix(limit + 1))
+        let hasMore = slice.count > limit
+        let page: [BrowseItem] = slice.prefix(limit).compactMap { hit in
+            switch hit.entry.kind {
+            case .directory:
+                guard let location = library.remoteFolderLocation(of: hit.entry.url) else { return nil }
+                return .folder(
+                    id: RemoteFolderRef.encode(rootID: location.rootID, components: location.components),
+                    name: hit.entry.name,
+                    childHint: hit.relativePath
+                )
+            case .audioFile(let track):
+                return .track(TrackDTO(track: track))
+            }
+        }
+        return (page, hasMore)
     }
 
     private static func browseFolders(
