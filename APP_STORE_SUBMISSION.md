@@ -11,7 +11,7 @@ Eine App, zwei Plattformen, **ein** Eintrag in App Store Connect:
 
 Vorgeschichte: Mac 1.0.0 (16, Branch `release/REL_1.0.0`, ohne Remote) hing im Review. Sie wird aus dem Review genommen und in App Store Connect auf **1.1.0** umbenannt (Schritte in [`APP_STORE_SUBMISSION_IOS.md` § 5](APP_STORE_SUBMISSION_IOS.md#5-app-store-connect--ablauf)). `release/REL_1.0.0` bleibt nur als Archiv. In Build 16 fehlte außerdem das Lesen der FLAC-Tags: jeder FLAC-Track stand als „Unknown Artist“ ohne Cover im Katalog.
 
-Stand der App im Repo: Bundle `com.gerov.audioharbor.player`. **1.1.0 (17)** auf `release/REL_1.1.0` geht unverändert raus; `develop` steht auf **1.1.1 (18)** (Playlists, Labels und Suche vom Remote, siehe [What's New 1.1.1](#whats-new-in-this-version-111)). App Sandbox aktiv, App Sandbox aktiv, StoreKit 2 (Trial + Unlock) eingebaut. Offen sind vor allem Sandbox-Tests, die Remote-Tests ([iOS § 4](APP_STORE_SUBMISSION_IOS.md#4-testen-vor-dem-upload)), Verträge und App Store Connect.
+Stand der App im Repo: Bundle `com.gerov.audioharbor.player`. **1.1.0 (17)** auf `release/REL_1.1.0` geht unverändert raus; `develop` steht auf **1.1.1 (18)** (Playlists, Labels und Suche vom Remote; DSD→PCM linear bis 25 kHz mit Pegel-Einstellung, siehe [What's New 1.1.1](#whats-new-in-this-version-111)). App Sandbox aktiv, StoreKit 2 (Trial + Unlock) eingebaut. Offen sind vor allem Sandbox-Tests, die Remote-Tests ([iOS § 4](APP_STORE_SUBMISSION_IOS.md#4-testen-vor-dem-upload)), Verträge und App Store Connect.
 
 ---
 
@@ -107,9 +107,10 @@ Ordnerzugriff läuft über `NSOpenPanel` / `fileImporter` + security-scoped Book
 | 12 | DAC bleibt über Titelwechsel exklusiv (kein DSD↔PCM-Umschalten pro Titel, das manche DACs per USB-Reset quittieren); solange die App den DAC hält, ist er das Ziel statt des System-Standards; Play nach fehlgeschlagenem Laden lädt den Titel neu |
 | 13 | Exclusive/DoP nur mit externem DAC (sonst Shared, Lautstärketasten gehen); Settings grauen sie ohne DAC aus, zeigen Shared und wählen beim Anstecken wieder die vorherige DAC-Einstellung; M3U/M3U8-Import und -Export (Entitlement `user-selected.read-write`); neues App-Icon; FAQ-Seite `docs/faq.html` |
 | 1.1.0 (1) | iPhone- und iPad-Remote (iPad mit derselben Oberfläche wie das iPhone, mittig): Remote-Server am Mac (Bonjour, Pairing-Code, Token), DAC-Lautstärke per Remote; FLAC-Tags und -Cover werden gelesen, Cover-Dateien im Ordner (`cover.jpg`, `folder.jpg`, …) als Rückfall; Alben nach Album-Artist gruppiert, Sampler ohne Tag bleiben ein Album; größeres Cover im Deck, auch bei Tonband und Receiver; Rechtsklick „Add to Playlist“ / „Labels“ für Ordner, Alben, Künstler und die Deck-Queue; Klick spielt ohne Sprung zum Deck (⌘-Klick, „Play and Show Deck“, ⌘3). Der Katalog wird beim ersten Start einmal neu eingelesen (neues Schema). |
-| 1.1.1 (18) | Remote-Protokoll 2: Playlists und Labels vom iPhone/iPad (`trackOptions`, `editTrack` — hinzufügen, herausnehmen, neu anlegen); eine Nachricht, die der Mac nicht kennt, bekommt einen Fehler statt die Verbindung zu trennen. Remote: Abspielen bleibt in der Liste, der laufende Song ist markiert; Dirs / Albums / Artists / Lists bleiben beim Durchklicken sichtbar. Suchleiste darunter wie die Katalogsuche am Mac (`BrowseRequest.query`): Dirs über alle Ordner, Albums / Artists / Lists nur mit passenden Songs. Der Mac merkt sich seinen Remote-Port über Neustarts; das iPhone meldet einen nicht erreichbaren Mac, statt endlos zu laden. |
+| 1.1.1 (18) | Remote-Protokoll 2: Playlists und Labels vom iPhone/iPad (`trackOptions`, `editTrack` — hinzufügen, herausnehmen, neu anlegen); eine Nachricht, die der Mac nicht kennt, bekommt einen Fehler statt die Verbindung zu trennen. Remote: Abspielen bleibt in der Liste, der laufende Song ist markiert; Dirs / Albums / Artists / Lists bleiben beim Durchklicken sichtbar. Suchleiste darunter wie die Katalogsuche am Mac (`BrowseRequest.query`): Dirs über alle Ordner, Albums / Artists / Lists nur mit passenden Songs. Der Mac merkt sich seinen Remote-Port über Neustarts; das iPhone meldet einen nicht erreichbaren Mac, statt endlos zu laden. DSD→PCM neu: mehrstufige phasenlineare FIR-Filter statt Butterworth 4. Ordnung bei 20 kHz (der war bei 20 kHz schon −3 dB und ließ DSD-Rauschen in den Hörbereich spiegeln), jetzt linear bis 25 kHz, ab 44,1 kHz ≥ 120 dB Dämpfung. Settings → Output → *DSD as PCM*: 0 / +3 / +6 dB, Standard +3 dB — umgerechnetes DSD war 6 dB leiser als DoP, weil SACD-0-dB nur 50 % Aussteuerung ist. |
 
 - [ ] Vor dem Upload mit USB-DAC testen: DSF, DFF und SACD ISO in **DoP** (kein Rauschen, keine Aussetzer), PCM in **Exclusive**
+- [ ] 1.1.1, DSD als PCM (Shared, Exclusive, mit Plugin): DSD64 und DSD128/256 spielen sauber ohne Aussetzer; *DSD as PCM* 0 → +3 → +6 dB im laufenden Song hörbar lauter, +3 dB etwa 3 dB unter DoP am selben DAC; Spulen ohne Knacken; DoP-Pegel unverändert
 
 ### 1.5 App Store Connect (Verträge)
 
@@ -181,7 +182,7 @@ Audio Harbor is a local audiophile player for Mac. Add the folders you already h
 
 Free to install for everyone. Seven days full use after you first install. Then a one-time unlock (€9.90). No subscription. No account.
 
-Shared is the everyday path — other Mac sound still works. Exclusive takes over a USB DAC for bit-perfect playback and sample-rate match; DSD is converted to PCM. DoP does the same and sends DSD files to a DSD-capable DAC as real DSD.
+Shared is the everyday path — other Mac sound still works. Exclusive takes over a USB DAC for bit-perfect playback and sample-rate match; DSD is converted to PCM, flat to 25 kHz, with a level setting so it plays as loud as DoP. DoP does the same and sends DSD files to a DSD-capable DAC as real DSD.
 
 AUv3 inserts (and classic AU on Mac) live on the Deck rack. The rack uses Shared. Exclusive stays bit-perfect when the rack is empty.
 
@@ -248,6 +249,8 @@ The iPhone and iPad remote now files your music.
 • Search on the remote works like the catalogue search on the Mac: across every directory, or for albums, artists, and playlists with a matching song.
 • Playing a song or a whole album from the remote keeps you in the list, with the song that plays marked.
 • The remote finds the Mac again more reliably after the Mac restarts.
+• DSD converted to PCM (Shared and Exclusive) sounds cleaner: flat to 25 kHz, with DSD's ultrasonic noise kept out of the audible band.
+• New in Settings → Output: DSD as PCM, 0 / +3 / +6 dB. Converted DSD used to play 6 dB quieter than DoP; it now plays 3 dB louder by default, or as loud as DoP at +6 dB.
 
 Update the remote too: playlists, labels, and search need version 1.1.1 on the Mac and on the iPhone or iPad.
 ```

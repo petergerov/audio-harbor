@@ -198,7 +198,22 @@
     <details>
       <summary>Where did the “DSD strategy” setting go?</summary>
       <div class="answer">
-        <p>It was removed. The output mode decides now: <strong>DoP</strong> sends DSD as DSD, <strong>Exclusive</strong> and <strong>Shared</strong> convert it to PCM. If the DAC cannot take the DoP rate, Audio Harbor converts to PCM so the track still plays.</p>
+        <p>It was removed. The output mode decides now: <strong>DoP</strong> sends DSD as DSD, <strong>Exclusive</strong> and <strong>Shared</strong> convert it to PCM. If the DAC cannot take the DoP rate, Audio Harbor converts to PCM so the track still plays. The one DSD setting left is how loud converted DSD plays — see below.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Why is DSD quieter in Shared or Exclusive than with DoP?</summary>
+      <div class="answer">
+        <p>DSD stores no sample values, only ones and zeros: how loud it is depends on how many ones come in a row. It must never use the full range, or the DSD modulator runs out of control, so the SACD standard sets full volume at <strong>50 %</strong> of it. With DoP your DAC plays the DSD itself and most DACs make up for that inside. Converted exactly to PCM, 50 % is half of PCM full scale: <strong>6 dB quieter</strong>.</p>
+        <p>Settings → Output → <strong>DSD as PCM</strong> evens it out: <strong>0 dB</strong> (the exact conversion), <strong>+3 dB</strong> (the default, leaves room for almost every disc), or <strong>+6 dB</strong> (as loud as DoP, but loud SACD masters can clip). It applies straight away, also to the song that plays. DoP is not touched, and no quality is lost.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>How does Audio Harbor convert DSD to PCM?</summary>
+      <div class="answer">
+        <p>In several linear-phase filter stages down to 88.2 kHz PCM, from DSD64 up to DSD256. The response is flat to <strong>25 kHz</strong>, then falls steeply and is at least <strong>120 dB</strong> down from 44.1 kHz. That keeps DSD’s strong ultrasonic noise out, so none of it folds back into the audible band.</p>
       </div>
     </details>
 
