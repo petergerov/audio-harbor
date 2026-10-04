@@ -11,7 +11,7 @@ Eine App, zwei Plattformen, **ein** Eintrag in App Store Connect:
 
 Vorgeschichte: Mac 1.0.0 (16, Branch `release/REL_1.0.0`, ohne Remote) hing im Review. Sie wird aus dem Review genommen und in App Store Connect auf **1.1.0** umbenannt (Schritte in [`APP_STORE_SUBMISSION_IOS.md` § 5](APP_STORE_SUBMISSION_IOS.md#5-app-store-connect--ablauf)). `release/REL_1.0.0` bleibt nur als Archiv. In Build 16 fehlte außerdem das Lesen der FLAC-Tags: jeder FLAC-Track stand als „Unknown Artist“ ohne Cover im Katalog.
 
-Stand der App im Repo: Bundle `com.gerov.audioharbor.player`. **1.1.0 (17)** auf `release/REL_1.1.0` geht unverändert raus; `develop` steht auf **1.1.1 (18)** (Playlists und Labels vom Remote, siehe [What's New 1.1.1](#whats-new-in-this-version-111)). App Sandbox aktiv, App Sandbox aktiv, StoreKit 2 (Trial + Unlock) eingebaut. Offen sind vor allem Sandbox-Tests, die Remote-Tests ([iOS § 4](APP_STORE_SUBMISSION_IOS.md#4-testen-vor-dem-upload)), Verträge und App Store Connect.
+Stand der App im Repo: Bundle `com.gerov.audioharbor.player`. **1.1.0 (17)** auf `release/REL_1.1.0` geht unverändert raus; `develop` steht auf **1.1.1 (18)** (Playlists, Labels und Suche vom Remote, siehe [What's New 1.1.1](#whats-new-in-this-version-111)). App Sandbox aktiv, App Sandbox aktiv, StoreKit 2 (Trial + Unlock) eingebaut. Offen sind vor allem Sandbox-Tests, die Remote-Tests ([iOS § 4](APP_STORE_SUBMISSION_IOS.md#4-testen-vor-dem-upload)), Verträge und App Store Connect.
 
 ---
 
@@ -107,7 +107,7 @@ Ordnerzugriff läuft über `NSOpenPanel` / `fileImporter` + security-scoped Book
 | 12 | DAC bleibt über Titelwechsel exklusiv (kein DSD↔PCM-Umschalten pro Titel, das manche DACs per USB-Reset quittieren); solange die App den DAC hält, ist er das Ziel statt des System-Standards; Play nach fehlgeschlagenem Laden lädt den Titel neu |
 | 13 | Exclusive/DoP nur mit externem DAC (sonst Shared, Lautstärketasten gehen); Settings grauen sie ohne DAC aus, zeigen Shared und wählen beim Anstecken wieder die vorherige DAC-Einstellung; M3U/M3U8-Import und -Export (Entitlement `user-selected.read-write`); neues App-Icon; FAQ-Seite `docs/faq.html` |
 | 1.1.0 (1) | iPhone- und iPad-Remote (iPad mit derselben Oberfläche wie das iPhone, mittig): Remote-Server am Mac (Bonjour, Pairing-Code, Token), DAC-Lautstärke per Remote; FLAC-Tags und -Cover werden gelesen, Cover-Dateien im Ordner (`cover.jpg`, `folder.jpg`, …) als Rückfall; Alben nach Album-Artist gruppiert, Sampler ohne Tag bleiben ein Album; größeres Cover im Deck, auch bei Tonband und Receiver; Rechtsklick „Add to Playlist“ / „Labels“ für Ordner, Alben, Künstler und die Deck-Queue; Klick spielt ohne Sprung zum Deck (⌘-Klick, „Play and Show Deck“, ⌘3). Der Katalog wird beim ersten Start einmal neu eingelesen (neues Schema). |
-| 1.1.1 (18) | Remote-Protokoll 2: Playlists und Labels vom iPhone/iPad (`trackOptions`, `editTrack` — hinzufügen, herausnehmen, neu anlegen); eine Nachricht, die der Mac nicht kennt, bekommt einen Fehler statt die Verbindung zu trennen. Remote: Abspielen bleibt in der Liste, der laufende Song ist markiert; Dirs / Albums / Artists / Lists bleiben beim Durchklicken sichtbar. |
+| 1.1.1 (18) | Remote-Protokoll 2: Playlists und Labels vom iPhone/iPad (`trackOptions`, `editTrack` — hinzufügen, herausnehmen, neu anlegen); eine Nachricht, die der Mac nicht kennt, bekommt einen Fehler statt die Verbindung zu trennen. Remote: Abspielen bleibt in der Liste, der laufende Song ist markiert; Dirs / Albums / Artists / Lists bleiben beim Durchklicken sichtbar. Suchleiste darunter wie die Katalogsuche am Mac (`BrowseRequest.query`): Dirs über alle Ordner, Albums / Artists / Lists nur mit passenden Songs. Der Mac merkt sich seinen Remote-Port über Neustarts; das iPhone meldet einen nicht erreichbaren Mac, statt endlos zu laden. |
 
 - [ ] Vor dem Upload mit USB-DAC testen: DSF, DFF und SACD ISO in **DoP** (kein Rauschen, keine Aussetzer), PCM in **Exclusive**
 
@@ -245,9 +245,11 @@ Erstes Update nach 1.1.0 — das Feld erscheint, sobald 1.1.0 live ist. Mac und 
 The iPhone and iPad remote now files your music.
 
 • Add a song to a playlist or take it out, and set or clear its labels, right from the remote. Long-press a song and choose Add to Playlist or Labels.
+• Search on the remote works like the catalogue search on the Mac: across every directory, or for albums, artists, and playlists with a matching song.
 • Playing a song or a whole album from the remote keeps you in the list, with the song that plays marked.
+• The remote finds the Mac again more reliably after the Mac restarts.
 
-Update the remote too: playlists and labels need version 1.1.1 on the Mac and on the iPhone or iPad.
+Update the remote too: playlists, labels, and search need version 1.1.1 on the Mac and on the iPhone or iPad.
 ```
 
 ---

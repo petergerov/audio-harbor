@@ -2,7 +2,7 @@
 
 Die iOS-App ist die **Fernbedienung** für Audio Harbor am Mac: findet den Mac per Bonjour, koppelt per 6-stelligem Code, steuert Wiedergabe, Queue, Suche und die Lautstärke des DAC. Sie spielt selbst nichts. Sie läuft auf iPhone **und iPad**; alles hier gilt für beide, wo nicht anders steht.
 
-iOS 1.1.0 ist die **erste iOS-Version** und geht in **derselben** Einreichung wie Mac 1.1.0 raus. Danach folgt **1.1.1 (18)**, wieder mit dem Mac zusammen: Playlists und Labels vom Remote ([What's New 1.1.1](#whats-new-in-this-version-111), Tests in [§ 4](#4-testen-vor-dem-upload)). Review bekommt Mac und iPhone gleichzeitig und kann den Remote gegen den Mac-Player testen, auch ohne dass der Mac schon im Store ist. Alles zum Mac-Player steht in [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md).
+iOS 1.1.0 ist die **erste iOS-Version** und geht in **derselben** Einreichung wie Mac 1.1.0 raus. Danach folgt **1.1.1 (18)**, wieder mit dem Mac zusammen: Playlists, Labels und Suche vom Remote ([What's New 1.1.1](#whats-new-in-this-version-111), Tests in [§ 4](#4-testen-vor-dem-upload)). Review bekommt Mac und iPhone gleichzeitig und kann den Remote gegen den Mac-Player testen, auch ohne dass der Mac schon im Store ist. Alles zum Mac-Player steht in [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md).
 
 ---
 
@@ -17,7 +17,7 @@ iOS 1.1.0 ist die **erste iOS-Version** und geht in **derselben** Einreichung wi
 | Build | `CURRENT_PROJECT_VERSION` **17** für 1.1.0, **18** für 1.1.1 (siehe [§ 3](#3-version-build-signing)) |
 | Geräte | iPhone und iPad (`TARGETED_DEVICE_FAMILY: "1,2"`) |
 | iOS deployment | 17.0 |
-| Remote | Bonjour `_audioharbor._tcp`, TCP im lokalen Netz, 6-stelliger Code (3 min gültig), danach Token. Protokoll 1 in 1.1.0, **2** ab 1.1.1 (Playlists, Labels) |
+| Remote | Bonjour `_audioharbor._tcp`, TCP im lokalen Netz, 6-stelliger Code (3 min gültig), danach Token. Protokoll 1 in 1.1.0, **2** ab 1.1.1 (Playlists, Labels, Suche in Browse) |
 | App-Preis | Free — für den ganzen Eintrag |
 | IAP product | `com.gerov.audioharbor.unlock` (Non-Consumable, 9,90 €) |
 | Trial | Nur am Mac. Der Remote auf iPhone und iPad ist frei und hat keine eigene Sperre. |
@@ -79,7 +79,9 @@ Der Remote ist **kostenlos** und hat keine eigene Trial-Sperre. Die Trial-Uhr un
 - [ ] Knopf neben den Transport-Tasten unter Now: dieselben zwei Punkte für den laufenden Song
 - [ ] Song und *Play all* antippen: bleibt in der Liste, der laufende Song ist bernsteinfarben mit Lautsprecher
 - [ ] In Dirs tief in Ordner gehen: Dirs / Albums / Artists / Lists bleiben oben, Antippen führt an den Anfang
-- [ ] iPhone 1.1.1 mit Mac 1.1.0: Menü zeigt nur *Play*, nichts bricht ab. iPhone 1.1.0 mit Mac 1.1.1: verbindet und steuert wie bisher
+- [ ] Suche unter den Tabs: Dirs findet Ordner und Dateien in allen Ordnern (Ordner antippen öffnet ihn und leert die Suche); Albums / Artists / Lists zeigen nur Einträge mit passenden Songs und darin nur diese; eine Playlist, deren Name passt, zeigt alle Songs. Treffer antippen bleibt geöffnet
+- [ ] Mac-App beenden (auch per Xcode-Stop) und neu starten: das iPhone verbindet wieder (gleicher Port). Mac aus: das iPhone zeigt „Can't reach …“ statt endlos zu laden
+- [ ] iPhone 1.1.1 mit Mac 1.1.0: Menü zeigt nur *Play*, keine Suchleiste in Browse, nichts bricht ab. iPhone 1.1.0 mit Mac 1.1.1: verbindet und steuert wie bisher
 - [ ] Unlock-Panel in den iPhone-Settings: Kauf und Restore mit Sandbox-Apple-ID; danach am Mac *Restore Purchases*
 
 ---
@@ -119,7 +121,7 @@ You need Audio Harbor for Mac on the same network. Turn on Settings → Remote �
 
 What you can do
 • Play, pause, skip, and seek
-• Browse your Mac's folders, albums, artists, and playlists
+• Browse your Mac's folders, albums, artists, and playlists, and search each like on the Mac
 • Search the whole catalogue on the Mac
 • Jump anywhere in the queue
 • Add songs to playlists and labels, or take them out — long-press a song
@@ -157,14 +159,16 @@ The music plays on the Mac. Nothing is copied to your iPhone or iPad, and there 
 
 ### What's New in This Version (1.1.1)
 
-Das erste iOS-Update — hier zeigt App Store Connect das Feld. Die Description oben enthält den neuen Punkt schon; für 1.1.0 ohne ihn einreichen.
+Das erste iOS-Update — hier zeigt App Store Connect das Feld. Die Description oben enthält die neuen Punkte schon (Playlists/Labels, Suche); für 1.1.0 ohne sie einreichen.
 
 ```
 • Add a song to a playlist or take it out: long-press it and choose Add to Playlist. Labels work the same way. A checkmark shows where the song is, and you can make a new playlist or label right there.
 • Playing a song or Play all keeps you in the list. The song that plays is marked.
+• Search under Dirs, Albums, Artists, and Lists, like the catalogue search on the Mac: across every directory, or albums, artists, and playlists with a matching song.
 • Dirs, Albums, Artists, and Lists stay at the top while you browse deeper. Tap one to go back to its start.
+• Finds your Mac again more reliably after it restarts, and says so when it can't reach it.
 
-Playlists and labels need Audio Harbor 1.1.1 on your Mac.
+Playlists, labels, and search need Audio Harbor 1.1.1 on your Mac.
 ```
 
 ---

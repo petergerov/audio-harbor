@@ -100,6 +100,10 @@ Die Musik spielt auf dem Mac, das iPhone ist die Fernbedienung.
 - **Playlists und Labels vom iPhone:** Song lange drücken → **Add to Playlist…** oder **Labels…**.
   Antippen nimmt den Song auf, nochmal antippen nimmt ihn heraus; ein Haken zeigt, wo er drin ist.
   Neue Playlists und Labels lassen sich dort anlegen. Braucht Mac und iPhone ab 1.1.1.
+- **Suche in Browse:** Unter Dirs / Albums / Artists / Lists sucht das Feld wie die Katalogsuche am Mac.
+  Dirs findet Ordner und Dateien in allen Ordnern; ein Ordner antippen öffnet ihn und leert die Suche.
+  Albums, Artists und Lists zeigen nur Einträge mit passenden Songs, darin nur diese — eine Playlist,
+  deren Name passt, zeigt alle. Braucht Mac und iPhone ab 1.1.1.
 - **Lautstärke:** Regler im iPhone und die Lautstärketasten am iPhone stellen die Lautstärke des Geräts ein,
   auf dem der Mac gerade spielt — den DAC selbst, wenn er eine Lautstärkeregelung hat, sonst den Mac-Ausgang.
   Der DAC regelt selbst, die Musik bleibt bit-perfect, auch in Exclusive und DoP.
