@@ -50,8 +50,9 @@ struct SettingsView: View {
                             .foregroundStyle(HarborColor.ivoryDim)
                     }
 
-                    panel(title: "License") {
-                        UnlockPanel()
+                    // Up front while the trial runs or has ended; once unlocked, last, under About.
+                    if !isUnlocked {
+                        licensePanel
                     }
 
                     panel(title: "Directories") {
@@ -74,6 +75,10 @@ struct SettingsView: View {
                         Text(Brand.tagline)
                             .font(HarborFont.body(13))
                             .foregroundStyle(HarborColor.ivoryDim)
+                    }
+
+                    if isUnlocked {
+                        licensePanel
                     }
                 }
                 .padding(.bottom, 24)
@@ -270,6 +275,16 @@ struct SettingsView: View {
         .accessibilityLabel("\(mode.title). \(mode.blurb)")
         .accessibilityHint(mode.detail)
         .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    private var isUnlocked: Bool {
+        appModel.license.status == .unlocked
+    }
+
+    private var licensePanel: some View {
+        panel(title: "License") {
+            UnlockPanel()
+        }
     }
 
     @ViewBuilder
