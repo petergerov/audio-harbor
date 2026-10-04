@@ -78,6 +78,7 @@
 		EF497E97808F64B06E4B7337 /* RemoteController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAB455A40308B519E01C8897 /* RemoteController.swift */; };
 		F1B40DCA41BE9ED20B03C3AB /* PlaybackService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 594FBEA5AC9E0B4C87D22424 /* PlaybackService.swift */; };
 		F25714D3F82281FBF48EF86F /* ReceiverVURig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86014A84599DFFC94B7542AD /* ReceiverVURig.swift */; };
+		F323DC864BA63A8E134BFE2E /* RemoteTrackOptionsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C92F07B59C8046E386858540 /* RemoteTrackOptionsSheet.swift */; };
 		FBF3EECAC0BB2240010ABF1F /* PlaylistService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2F79E705295934168D2B714 /* PlaylistService.swift */; };
 		FE99BD8D8179E02001401C60 /* BookmarkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FA726BDA6ACC238C61BCBAA /* BookmarkStore.swift */; };
 		FEF16E6A6F395EF5159B35E1 /* FolderDiskScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04C9378090488945FDED57A3 /* FolderDiskScanner.swift */; };
@@ -143,6 +144,7 @@
 		C4A50CD9E599EEDB62B08B5C /* CatalogueIndexer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogueIndexer.swift; sourceTree = "<group>"; };
 		C69056BD4AB5A360D4A15C0A /* CatalogueIndexStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogueIndexStore.swift; sourceTree = "<group>"; };
 		C811141C1870BECD8C5723FB /* LibraryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryViewModel.swift; sourceTree = "<group>"; };
+		C92F07B59C8046E386858540 /* RemoteTrackOptionsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteTrackOptionsSheet.swift; sourceTree = "<group>"; };
 		C98A719353878C893B9C45EC /* MetadataReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataReader.swift; sourceTree = "<group>"; };
 		CE0277F8E124960C06139C61 /* DSDDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSDDecoder.swift; sourceTree = "<group>"; };
 		CE4F5BDDB75DF28EDAB6F4A5 /* StereoMeter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StereoMeter.swift; sourceTree = "<group>"; };
@@ -181,6 +183,7 @@
 				DF181C0F4160B4BBDD394100 /* RemoteControllerView.swift */,
 				9D026D9DC059DF2F5929AAF2 /* RemoteHomeView.swift */,
 				9A987B0F929A0F6129BFAB4F /* RemoteSettingsSection.swift */,
+				C92F07B59C8046E386858540 /* RemoteTrackOptionsSheet.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -569,6 +572,7 @@
 				9179911D39854D3532C742EE /* RemoteScreenshotFixture.swift in Sources */,
 				45305B66665A17C994FC6A21 /* RemoteSession.swift in Sources */,
 				1D797BEAA4DC4CA6B65C2968 /* RemoteSettingsSection.swift in Sources */,
+				F323DC864BA63A8E134BFE2E /* RemoteTrackOptionsSheet.swift in Sources */,
 				B1ABBE0CD9CC54DC22612982 /* RootView.swift in Sources */,
 				DAB691949E3F25874EDB84DB /* SACDISO.swift in Sources */,
 				0868606C96FE00837683B871 /* SettingsView.swift in Sources */,
@@ -617,7 +621,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -631,7 +635,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -716,7 +720,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -736,7 +740,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;

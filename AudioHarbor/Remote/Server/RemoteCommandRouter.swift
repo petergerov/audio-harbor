@@ -63,8 +63,51 @@ final class RemoteCommandRouter {
                 requestID: requestID
             )
 
+        case .trackOptions(let cataloguePath):
+            return trackOptionsReply(cataloguePath, requestID: requestID)
+
+        case let .editTrack(cataloguePath, edit):
+            guard let track = appModel.library.track(forCataloguePath: cataloguePath) else {
+                return .message(.error(code: .notFound, message: "Track not found"), requestID: requestID)
+            }
+            apply(edit, to: track)
+            return trackOptionsReply(cataloguePath, requestID: requestID)
+
         case .ping:
             return .message(.pong, requestID: requestID)
+        }
+    }
+
+    private func trackOptionsReply(_ cataloguePath: String, requestID: UInt32?) -> RouterReply {
+        guard let options = LibraryQueryService.trackOptions(
+            cataloguePath: cataloguePath,
+            library: appModel.library,
+            playlists: appModel.playlists
+        ) else {
+            return .message(.error(code: .notFound, message: "Track not found"), requestID: requestID)
+        }
+        return .message(.trackOptions(options: options), requestID: requestID)
+    }
+
+    private func apply(_ edit: TrackEdit, to track: Track) {
+        let playlists = appModel.playlists
+        switch edit {
+        case .addToPlaylist(let id):
+            if let playlist = playlists.playlists.first(where: { $0.id == id }) {
+                playlists.add(track, to: playlist)
+            }
+        case .removeFromPlaylist(let id):
+            if let playlist = playlists.playlists.first(where: { $0.id == id }) {
+                playlists.removeTrack(track, from: playlist)
+            }
+        case .addToNewPlaylist(let name):
+            if let playlist = playlists.createPlaylist(named: name) {
+                playlists.add(track, to: playlist)
+            }
+        case .addLabel(let name):
+            appModel.library.addLabel(name, to: track)
+        case .removeLabel(let name):
+            appModel.library.removeLabel(name, from: track)
         }
     }
 

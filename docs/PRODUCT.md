@@ -98,6 +98,8 @@ Ship only after MVP feels effortless. Pro adds power *behind* the same calm UI.
 - [x] iPhone remote for the Mac engine — Bonjour + pairing code; browse, search, queue, transport; DAC hardware volume from the slider and the iPhone's volume buttons (ships with Mac 1.1)
 - Listen on iPhone — the Mac streams to the paired iPhone on the home network (see below)
 - [x] iPad as a remote too — the same layout as the iPhone, centred
+- [x] Playlists and labels from the remote — long-press a song: Add to Playlist… / Labels…, tap to put it in or take it out; playing a song or Play all stays in the list and marks the playing row (Mac + iOS 1.1.1, protocol 2)
+- [x] Search on the remote like the Mac's catalogue search — Dirs across every directory, Albums / Artists / Lists with a matching song (Mac + iOS 1.1.1)
 - Mac menu bar mini player + notch-friendly compact mode
 - Continuity: handoff queue Mac ↔ iPhone (same library roots when possible)
 - CarPlay (iOS) — later, carefully

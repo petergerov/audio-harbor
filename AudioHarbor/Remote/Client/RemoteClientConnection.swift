@@ -71,6 +71,16 @@ actor RemoteClientConnection {
             startContinuation?.resume(throwing: error)
             startContinuation = nil
             frameContinuation.finish()
+        case .waiting(let error):
+            // Refused or unreachable (Mac firewall, other network, local network access off).
+            // NWConnection would retry forever behind a spinner; report it instead.
+            guard case .connecting = state else { return }
+            state = .failed(error.localizedDescription)
+            startContinuation?.resume(throwing: error)
+            startContinuation = nil
+            frameContinuation.finish()
+            closed = true
+            connection.cancel()
         case .cancelled:
             state = .cancelled
             startContinuation?.resume(throwing: CancellationError())

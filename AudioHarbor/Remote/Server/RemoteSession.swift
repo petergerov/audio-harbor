@@ -96,10 +96,18 @@ actor RemoteSession {
             let frames = try FrameCodec.feed(chunk: chunk, into: &buffer)
             for frame in frames {
                 guard frame.kind == .json else { continue }
-                let envelope = try FrameCodec.decodeJSON(
+                // A message this Mac does not know — from a newer remote — is refused, not fatal:
+                // the framing is intact, so the session carries on.
+                guard let envelope = try? FrameCodec.decodeJSON(
                     RemoteEnvelope<ClientMessage>.self,
                     from: frame.payload
-                )
+                ) else {
+                    await send(
+                        .error(code: .unsupported, message: "This Mac does not support that request"),
+                        requestID: nil
+                    )
+                    continue
+                }
                 await process(envelope)
             }
         } catch {

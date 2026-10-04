@@ -28,4 +28,5 @@ enum DefaultsKey {
     // Remote
     static let remoteEnabled = "audioharbor.remote.enabled"
     static let remoteServerID = "audioharbor.remote.serverID"
+    static let remotePort = "audioharbor.remote.port"
 }
