@@ -54,7 +54,8 @@
 ### Settings (MVP-thin)
 - [x] Output device (Mac)
 - [x] Exclusive mode on/off
-- [x] DSD: DoP in Output DoP, convert-to-PCM otherwise (no separate DSD setting)
+- [x] DSD: DoP in Output DoP, convert-to-PCM otherwise (no DSD strategy setting)
+- [x] DSD as PCM level: 0 / +3 / +6 dB (default +3), so converted DSD plays about as loud as DoP
 - [x] Library folders
 - [x] ReplayGain off / track / album (optional if low cost)
 
