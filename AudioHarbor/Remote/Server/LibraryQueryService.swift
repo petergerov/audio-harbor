@@ -45,9 +45,11 @@ enum LibraryQueryService {
             return (Array(page), hasMore)
 
         case .playlists:
-            let list = query.isEmpty
-                ? playlists.playlists
-                : playlists.playlists.filter { $0.name.localizedCaseInsensitiveContains(query) }
+            // Like Albums: playlists with a matching track — or a matching name.
+            let list = hits == nil ? playlists.playlists : playlists.playlists.filter { playlist in
+                playlist.name.localizedCaseInsensitiveContains(query)
+                    || !visible(playlists.tracks(for: playlist, from: library.allTracks)).isEmpty
+            }
             let slice = Array(list.dropFirst(offset).prefix(limit + 1))
             let hasMore = slice.count > limit
             let page = slice.prefix(limit).map { playlist -> BrowseItem in
@@ -70,8 +72,10 @@ enum LibraryQueryService {
             guard let raw = request.parentID, let id = UUID(uuidString: raw),
                   let playlist = playlists.playlists.first(where: { $0.id == id })
             else { return ([], false) }
+            // Only the matching tracks, unless the search found the playlist by its name.
             let tracks = playlists.tracks(for: playlist, from: library.allTracks)
-            return pageTracks(visible(tracks), offset: offset, limit: limit)
+            let shown = playlist.name.localizedCaseInsensitiveContains(query) ? tracks : visible(tracks)
+            return pageTracks(shown, offset: offset, limit: limit)
 
         case .folders:
             if !query.isEmpty {

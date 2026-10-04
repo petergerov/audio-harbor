@@ -108,10 +108,22 @@ final class RemoteControlService {
         self.observer = observer
         observer.start()
 
+        let saved = UInt16(clamping: UserDefaults.standard.integer(forKey: DefaultsKey.remotePort))
+        startListener(on: saved == 0 ? nil : NWEndpoint.Port(rawValue: saved))
+    }
+
+    /// Listens on `port`, or any free port when nil. The port is remembered and asked for again
+    /// next launch: a Mac that quit without a Bonjour goodbye (crash, Xcode stop) leaves its old
+    /// port in the phone's mDNS cache for minutes, and a new random port would be refused there.
+    private func startListener(on port: NWEndpoint.Port?) {
         do {
             let parameters = NWParameters.tcp
             parameters.allowLocalEndpointReuse = true
-            let listener = try NWListener(using: parameters)
+            let listener = if let port {
+                try NWListener(using: parameters, on: port)
+            } else {
+                try NWListener(using: parameters)
+            }
             listener.service = NWListener.Service(
                 name: serverDisplayName,
                 type: RemoteProtocol.serviceType,
@@ -122,9 +134,10 @@ final class RemoteControlService {
                     "pair": "1"
                 ])
             )
-            listener.stateUpdateHandler = { [weak self] state in
+            listener.stateUpdateHandler = { [weak self, weak listener] state in
                 Task { @MainActor in
-                    self?.applyListenerState(state)
+                    guard let self, let listener, self.listener === listener else { return }
+                    self.applyListenerState(state, retryOnAnyPort: port != nil)
                 }
             }
             listener.newConnectionHandler = { [weak self] connection in
@@ -196,12 +209,22 @@ final class RemoteControlService {
         Task { await session.start() }
     }
 
-    private func applyListenerState(_ state: NWListener.State) {
+    private func applyListenerState(_ state: NWListener.State, retryOnAnyPort: Bool) {
         switch state {
         case .ready:
             isListening = true
             statusText = "Listening as \(serverDisplayName)"
+            if let port = listener?.port {
+                UserDefaults.standard.set(Int(port.rawValue), forKey: DefaultsKey.remotePort)
+            }
         case .failed(let error):
+            if retryOnAnyPort {
+                // The remembered port is taken; any free one, remembered from now on.
+                listener?.cancel()
+                listener = nil
+                startListener(on: nil)
+                return
+            }
             isListening = false
             statusText = "Failed: \(error.localizedDescription)"
         case .cancelled:

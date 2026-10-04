@@ -152,8 +152,11 @@ final class RemoteController {
             } catch {
                 await MainActor.run {
                     guard let self, self.phase != .idle else { return }
-                    self.phase = .failed(error.localizedDescription)
-                    self.statusText = error.localizedDescription
+                    let message = error is NWError
+                        ? "Can't reach \(server.name). Check that both are on the same network and that the Mac's firewall lets Audio Harbor accept incoming connections."
+                        : error.localizedDescription
+                    self.phase = .failed(message)
+                    self.statusText = message
                 }
             }
         }

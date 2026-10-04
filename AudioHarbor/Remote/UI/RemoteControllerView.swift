@@ -29,7 +29,7 @@ private enum BrowseRoot: String, CaseIterable, Identifiable {
         case .folders: "Find directories & files"
         case .albums: "Find album, artist, track"
         case .artists: "Find artist, album, track"
-        case .playlists: "Find playlist"
+        case .playlists: "Find playlist, artist, track"
         }
     }
     var scope: BrowseScope {
@@ -454,10 +454,15 @@ struct RemoteControllerView: View {
         HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(HarborColor.ivoryDim)
-            // Set through the binding so clearing it in code does not reload the list.
+            // Set through the binding so clearing it in code does not reload the list. Only a real
+            // change searches: losing focus writes the same text back, and must not undo a drill-in.
             TextField(browseRoot.searchPrompt, text: Binding(
                 get: { browseQuery },
-                set: { browseQuery = $0; scheduleBrowseSearch() }
+                set: { newValue in
+                    guard newValue != browseQuery else { return }
+                    browseQuery = newValue
+                    scheduleBrowseSearch()
+                }
             ))
             .textFieldStyle(.plain)
             .foregroundStyle(HarborColor.ivory)
@@ -701,6 +706,8 @@ struct RemoteControllerView: View {
     }
 
     private func handleBrowseTap(_ item: BrowseItem) {
+        // A search still waiting to run would replace what this opens.
+        browseSearchTask?.cancel()
         switch item {
         case let .album(id, title, _, _, _):
             drill = BrowseDrill(title: title, scope: .albumTracks, parentID: id.uuidString)
@@ -713,7 +720,6 @@ struct RemoteControllerView: View {
             controller.browse(scope: .playlistTracks, parentID: id.uuidString, query: activeBrowseQuery)
         case let .folder(id, name, _):
             // As on the Mac, opening a directory from the search clears it.
-            browseSearchTask?.cancel()
             browseQuery = ""
             drill = BrowseDrill(title: name, scope: .folders, parentID: id)
             controller.browse(scope: .folders, parentID: id)

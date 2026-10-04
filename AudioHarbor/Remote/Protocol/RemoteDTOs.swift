@@ -98,7 +98,7 @@ struct BrowseRequest: Codable, Sendable, Equatable {
     var offset: Int
     var limit: Int
     /// Version 2 on: filters like the Mac's catalogue search. With `.folders` it searches every
-    /// connected directory and ignores `parentID`.
+    /// connected directory and ignores `parentID`. A playlist whose name matches keeps all its tracks.
     var query: String?
 }
 
