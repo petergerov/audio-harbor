@@ -44,7 +44,8 @@ Der DAC erkennt die Markierung, packt die Daten aus und spielt echtes DSD.
   Wichtig: Ein DAC ohne DSD macht aus DoP lautes Rauschen.
 - Kann der DAC die DoP-Rate nicht annehmen, wechselt die App automatisch zu PCM.
 
-Eine eigene DSD-Einstellung gibt es nicht mehr. Der Output-Modus entscheidet.
+Ob DSD als DSD oder als PCM rausgeht, entscheidet der Output-Modus. Einstellen kannst du nur, wie laut
+umgerechnetes DSD spielt (siehe [DSD as PCM](#dsd-as-pcm-warum-ist-umgerechnetes-dsd-leiser)).
 
 ## Welche DSD-Wiedergabe bei welchem Output?
 
@@ -55,6 +56,35 @@ Eine eigene DSD-Einstellung gibt es nicht mehr. Der Output-Modus entscheidet.
 | DoP | echtes DSD per DoP | bit-perfect |
 
 Auf dem Deck steht immer, welcher Weg aktiv ist, z. B. „Exclusive · Bit-perfect“, „Exclusive · DoP“, „Exclusive · DSD→PCM“ oder mit Plugins „Exclusive · FX“.
+
+## DSD as PCM: Warum ist umgerechnetes DSD leiser?
+
+Settings → Output → **DSD as PCM**: **0 dB**, **+3 dB** (Standard) oder **+6 dB**.
+
+DSD speichert keine Zahlen wie PCM, sondern nur Einsen und Nullen. Wie laut es gerade ist, steckt darin,
+wie viele Einsen hintereinander kommen. Ganz ausreizen darf man das nie, sonst gerät der DSD-Wandler
+außer Kontrolle. Deshalb gilt bei der SACD: **volle Lautstärke = 50 % der Möglichkeiten.**
+
+- Bei **DoP** rechnet die App nichts um. Der DAC spielt das DSD selbst und gleicht den Abstand meistens
+  intern aus. Es klingt so laut wie PCM.
+- Bei der **Umrechnung in PCM** wird aus 50 % genau die Hälfte der PCM-Vollaussteuerung, also **−6 dB**.
+  Das ist korrekt, aber hörbar leiser als DoP.
+
+Die Einstellung gleicht das aus:
+
+| Einstellung | Wirkung |
+|---|---|
+| **0 dB** | Exakte Umrechnung, 6 dB leiser als DoP |
+| **+3 dB** | Standard. 3 dB leiser als DoP, passt für fast jede SACD ohne Übersteuern |
+| **+6 dB** | So laut wie DoP. Laut gemasterte SACDs nutzen den Sicherheitsabstand teilweise aus und können übersteuern |
+
+Die Einstellung wirkt sofort, auch im laufenden Song. Sie gilt für Shared, Exclusive · DSD→PCM und DSD mit
+Plugins. **DoP bleibt unverändert.** Qualität geht dabei nicht verloren.
+
+**Wie umgerechnet wird:** Die App filtert DSD in mehreren Stufen auf 88,2 kHz PCM herunter (DSD64 bis DSD256).
+Der Frequenzgang ist **linear bis 25 kHz**, danach fällt er steil ab und ist ab **44,1 kHz um mindestens 120 dB**
+gedämpft. So bleibt das starke Ultraschall-Rauschen von DSD draußen und spiegelt sich nicht in den
+hörbaren Bereich. Die Filter sind phasenlinear, die Wellenform bleibt also erhalten.
 
 ## Plugins (Rack)
 

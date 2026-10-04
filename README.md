@@ -33,7 +33,7 @@ Select the **AudioHarbor** scheme → **My Mac** or an iPhone simulator → Run.
 - Albums grouped by album artist; untagged compilations in one folder stay one album
 - iPhone and iPad remote: Bonjour + pairing code; browse, queue, transport, DAC volume; long-press a song to add it to playlists and labels or take it out; search under Dirs / Albums / Artists / Lists like on the Mac; playing stays in the list; the iPad shows the same layout as the iPhone
 - Mac exclusive mode: hog + sample-rate match + HAL 24-bit path, external DACs only (USB / Thunderbolt / FireWire / PCI); Exclusive and DoP grey out without one and the choice returns when the DAC is plugged in
-- DSF / DFF → DoP in Output DoP; DSD→PCM in Shared and Exclusive
+- DSF / DFF → DoP in Output DoP; DSD→PCM in Shared and Exclusive: linear-phase multi-stage FIR to 88.2 kHz, flat to 25 kHz, ≥ 120 dB down from 44.1 kHz; Settings → *DSD as PCM* adds 0 / +3 / +6 dB (default +3) to make up for SACD's 50 % reference level
 - SACD ISO stereo tracks, including MPEG-4 DST → cached DFF → same DSD path
 - Shared AVAudioEngine path as default/stable playback
 - AU / AUv3 rack on Shared; non-sandbox-safe AUv2 load out of process

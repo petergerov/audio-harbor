@@ -19,6 +19,7 @@ enum DefaultsKey {
     static let repeatMode = "audioharbor.repeatMode"
     static let shuffle = "audioharbor.shuffle"
     static let effectChain = "audioharbor.effectChain"
+    static let dsdPCMLevel = "audioharbor.dsdPCMLevel"
 
     // Deck
     static let deckStyle = "audioharbor.deckStyle"

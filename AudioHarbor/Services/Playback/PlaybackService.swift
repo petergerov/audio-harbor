@@ -41,6 +41,15 @@ final class PlaybackService {
         }
     }
 
+    /// Gain on DSD converted to PCM; takes effect within the playing track.
+    var dsdPCMLevel: DSDPCMLevel = .default {
+        didSet {
+            guard dsdPCMLevel != oldValue else { return }
+            UserDefaults.standard.set(dsdPCMLevel.rawValue, forKey: DefaultsKey.dsdPCMLevel)
+            DSDConversion.gain = dsdPCMLevel.linearGain
+        }
+    }
+
     var repeatMode: RepeatMode = .off {
         didSet {
             guard repeatMode != oldValue else { return }
@@ -132,6 +141,11 @@ final class PlaybackService {
             repeatMode = mode
         }
         isShuffled = UserDefaults.standard.bool(forKey: DefaultsKey.shuffle)
+        if UserDefaults.standard.object(forKey: DefaultsKey.dsdPCMLevel) != nil,
+           let level = DSDPCMLevel(rawValue: UserDefaults.standard.integer(forKey: DefaultsKey.dsdPCMLevel)) {
+            dsdPCMLevel = level
+        }
+        DSDConversion.gain = dsdPCMLevel.linearGain
         engine.setOutputMode(outputMode)
         // Assigned in init, so didSet does not run — hand the engine the pick directly.
         outputDeviceName = UserDefaults.standard.string(forKey: DefaultsKey.outputDeviceName)
