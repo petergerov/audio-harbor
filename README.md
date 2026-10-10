@@ -25,13 +25,13 @@ Select the **AudioHarbor** scheme → **My Mac** or an iPhone simulator → Run.
 
 - Security-scoped folder bookmarks (persist across launches)
 - Catalogue: directories, albums, artists; playlists and labels
-- Click plays and stays in the list; ⌘-click, *Play and Show Deck*, the mini player or ⌘3 open the Deck
+- Click plays and stays in the list; click the current song again to pause, once more to resume; ⌘-click, *Play and Show Deck*, the mini player or ⌘3 open the Deck
 - Right-click a directory, album, artist or the Deck queue → Add to Playlist / Labels
 - Shortcuts: Space, ⌘← / ⌘→, ⌘1 Catalogue, ⌘2 Playlists, ⌘3 Deck, ⌘, Settings, ⌘O, ⇧⌘R
 - M3U / M3U8 playlist import and export
 - Real metadata + artwork via AVFoundation (incl. FLAC Vorbis comments) / DSD probe; folder images (`cover`, `folder`, `front`, …) when a file has none
 - Albums grouped by album artist; untagged compilations in one folder stay one album
-- iPhone and iPad remote: Bonjour + pairing code; browse, queue, transport, DAC volume; long-press a song to add it to playlists and labels or take it out; search under Dirs / Albums / Artists / Lists like on the Mac; playing stays in the list; the iPad shows the same layout as the iPhone
+- iPhone and iPad remote: Bonjour + pairing code; bottom tabs Deck · Catalogue · Settings like the Mac; Deck stage + queue sheet (no search on Deck); Catalogue browse/search; Mac Settings from the Settings tab; long-press a song for playlists and labels; tap a playing song again to pause; DAC volume from the Deck speaker or the volume buttons; the iPad shows the same layout as the iPhone
 - Mac exclusive mode: hog + sample-rate match + HAL 24-bit path, external DACs only (USB / Thunderbolt / FireWire / PCI); Exclusive and DoP grey out without one and the choice returns when the DAC is plugged in
 - DSF / DFF → DoP in Output DoP; DSD→PCM in Shared and Exclusive: linear-phase multi-stage FIR to 88.2 kHz, flat to 25 kHz, ≥ 120 dB down from 44.1 kHz; Settings → *DSD as PCM* adds 0 / +3 / +6 dB (default +3) to make up for SACD's 50 % reference level
 - SACD ISO stereo tracks, including MPEG-4 DST → cached DFF (full DSDIFF header, readable by other players) → same DSD path

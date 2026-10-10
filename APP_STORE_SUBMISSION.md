@@ -5,7 +5,7 @@ Eine App, zwei Plattformen, **ein** Eintrag in App Store Connect:
 | Plattform | Rolle | Release |
 |---|---|---|
 | **macOS** | Der Player: Bibliothek, Deck, Exclusive / DoP, Rack, UPnP-Netzwerkplayer. Spielt auf dem DAC oder einem Streamer im Heimnetz. | **1.1.0** — erste Mac-Version, mit Remote-Server · danach **1.1.1** · Netzwerkplayer auf `develop` für das nächste Update |
-| **iOS** (iPhone, iPad) | Die Fernbedienung: findet den Mac per Bonjour, koppelt per 6-stelligem Code, steuert Wiedergabe, Queue, Suche und die Lautstärke des DAC. Spielt selbst nichts. | **1.1.0** — erste iOS-Version, siehe [`APP_STORE_SUBMISSION_IOS.md`](APP_STORE_SUBMISSION_IOS.md) · danach **1.1.1** |
+| **iOS** (iPhone, iPad) | Die Fernbedienung: findet den Mac per Bonjour, koppelt per 6-stelligem Code; Tabs Deck · Catalogue · Settings; steuert Wiedergabe, Queue, Suche, Mac-Settings und die Lautstärke des DAC. Spielt selbst nichts. | **1.1.0** — erste iOS-Version, siehe [`APP_STORE_SUBMISSION_IOS.md`](APP_STORE_SUBMISSION_IOS.md) · danach **1.1.1** · Tabs/Settings auf `develop` |
 
 **Beide gehen in einer Einreichung raus.** Review bekommt Mac und iPhone gleichzeitig und kann den Remote gegen den Mac-Player testen, auch ohne dass der Mac schon im Store ist.
 
@@ -108,7 +108,7 @@ Ordnerzugriff läuft über `NSOpenPanel` / `fileImporter` + security-scoped Book
 | 13 | Exclusive/DoP nur mit externem DAC (sonst Shared, Lautstärketasten gehen); Settings grauen sie ohne DAC aus, zeigen Shared und wählen beim Anstecken wieder die vorherige DAC-Einstellung; M3U/M3U8-Import und -Export (Entitlement `user-selected.read-write`); neues App-Icon; FAQ-Seite `docs/faq.html` |
 | 1.1.0 (1) | iPhone- und iPad-Remote (iPad mit derselben Oberfläche wie das iPhone, mittig): Remote-Server am Mac (Bonjour, Pairing-Code, Token), DAC-Lautstärke per Remote; FLAC-Tags und -Cover werden gelesen, Cover-Dateien im Ordner (`cover.jpg`, `folder.jpg`, …) als Rückfall; Alben nach Album-Artist gruppiert, Sampler ohne Tag bleiben ein Album; größeres Cover im Deck, auch bei Tonband und Receiver; Rechtsklick „Add to Playlist“ / „Labels“ für Ordner, Alben, Künstler und die Deck-Queue; Klick spielt ohne Sprung zum Deck (⌘-Klick, „Play and Show Deck“, ⌘3). Der Katalog wird beim ersten Start einmal neu eingelesen (neues Schema). |
 | 1.1.1 (18) | Remote-Protokoll 2: Playlists und Labels vom iPhone/iPad (`trackOptions`, `editTrack` — hinzufügen, herausnehmen, neu anlegen); eine Nachricht, die der Mac nicht kennt, bekommt einen Fehler statt die Verbindung zu trennen. Remote: Abspielen bleibt in der Liste, der laufende Song ist markiert; Dirs / Albums / Artists / Lists bleiben beim Durchklicken sichtbar. Suchleiste darunter wie die Katalogsuche am Mac (`BrowseRequest.query`): Dirs über alle Ordner, Albums / Artists / Lists nur mit passenden Songs. Der Mac merkt sich seinen Remote-Port über Neustarts; das iPhone meldet einen nicht erreichbaren Mac, statt endlos zu laden. DSD→PCM neu: mehrstufige phasenlineare FIR-Filter statt Butterworth 4. Ordnung bei 20 kHz (der war bei 20 kHz schon −3 dB und ließ DSD-Rauschen in den Hörbereich spiegeln), jetzt linear bis 25 kHz, ab 44,1 kHz ≥ 120 dB Dämpfung. Settings → Output → *DSD as PCM*: 0 / +3 / +6 dB, Standard +3 dB — umgerechnetes DSD war 6 dB leiser als DoP, weil SACD-0-dB nur 50 % Aussteuerung ist. |
-| develop (nach 1.1.1) | UPnP / DLNA-Netzwerkausgabe: Renderer unter **Network Players**; Radios **Wi‑Fi friendly** / **Full** / **DSD, SACD, DoP** (ausgegraut bis der Player DSD listet); native DSF/DFF/SACD wenn möglich, sonst PCM; Library Sharing (Settings → Sharing). Siehe [`docs/UPNP.md`](docs/UPNP.md). |
+| develop (nach 1.1.1) | UPnP / DLNA-Netzwerkausgabe: Renderer unter **Network Players**; Radios **Wi‑Fi friendly** / **Full** / **DSD, SACD, DoP** (ausgegraut bis der Player DSD listet); native DSF/DFF/SACD wenn möglich, sonst PCM; Library Sharing (Settings → Sharing). Remote-Protokoll **3**: Mac Settings vom iPhone (Output, Sharing, Directories). Remote-UI: untere Tabs **Deck · Catalogue · Settings**; Deck wie am Mac (Stage, Queue-Sheet, kein Search, kein Receiver-Look); Volume als Lautsprecher in der Deck-Toolbar. Gleichen Song nochmal antippen pausiert / resumiert (Mac-Katalog, Playlists, Deck-Queue und Remote). Siehe [`docs/UPNP.md`](docs/UPNP.md) und [iOS What's New](APP_STORE_SUBMISSION_IOS.md#whats-new--deck--catalogue--settings-develop). |
 
 - [ ] Vor dem Upload mit USB-DAC testen: DSF, DFF und SACD ISO in **DoP** (kein Rauschen, keine Aussetzer), PCM in **Exclusive**
 - [ ] 1.1.1, DSD als PCM (Shared, Exclusive, mit Plugin): DSD64 und DSD128/256 spielen sauber ohne Aussetzer; *DSD as PCM* 0 → +3 → +6 dB im laufenden Song hörbar lauter, +3 dB etwa 3 dB unter DoP am selben DAC; Spulen ohne Knacken; DoP-Pegel unverändert
@@ -199,7 +199,7 @@ What you get
 • Library sharing as a DLNA music server
 • Import and export M3U / M3U8 playlists
 • Optional AU / AUv3 rack on Shared
-• Free iPhone and iPad remote — browse, queue, and set your DAC's or network player's volume from the couch
+• Free iPhone and iPad remote — Deck, Catalogue, and Settings like on the Mac; set your DAC's or network player's volume from the couch
 
 What you do not get
 • Streaming services or an account
@@ -260,18 +260,19 @@ The iPhone and iPad remote now files your music.
 Update the remote too: playlists, labels, and search need version 1.1.1 on the Mac and on the iPhone or iPad.
 ```
 
-### What's New — Network players (`develop`)
+### What's New — Network players & remote (`develop`)
 
-Copy for the next Mac update after 1.1.1 (bump marketing version when you cut the release). iOS remote needs no change for this feature.
+Copy for the next Mac + iOS update after 1.1.1 (bump marketing version when you cut the release). Paste the Mac block here and the iOS block in [`APP_STORE_SUBMISSION_IOS.md`](APP_STORE_SUBMISSION_IOS.md#whats-new--deck--catalogue--settings-develop).
 
 ```
-Play to a network streamer from Audio Harbor on your Mac.
+Play to a network streamer — and steer more of the Mac from the couch.
 
 • UPnP / DLNA players on your home network appear under Network Players, separate from This Host.
 • Output radios switch with the device: Shared, Exclusive and DoP stay for USB DACs; network players get Wi‑Fi friendly, Full, and DSD, SACD, DoP when the player lists DSD.
 • Files the player accepts go untouched. DSF, DFF and SACD go native when supported, as 88.2 kHz PCM on Full, or as CD-rate PCM on Wi‑Fi friendly.
 • Share Library on the Network (Settings → Sharing) so a DLNA app such as mconnect can browse and play your catalogue.
-• The iPhone remote sets the network player's volume. The Mac stays awake while it plays.
+• The iPhone and iPad remote now has Deck, Catalogue, and Settings tabs like the Mac. Change Output, Sharing, and Directories from the Settings tab. The Mac stays awake while a network player plays.
+• On Mac and on the remote: tap the song that is playing again to pause; tap once more to resume. A different song still starts fresh.
 ```
 
 ---

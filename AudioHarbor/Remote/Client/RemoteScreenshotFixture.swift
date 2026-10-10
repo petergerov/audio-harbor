@@ -205,11 +205,15 @@ struct RemoteScreenshotFixture {
 
     var pane: String? {
         switch scene {
-        case .browse: "browse"
-        case .queue: "queue"
+        case .browse: "catalogue"
+        case .queue: "deck"
+        case .now: "deck"
         default: nil
         }
     }
+
+    /// Open the Deck queue sheet for the `queue` screenshot scene.
+    var showQueue: Bool { scene == .queue }
 
     var pairingCode: String { scene == .pairing ? "482193" : "" }
 

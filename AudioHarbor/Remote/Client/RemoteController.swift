@@ -39,6 +39,8 @@ final class RemoteController {
     private(set) var artworkByHash: [String: Data] = [:]
     /// Playlists and labels for the track last asked about.
     private(set) var trackOptions: TrackOptionsDTO?
+    /// Mac Settings (protocol 3+).
+    private(set) var settings: SettingsSnapshot?
 
     var pairingCodeInput = ""
 
@@ -64,6 +66,7 @@ final class RemoteController {
     @ObservationIgnored private var fixture: RemoteScreenshotFixture?
     private(set) var fixturePane: String?
     private(set) var fixtureSearchText: String?
+    private(set) var fixtureShowQueue = false
     #endif
     #if os(iOS)
     @ObservationIgnored
@@ -87,6 +90,11 @@ final class RemoteController {
     /// Macs on protocol version 2 and later filter Browse by a search query.
     var canSearchBrowse: Bool {
         phase == .connected && serverVersion >= RemoteProtocol.browseSearchVersion
+    }
+
+    /// Macs on protocol version 3 and later expose Settings.
+    var canEditSettings: Bool {
+        phase == .connected && serverVersion >= RemoteProtocol.settingsVersion
     }
 
     var isPlaying: Bool {
@@ -186,17 +194,76 @@ final class RemoteController {
         browseHasMore = false
         lastBrowseRequest = nil
         trackOptions = nil
+        settings = nil
         serverVersion = 0
         didAuthenticate = false
     }
 
-    func togglePlayPause() { sendTransport(.playPause) }
+    func togglePlayPause() {
+        sendTransport(.playPause)
+        // Flip locally so a second tap before the Mac's snapshot arrives still resumes / pauses.
+        applyOptimisticPlayPause()
+    }
     func next() { sendTransport(.next) }
     func previous() { sendTransport(.previous) }
     func seek(to seconds: TimeInterval) { sendTransport(.seek(seconds: seconds)) }
     func playQueueIndex(_ index: Int) { sendTransport(.playQueueIndex(index: index)) }
+    func toggleShuffle() {
+        sendTransport(.setShuffle(on: !(nowPlaying?.isShuffled ?? false)))
+    }
+    func cycleRepeatMode() {
+        let current = RepeatMode(rawValue: nowPlaying?.repeatMode ?? "") ?? .off
+        sendTransport(.setRepeat(mode: current.cycled.rawValue))
+    }
+    /// Path of the last play request — used so a second tap can pause before the Mac snapshot arrives.
+    private var armedPlayPath: String?
+
     func play(cataloguePath: String) {
+        armedPlayPath = cataloguePath
         send(.playSelection(selection: .track(cataloguePath: cataloguePath)))
+    }
+
+    /// Catalogue / queue rows: first tap plays, tap again pauses, tap again resumes.
+    /// Always sends `playSelection` for a track row when not clearly current-and-paused/playing
+    /// via transport — the Mac's `PlaybackService.play` toggles when the path matches.
+    func playOrToggle(cataloguePath: String) {
+        if shouldToggle(cataloguePath: cataloguePath) {
+            togglePlayPause()
+            return
+        }
+        play(cataloguePath: cataloguePath)
+    }
+
+    func playOrToggleQueueIndex(_ index: Int) {
+        if let queue, queue.tracks.indices.contains(index) {
+            let path = queue.tracks[index].cataloguePath
+            if queue.index == index || shouldToggle(cataloguePath: path) {
+                togglePlayPause()
+                return
+            }
+        }
+        playQueueIndex(index)
+    }
+
+    private func shouldToggle(cataloguePath: String) -> Bool {
+        if nowPlaying?.track?.cataloguePath == cataloguePath {
+            return true
+        }
+        // Snapshot not updated yet, but we already asked to play this path.
+        if armedPlayPath == cataloguePath {
+            let state = nowPlaying?.state
+            return state == nil || state == "loading" || state == "playing" || state == "paused"
+        }
+        return false
+    }
+
+    private func applyOptimisticPlayPause() {
+        guard var snap = nowPlaying else { return }
+        let playing = snap.state == "playing" || snap.state == "loading"
+        snap.state = playing ? "paused" : "playing"
+        snap.rate = playing ? 0 : 1
+        snap.positionTimestamp = Date()
+        nowPlaying = snap
     }
     func play(albumID: UUID) {
         send(.playSelection(selection: .album(id: albumID)))
@@ -292,6 +359,16 @@ final class RemoteController {
         send(.artwork(hash: hash, maxPixel: maxPixel))
     }
 
+    func refreshSettings() {
+        guard canEditSettings else { return }
+        send(.getSettings)
+    }
+
+    func applySettings(_ patch: SettingsPatch) {
+        guard canEditSettings else { return }
+        send(.setSettings(patch: patch))
+    }
+
     #if DEBUG && os(iOS)
     func showFixture(_ fixture: RemoteScreenshotFixture) {
         self.fixture = fixture
@@ -310,6 +387,7 @@ final class RemoteController {
             searchResults = fixture.searchResults
             fixturePane = fixture.pane
             fixtureSearchText = fixture.searchQuery
+            fixtureShowQueue = fixture.showQueue
             statusText = "Connected to \(RemoteScreenshotFixture.serverName)"
             phase = .connected
         }
@@ -401,6 +479,9 @@ final class RemoteController {
 
         case .nowPlaying(let snapshot):
             nowPlaying = snapshot
+            if let path = snapshot.track?.cataloguePath {
+                armedPlayPath = path
+            }
             if let hash = snapshot.track?.artworkHash {
                 requestArtwork(hash: hash)
             }
@@ -413,6 +494,9 @@ final class RemoteController {
 
         case .trackOptions(let options):
             trackOptions = options
+
+        case .settings(let snapshot):
+            settings = snapshot
 
         case .browseResult(let items, let hasMore):
             if browseAppend {
@@ -477,7 +561,14 @@ final class RemoteController {
         didAuthenticate = true
         phase = .connected
         statusText = "Connected to \(serverName ?? "Audio Harbor")"
-        await send(.subscribe(topics: [.nowPlaying, .queue]), on: connection)
+        var topics: [RemoteTopic] = [.nowPlaying, .queue]
+        if serverVersion >= RemoteProtocol.settingsVersion {
+            topics.append(.settings)
+        }
+        await send(.subscribe(topics: topics), on: connection)
+        if serverVersion >= RemoteProtocol.settingsVersion {
+            await send(.getSettings, on: connection)
+        }
     }
 
     /// The phone's volume buttons steer the Mac while connected to an output with a volume control.

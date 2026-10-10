@@ -31,6 +31,9 @@ final class UPnPPlaybackEngine: PlaybackEngine {
     private var outputStatusHandler: ((OutputStatus) -> Void)?
     private var outputVolumeHandler: ((Double?) -> Void)?
     private var pollTask: Task<Void, Never>?
+    private var transportTask: Task<Void, Never>?
+    private var transportGeneration: UInt64 = 0
+    private var wantsPlayback = false
     private var sawPlaying = false
     private var lastVolume: Double?
     /// Cached GetProtocolInfo sink list per renderer UDN.
@@ -104,6 +107,10 @@ final class UPnPPlaybackEngine: PlaybackEngine {
     // MARK: - PlaybackEngine
 
     func load(_ track: Track) async throws {
+        transportTask?.cancel()
+        transportTask = nil
+        transportGeneration &+= 1
+        wantsPlayback = false
         stopPolling()
         clearNext()
         pendingAdoption = nil
@@ -223,26 +230,58 @@ final class UPnPPlaybackEngine: PlaybackEngine {
 
     func play() {
         guard let renderer, loadedTrack != nil else { return }
-        Task {
+        transportTask?.cancel()
+        transportGeneration &+= 1
+        let generation = transportGeneration
+        wantsPlayback = true
+        // PlaybackEngine.play() is synchronous. Publish the requested state now so its caller
+        // can immediately turn a second tap into Pause while the SOAP request is still pending.
+        setPlaybackState(.playing)
+        transportTask = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                if generation == self.transportGeneration {
+                    self.transportTask = nil
+                }
+            }
             do {
-                try await control.play(renderer)
-                sawPlaying = true
-                setPlaybackState(.playing)
-                startPolling()
+                try await self.control.play(renderer)
+                guard !Task.isCancelled,
+                      generation == self.transportGeneration,
+                      self.wantsPlayback
+                else { return }
+                self.sawPlaying = true
+                self.setPlaybackState(.playing)
+                self.startPolling()
+            } catch is CancellationError {
+                return
             } catch {
+                guard !Task.isCancelled,
+                      generation == self.transportGeneration,
+                      self.wantsPlayback
+                else { return }
                 // Bose / some DLNA boxes hold the Play SOAP until HTTP has buffered —
                 // the reply times out even though transport is already PLAYING.
-                if Self.isTimeout(error), await waitUntilPlaying(renderer, seconds: 20) {
-                    sawPlaying = true
-                    setPlaybackState(.playing)
-                    startPolling()
-                    logger.info(
+                if Self.isTimeout(error), await self.waitUntilPlaying(renderer, seconds: 20) {
+                    guard !Task.isCancelled,
+                          generation == self.transportGeneration,
+                          self.wantsPlayback
+                    else { return }
+                    self.sawPlaying = true
+                    self.setPlaybackState(.playing)
+                    self.startPolling()
+                    self.logger.info(
                         "Play reply timed out; \(renderer.name, privacy: .public) is playing"
                     )
                     return
                 }
-                logger.error("Play failed: \(error.localizedDescription, privacy: .public)")
-                setPlaybackState(.failed(error.localizedDescription))
+                guard !Task.isCancelled,
+                      generation == self.transportGeneration,
+                      self.wantsPlayback
+                else { return }
+                self.wantsPlayback = false
+                self.logger.error("Play failed: \(error.localizedDescription, privacy: .public)")
+                self.setPlaybackState(.failed(error.localizedDescription))
             }
         }
     }
@@ -274,18 +313,41 @@ final class UPnPPlaybackEngine: PlaybackEngine {
 
     func pause() {
         guard let renderer else { return }
+        transportTask?.cancel()
+        transportGeneration &+= 1
+        let generation = transportGeneration
+        wantsPlayback = false
         stopPolling()
-        Task {
+        // Tell the UI / remote immediately — the SOAP round-trip can take hundreds of ms.
+        setPlaybackState(.paused)
+        transportTask = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                if generation == self.transportGeneration {
+                    self.transportTask = nil
+                }
+            }
             do {
-                try await control.pause(renderer)
-                setPlaybackState(.paused)
+                try await self.control.pause(renderer)
+                guard !Task.isCancelled,
+                      generation == self.transportGeneration,
+                      !self.wantsPlayback
+                else { return }
+                self.setPlaybackState(.paused)
+            } catch is CancellationError {
+                return
             } catch {
-                logger.error("Pause failed: \(error.localizedDescription, privacy: .public)")
+                guard !Task.isCancelled, generation == self.transportGeneration else { return }
+                self.logger.error("Pause failed: \(error.localizedDescription, privacy: .public)")
             }
         }
     }
 
     func stop() {
+        transportTask?.cancel()
+        transportTask = nil
+        transportGeneration &+= 1
+        wantsPlayback = false
         stopPolling()
         let renderer = self.renderer
         loadedTrack = nil
@@ -525,10 +587,17 @@ final class UPnPPlaybackEngine: PlaybackEngine {
     }
 
     private func pollOnce() async {
-        guard let renderer, let track = loadedTrack, state == .playing || state == .paused else { return }
+        guard !Task.isCancelled,
+              wantsPlayback,
+              let renderer,
+              let track = loadedTrack,
+              state == .playing || state == .paused
+        else { return }
         do {
             let transport = try await control.getTransportInfo(renderer)
+            guard !Task.isCancelled, wantsPlayback else { return }
             let position = try await control.getPositionInfo(renderer)
+            guard !Task.isCancelled, wantsPlayback else { return }
             if let rel = position.relTime {
                 currentTime = rel
             }

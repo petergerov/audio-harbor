@@ -98,11 +98,15 @@ final class RemoteControlService {
 
         let observer = PlaybackObserver(
             playback: appModel.playback,
+            appModel: appModel,
             onNowPlaying: { [weak self] snapshot in
                 self?.fanOutNowPlaying(snapshot)
             },
             onQueue: { [weak self] snapshot in
                 self?.fanOutQueue(snapshot)
+            },
+            onSettings: { [weak self] snapshot in
+                self?.fanOutSettings(snapshot)
             }
         )
         self.observer = observer
@@ -200,8 +204,10 @@ final class RemoteControlService {
                 guard let self else { return }
                 let now = await MainActor.run { self.observer?.currentNowPlaying() }
                 let queue = await MainActor.run { self.observer?.currentQueue() }
+                let settings = await MainActor.run { self.observer?.currentSettings() }
                 if let now { await session.pushNowPlaying(now) }
                 if let queue { await session.pushQueue(queue) }
+                if let settings { await session.pushSettings(settings) }
             }
         )
         sessions[session.id] = session
@@ -246,6 +252,13 @@ final class RemoteControlService {
         let sessions = self.sessions.values
         for session in sessions {
             Task { await session.pushQueue(snapshot) }
+        }
+    }
+
+    private func fanOutSettings(_ snapshot: SettingsSnapshot) {
+        let sessions = self.sessions.values
+        for session in sessions {
+            Task { await session.pushSettings(snapshot) }
         }
     }
 }

@@ -194,6 +194,9 @@ final class PlaybackService {
     private var syncTimer: Timer?
     /// Guards against two loads overlapping — the later one wins.
     private var loadGeneration: UInt64 = 0
+    /// The current load keeps running when paused so a third tap can resume it safely.
+    private var activeLoadGeneration: UInt64?
+    private var playWhenLoaded = false
     /// Indices into `queue`, in the order they play — the natural order, or a shuffled draw.
     private var playOrder: [Int] = []
     private var orderPosition: Int = 0
@@ -251,9 +254,24 @@ final class PlaybackService {
     func play(track: Track, in queueTracks: [Track]? = nil, from source: QueueSource? = nil) {
         guard allowPlayback() else { return }
 
+        // Same song already loaded (remote / catalogue row tap again): pause or resume.
+        // Do not start another loadAndPlay — that restarts the file instead of pausing.
+        if isCurrentTrack(track) {
+            if let queueTracks {
+                queue = queueTracks
+                queueIndex = queueTracks.firstIndex(where: { tracksMatch($0, track) }) ?? 0
+                rebuildPlayOrder(anchoredTo: queueIndex)
+            }
+            if let source, !source.name.isEmpty {
+                queueSource = source
+            }
+            togglePlayPause()
+            return
+        }
+
         if let queueTracks {
             queue = queueTracks
-            queueIndex = queueTracks.firstIndex(of: track) ?? 0
+            queueIndex = queueTracks.firstIndex(where: { tracksMatch($0, track) }) ?? 0
         } else {
             queue = [track]
             queueIndex = 0
@@ -268,27 +286,63 @@ final class PlaybackService {
             queueSource = nil
         }
 
-        Task { await loadAndPlay(track) }
+        loadAndPlay(track)
     }
 
     func togglePlayPause() {
-        if isPlaying {
+        // Keep the load alive while changing its final intent. Cancelling only the service
+        // generation can leave an engine load running with no safe way to resume it.
+        if activeLoadGeneration == loadGeneration {
+            playWhenLoaded.toggle()
+            if playWhenLoaded {
+                playbackState = .loading
+            } else {
+                engine.pause()
+                stopSyncing()
+                playbackState = .paused
+            }
+            return
+        }
+
+        // The engine is authoritative too: an asynchronous network Play can move before the
+        // service's next sync tick.
+        if isPlaying || engine.state == .playing {
             engine.pause()
             stopSyncing()
+            // Publish paused immediately (UPnP pause is async and would otherwise stay "playing").
+            playbackState = .paused
             syncFromEngine()
+            if playbackState != .paused {
+                playbackState = .paused
+            }
         } else if let track = currentTrack {
             guard allowPlayback() else { return }
             // After the queue ran out the file sits at its end — start it over.
             // A failed load or start leaves the engine empty — load the track again
             // instead of playing nothing ("Could not read the audio file").
             if queueEnded || engineIsEmpty {
-                Task { await loadAndPlay(track) }
+                loadAndPlay(track)
                 return
             }
             engine.play()
             syncFromEngine()
             startSyncing()
         }
+    }
+
+    func isCurrentTrack(_ track: Track) -> Bool {
+        guard let currentTrack else { return false }
+        return tracksMatch(currentTrack, track)
+    }
+
+    private func tracksMatch(_ lhs: Track, _ rhs: Track) -> Bool {
+        if lhs.id == rhs.id { return true }
+        if !lhs.cataloguePath.isEmpty, lhs.cataloguePath == rhs.cataloguePath { return true }
+        // One SACD/DFF container can hold several virtual tracks with the same file URL.
+        guard !VirtualTrackPath.isVirtual(lhs.cataloguePath),
+              !VirtualTrackPath.isVirtual(rhs.cataloguePath)
+        else { return false }
+        return lhs.url.standardizedFileURL.path == rhs.url.standardizedFileURL.path
     }
 
     private var engineIsEmpty: Bool {
@@ -302,7 +356,7 @@ final class PlaybackService {
         // Pressing skip always moves on, whatever the repeat mode says.
         guard let index = stepForward(wrapping: true) else { return }
         queueIndex = index
-        Task { await loadAndPlay(queue[index]) }
+        loadAndPlay(queue[index])
     }
 
     func playPrevious() {
@@ -313,7 +367,7 @@ final class PlaybackService {
         }
         orderPosition = (orderPosition - 1 + playOrder.count) % playOrder.count
         queueIndex = playOrder[orderPosition]
-        Task { await loadAndPlay(queue[queueIndex]) }
+        loadAndPlay(queue[queueIndex])
     }
 
     func cycleRepeatMode() {
@@ -331,7 +385,7 @@ final class PlaybackService {
 
         if repeatMode == .one, let track = currentTrack {
             queueEnded = false
-            Task { await loadAndPlay(track) }
+            loadAndPlay(track)
             return
         }
 
@@ -352,7 +406,7 @@ final class PlaybackService {
             Task { await prepareFollowingTrack() }
             return
         }
-        Task { await loadAndPlay(next) }
+        loadAndPlay(next)
     }
 
     /// Arms SetNextAVTransportURI for the track after the current one (network output only).
@@ -431,10 +485,16 @@ final class PlaybackService {
 
     func playQueueItem(at index: Int) {
         guard queue.indices.contains(index) else { return }
-        if index == queueIndex, currentTrack != nil {
-            if !isPlaying {
-                togglePlayPause()
+        let track = queue[index]
+        // Match the loaded track, not a potentially stale queue index.
+        if let currentTrack, tracksMatch(currentTrack, track) {
+            queueIndex = index
+            if let position = playOrder.firstIndex(of: index) {
+                orderPosition = position
+            } else {
+                rebuildPlayOrder(anchoredTo: index)
             }
+            togglePlayPause()
             return
         }
         queueIndex = index
@@ -443,7 +503,7 @@ final class PlaybackService {
         } else {
             rebuildPlayOrder(anchoredTo: index)
         }
-        Task { await loadAndPlay(queue[index]) }
+        loadAndPlay(track)
     }
 
     func seek(to seconds: TimeInterval) {
@@ -511,23 +571,32 @@ final class PlaybackService {
             syncFromEngine()
             return
         }
-        Task { await loadAndPlay(track, at: position, autoplay: resume) }
+        loadAndPlay(track, at: position, autoplay: resume)
     }
 
-    private func loadAndPlay(_ track: Track, at position: TimeInterval = 0, autoplay: Bool = true) async {
+    private func loadAndPlay(_ track: Track, at position: TimeInterval = 0, autoplay: Bool = true) {
         guard allowPlayback() else { return }
         loadGeneration &+= 1
         let generation = loadGeneration
+        activeLoadGeneration = generation
+        playWhenLoaded = autoplay
         currentTrack = track
         queueEnded = false
         stopSyncing()
         playbackState = .loading
+        Task {
+            await finishLoadAndPlay(track, at: position, generation: generation)
+        }
+    }
+
+    private func finishLoadAndPlay(_ track: Track, at position: TimeInterval, generation: UInt64) async {
         do {
             await ICloudItem.ensureDownloaded(track.url)
             guard generation == loadGeneration else { return }
             try await engine.load(track)
             guard generation == loadGeneration else { return }
-            if autoplay {
+            activeLoadGeneration = nil
+            if playWhenLoaded {
                 engine.play()
                 if position > 0 { engine.seek(to: position) }
                 syncFromEngine()
@@ -539,6 +608,7 @@ final class PlaybackService {
             await prepareFollowingTrack()
         } catch {
             guard generation == loadGeneration else { return }
+            activeLoadGeneration = nil
             syncFromEngine()
             stopSyncing()
         }

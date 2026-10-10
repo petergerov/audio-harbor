@@ -75,6 +75,11 @@ actor RemoteSession {
         await send(.queue(snapshot: snapshot), requestID: nil)
     }
 
+    func pushSettings(_ snapshot: SettingsSnapshot) async {
+        guard authenticated, topics.contains(.settings) else { return }
+        await send(.settings(snapshot: snapshot), requestID: nil)
+    }
+
     private func receiveLoop() {
         connection.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) { [weak self] content, _, isComplete, error in
             guard let self else { return }

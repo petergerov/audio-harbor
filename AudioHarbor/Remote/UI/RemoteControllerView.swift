@@ -1,13 +1,20 @@
 import SwiftUI
 
-private enum RemotePane: String, CaseIterable, Identifiable {
-    case now, browse, queue
+private enum RemoteTab: String, CaseIterable, Identifiable {
+    case deck, catalogue, settings
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .now: "Now"
-        case .browse: "Browse"
-        case .queue: "Queue"
+        case .deck: "Deck"
+        case .catalogue: "Catalogue"
+        case .settings: "Settings"
+        }
+    }
+    var systemImage: String {
+        switch self {
+        case .deck: "hifispeaker.fill"
+        case .catalogue: "rectangle.stack"
+        case .settings: "gearshape"
         }
     }
 }
@@ -48,18 +55,20 @@ private struct BrowseDrill: Equatable {
     var parentID: String
 }
 
-/// Remote Now Playing surface — controls a Harbor engine over the LAN.
+/// Remote surface — controls a Harbor engine over the LAN.
+/// Bottom tabs match the Mac: Deck · Catalogue · Settings.
 struct RemoteControllerView: View {
     @Bindable var controller: RemoteController
     @Environment(\.scenePhase) private var scenePhase
-    @State private var pane: RemotePane = .now
-    @State private var seekDraft: Double = 0
-    @State private var isSeeking = false
-    @State private var searchText = ""
+    @AppStorage(DefaultsKey.deckStyle) private var deckStyleRaw: String = DeckStyle.turntable.rawValue
+    @State private var tab: RemoteTab = .deck
+    @State private var scrubRatio: Double?
+    @State private var showQueue = false
+    /// Volume slider stays collapsed so Playlist / Labels is not next to a live thumb.
+    @State private var showVolumeControl = false
     @State private var browseRoot: BrowseRoot = .folders
     @State private var drill: BrowseDrill?
     @State private var tick = Date()
-    @State private var searchTask: Task<Void, Never>?
     /// Browse search, under the Dirs / Albums / Artists / Lists tabs.
     @State private var browseQuery = ""
     @State private var browseSearchTask: Task<Void, Never>?
@@ -68,61 +77,70 @@ struct RemoteControllerView: View {
 
     private let tickTimer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
 
+    private var deckStyle: Binding<DeckStyle> {
+        Binding(
+            get: { DeckStyle(rawValue: deckStyleRaw) ?? .turntable },
+            set: { deckStyleRaw = $0.rawValue }
+        )
+    }
+
     var body: some View {
-        ReceiverChassis {
-            VStack(alignment: .leading, spacing: 10) {
-                header
-                switch controller.phase {
-                case .needsPairing:
-                    pairingPanel
-                case .connected:
-                    panePicker
-                    switch pane {
-                    case .now:
-                        VStack(alignment: .leading, spacing: 10) {
-                            compactNowPlaying
-                            searchPanel
+        Group {
+            switch controller.phase {
+            case .connected:
+                connectedTabs
+            case .needsPairing, .connecting, .failed, .idle:
+                ReceiverChassis {
+                    VStack(alignment: .leading, spacing: 10) {
+                        connectionHeader
+                        switch controller.phase {
+                        case .needsPairing:
+                            pairingPanel
+                        case .connecting:
+                            ProgressView()
+                                .tint(HarborColor.amber)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        case .failed(let message):
+                            Text(message)
+                                .font(HarborFont.body(14))
+                                .foregroundStyle(HarborColor.ivoryDim)
+                            Button("Disconnect") { controller.disconnect() }
+                                .foregroundStyle(HarborColor.amber)
+                        case .idle:
+                            Text("Not connected")
+                                .foregroundStyle(HarborColor.ivoryDim)
+                        default:
+                            EmptyView()
                         }
-                    case .browse:
-                        browsePanel
-                    case .queue:
-                        queuePanel
                     }
-                case .connecting:
-                    ProgressView()
-                        .tint(HarborColor.amber)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                case .failed(let message):
-                    Text(message)
-                        .font(HarborFont.body(14))
-                        .foregroundStyle(HarborColor.ivoryDim)
-                    Button("Disconnect") { controller.disconnect() }
-                        .foregroundStyle(HarborColor.amber)
-                case .idle:
-                    Text("Not connected")
-                        .foregroundStyle(HarborColor.ivoryDim)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .remoteReadableWidth()
                 }
             }
-            // Short panels (pairing, errors) start under the header instead of floating mid-screen.
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            // The iPad shows the iPhone layout, centred at a phone-like width.
-            .remoteReadableWidth()
         }
         .onReceive(tickTimer) { tick = $0 }
         .sheet(item: $optionsRequest) { request in
             RemoteTrackOptionsSheet(controller: controller, track: request.track, kind: request.kind)
         }
+        .sheet(isPresented: $showQueue) {
+            remoteQueueSheet
+        }
         #if DEBUG && os(iOS)
         .onAppear {
-            if let raw = controller.fixturePane, let fixturePane = RemotePane(rawValue: raw) {
-                pane = fixturePane
-                if fixturePane == .browse {
+            if let raw = controller.fixturePane {
+                switch raw {
+                case "browse", "catalogue":
+                    tab = .catalogue
                     browseRoot = .albums
                     reloadBrowseRoot()
+                case "queue", "deck", "now":
+                    tab = .deck
+                default:
+                    break
                 }
             }
-            if let text = controller.fixtureSearchText {
-                searchText = text
+            if controller.fixtureShowQueue {
+                showQueue = true
             }
         }
         #endif
@@ -139,7 +157,382 @@ struct RemoteControllerView: View {
         #endif
     }
 
-    private var header: some View {
+    private var connectedTabs: some View {
+        TabView(selection: $tab) {
+            deckPage
+                .tabItem { Label(RemoteTab.deck.title, systemImage: RemoteTab.deck.systemImage) }
+                .tag(RemoteTab.deck)
+
+            cataloguePage
+                .tabItem { Label(RemoteTab.catalogue.title, systemImage: RemoteTab.catalogue.systemImage) }
+                .tag(RemoteTab.catalogue)
+
+            settingsPage
+                .tabItem { Label(RemoteTab.settings.title, systemImage: RemoteTab.settings.systemImage) }
+                .tag(RemoteTab.settings)
+        }
+        .tint(HarborColor.amber)
+        #if os(iOS)
+        .toolbarBackground(HarborColor.chassis, for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
+        #endif
+        .onChange(of: tab) { _, newTab in
+            if newTab == .catalogue, controller.browseItems.isEmpty {
+                reloadBrowseRoot()
+            }
+            if newTab == .settings {
+                controller.refreshSettings()
+            }
+        }
+    }
+
+    // MARK: - Deck
+
+    private var deckPage: some View {
+        NavigationStack {
+            ReceiverChassis {
+                GeometryReader { geo in
+                    ScrollView {
+                        VStack(spacing: 10) {
+                            if controller.nowPlaying?.playbackLocked == true {
+                                Text("The trial on \(controller.serverName ?? "the Mac") has ended. Unlock Audio Harbor in its Settings to keep playing.")
+                                    .font(HarborFont.body(12))
+                                    .foregroundStyle(HarborColor.amber)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+
+                            deckChrome(heroHeight: deckHeroHeight(in: geo.size))
+                        }
+                        .padding(.bottom, 8)
+                    }
+                    #if os(iOS)
+                    .scrollBounceBehavior(.basedOnSize)
+                    #endif
+                }
+            }
+            .navigationTitle(controller.serverName ?? "Deck")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar { disconnectToolbar }
+        }
+    }
+
+    private func deckChrome(heroHeight: CGFloat) -> some View {
+        let snap = controller.nowPlaying
+        let track = snap?.track
+        let duration = max(snap?.duration ?? 0, 0.1)
+        let display = scrubRatio.map { $0 * duration } ?? controller.displayedPosition
+        let progress = min(max(display / duration, 0), 1)
+        let style = deckStyle.wrappedValue.resolvedForCompact
+        let artworkImage = artworkImage(for: track?.artworkHash)
+        _ = tick
+
+        return VStack(spacing: 12) {
+            DeckStage(
+                style: deckStyle,
+                artwork: artworkImage,
+                isPlaying: controller.isPlaying,
+                progress: progress,
+                heroHeight: heroHeight,
+                meterLeft: 0,
+                meterRight: 0
+            ) {
+                // Live/Standby is the LED on the stage photo (top trailing) — no room for PowerLamp here.
+                HStack(spacing: 8) {
+                    volumeToolbarButton(
+                        volume: controller.outputVolume,
+                        outputName: snap?.outputName
+                    )
+                    queueToggle
+                }
+            }
+
+            if showVolumeControl, let volume = controller.outputVolume {
+                volumeSliderRow(volume: volume, outputName: snap?.outputName)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
+            VStack(spacing: 5) {
+                Text(track?.title ?? idleTitle(style))
+                    .font(HarborFont.display(20))
+                    .foregroundStyle(HarborColor.ivory)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(1)
+                Text(track.map { "\($0.artist)  ·  \($0.album)" } ?? idleSubtitle(style))
+                    .font(HarborFont.body(12))
+                    .foregroundStyle(HarborColor.ivoryDim)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(1)
+            }
+
+            VStack(spacing: 6) {
+                SeekBar(
+                    progress: progress,
+                    onSeeking: { scrubRatio = $0 },
+                    onSeekEnded: { ratio in
+                        controller.seek(to: ratio * duration)
+                        scrubRatio = nil
+                    }
+                )
+                ZStack {
+                    HStack {
+                        Text(display.clockText)
+                        Spacer()
+                        Text(duration.clockText)
+                    }
+                    if let track {
+                        FormatBadge(
+                            format: AudioFormat(rawValue: track.format) ?? .unknown,
+                            sampleRateHz: track.sampleRateHz,
+                            bitDepth: track.bitDepth,
+                            path: snap?.pathLabel,
+                            liveLabel: snap?.activeFormatLabel != track.format
+                                ? snap?.activeFormatLabel
+                                : nil
+                        )
+                        .minimumScaleFactor(0.8)
+                        .padding(.horizontal, 52)
+                    }
+                }
+                .font(HarborFont.mono(12))
+                .foregroundStyle(HarborColor.ivoryDim)
+            }
+
+            HStack(spacing: 14) {
+                HardwareButton(
+                    systemName: "shuffle",
+                    isLit: snap?.isShuffled == true,
+                    isSatellite: true
+                ) {
+                    controller.toggleShuffle()
+                }
+                .accessibilityLabel("Shuffle")
+                .accessibilityValue(snap?.isShuffled == true ? "On" : "Off")
+
+                HardwareButton(systemName: "backward.fill") {
+                    controller.previous()
+                }
+                HardwareButton(
+                    systemName: controller.isPlaying ? "pause.fill" : "play.fill",
+                    isPrimary: true,
+                    isLit: controller.isPlaying
+                ) {
+                    controller.togglePlayPause()
+                }
+                HardwareButton(systemName: "forward.fill") {
+                    controller.next()
+                }
+
+                let repeatMode = RepeatMode(rawValue: snap?.repeatMode ?? "") ?? .off
+                HardwareButton(
+                    systemName: repeatMode.systemImage,
+                    isLit: repeatMode != .off,
+                    isSatellite: true
+                ) {
+                    controller.cycleRepeatMode()
+                }
+                .accessibilityLabel("Repeat")
+                .accessibilityValue(repeatMode.title)
+            }
+            .scaleEffect(0.86, anchor: .center)
+            .padding(.vertical, -6)
+
+            if controller.canEditTracks, let track {
+                Menu {
+                    trackOptionsButtons(track)
+                } label: {
+                    Label("Playlist and Labels", systemImage: "text.badge.plus")
+                        .font(HarborFont.title(14))
+                        .foregroundStyle(HarborColor.amber)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity)
+                        .background(HarborColor.faceplateLift)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                }
+                .menuStyle(.button)
+                .buttonStyle(.plain)
+                .padding(.top, 14)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: showVolumeControl)
+        .faceplate(compact: true)
+    }
+
+    /// Same chrome pill as Queue — lives in the stage toolbar, away from Playlist / Labels.
+    @ViewBuilder
+    private func volumeToolbarButton(volume: Double?, outputName: String?) -> some View {
+        if let volume {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showVolumeControl.toggle()
+                }
+            } label: {
+                Image(systemName: RemoteVolumeSymbols.symbol(for: volume))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(showVolumeControl ? HarborColor.faceplate : HarborColor.ivoryDim)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                            .fill(showVolumeControl ? HarborColor.amber : HarborColor.faceplate.opacity(0.5))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                    .stroke(HarborColor.aluminumDark, lineWidth: 1)
+                            )
+                    )
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Volume\(outputName.map { " on \($0)" } ?? "")")
+            .accessibilityValue("\(Int((volume * 100).rounded())) percent")
+            .accessibilityHint(showVolumeControl ? "Hides the volume slider" : "Shows the volume slider")
+        } else if outputName != nil {
+            Image(systemName: "speaker.slash.fill")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(HarborColor.aluminumDark)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .fill(HarborColor.faceplate.opacity(0.35))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                .stroke(HarborColor.aluminumDark.opacity(0.6), lineWidth: 1)
+                        )
+                )
+                .accessibilityLabel(outputName.map { "\($0) has no volume control" } ?? "No volume control")
+        }
+    }
+
+    private func volumeSliderRow(volume: Double, outputName: String?) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: RemoteVolumeSymbols.symbol(for: volume))
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(HarborColor.amber)
+                .frame(width: 22)
+            Slider(
+                value: Binding(
+                    get: { volume },
+                    set: { controller.setVolume($0) }
+                ),
+                in: 0...1
+            )
+            .tint(HarborColor.amber)
+            Text("\(Int((volume * 100).rounded()))")
+                .font(HarborFont.mono(11))
+                .foregroundStyle(HarborColor.ivoryDim)
+                .frame(width: 32, alignment: .trailing)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(HarborColor.faceplateLift)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Volume\(outputName.map { " on \($0)" } ?? "")")
+    }
+
+    private var queueToggle: some View {
+        Button {
+            showQueue = true
+        } label: {
+            Image(systemName: "list.bullet.rectangle.portrait")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(showQueue ? HarborColor.faceplate : HarborColor.ivoryDim)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .fill(showQueue ? HarborColor.amber : HarborColor.faceplate.opacity(0.5))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                .stroke(HarborColor.aluminumDark, lineWidth: 1)
+                        )
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Show queue")
+    }
+
+    private var remoteQueueSheet: some View {
+        NavigationStack {
+            ReceiverChassis {
+                queuePanel
+                    .padding(.horizontal, 4)
+            }
+            .navigationTitle(queueNavigationTitle)
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { showQueue = false }
+                        .foregroundStyle(HarborColor.amber)
+                }
+            }
+        }
+        #if os(iOS)
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+        #endif
+    }
+
+    private var queueNavigationTitle: String {
+        if let name = controller.queue?.sourceName, !name.isEmpty { return name }
+        return controller.queue?.sourceKind ?? "Queue"
+    }
+
+    private func deckHeroHeight(in size: CGSize) -> CGFloat {
+        let reserved: CGFloat = 360
+        return min(228, max(128, size.height - reserved))
+    }
+
+    private func idleTitle(_ style: DeckStyle) -> String {
+        switch style {
+        case .turntable: "Nothing on the platter"
+        case .reelToReel: "No tape threaded"
+        case .receiver: "No source selected"
+        }
+    }
+
+    private func idleSubtitle(_ style: DeckStyle) -> String {
+        switch style {
+        case .turntable: "Drop the needle from Catalogue"
+        case .reelToReel: "Load a track from Catalogue"
+        case .receiver: "Choose a track from Catalogue"
+        }
+    }
+
+    // MARK: - Catalogue
+
+    private var cataloguePage: some View {
+        NavigationStack {
+            ReceiverChassis {
+                browsePanel
+            }
+            .navigationTitle("Catalogue")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar { disconnectToolbar }
+        }
+    }
+
+    // MARK: - Settings
+
+    private var settingsPage: some View {
+        RemoteMacSettingsView(
+            controller: controller,
+            showsDismissButton: false,
+            onDisconnect: { controller.disconnect() }
+        )
+    }
+
+    // MARK: - Shared chrome
+
+    private var connectionHeader: some View {
         HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(controller.serverName ?? "Remote")
@@ -160,26 +553,12 @@ struct RemoteControllerView: View {
         }
     }
 
-    private var panePicker: some View {
-        HStack(spacing: 0) {
-            ForEach(RemotePane.allCases) { item in
-                Button {
-                    pane = item
-                    if item == .browse, controller.browseItems.isEmpty {
-                        reloadBrowseRoot()
-                    }
-                } label: {
-                    Text(item.title)
-                        .font(HarborFont.title(13))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                        .foregroundStyle(pane == item ? HarborColor.chassis : HarborColor.ivory)
-                        .background(pane == item ? HarborColor.amber : HarborColor.faceplateLift)
-                }
-                .buttonStyle(.plain)
-            }
+    @ToolbarContentBuilder
+    private var disconnectToolbar: some ToolbarContent {
+        ToolbarItem(placement: .automatic) {
+            Button("Disconnect") { controller.disconnect() }
+                .foregroundStyle(HarborColor.amber)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
     private var pairingPanel: some View {
@@ -215,182 +594,6 @@ struct RemoteControllerView: View {
             .disabled(controller.pairingCodeInput.trimmingCharacters(in: .whitespacesAndNewlines).count < 6)
         }
         .padding(.top, 8)
-    }
-
-    private var compactNowPlaying: some View {
-        let snap = controller.nowPlaying
-        let track = snap?.track
-        let position = isSeeking ? seekDraft : controller.displayedPosition
-        _ = tick
-
-        return VStack(spacing: 8) {
-            if snap?.playbackLocked == true {
-                Text("The trial on \(controller.serverName ?? "the Mac") has ended. Unlock Audio Harbor in its Settings to keep playing.")
-                    .font(HarborFont.body(12))
-                    .foregroundStyle(HarborColor.amber)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            HStack(spacing: 12) {
-                artwork(for: track?.artworkHash, large: false)
-                    .frame(width: 56, height: 56)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(track?.title ?? "Nothing playing")
-                        .font(HarborFont.title(14))
-                        .foregroundStyle(HarborColor.ivory)
-                        .lineLimit(1)
-                    Text(track.map { "\($0.artist) — \($0.album)" } ?? " ")
-                        .font(HarborFont.body(11))
-                        .foregroundStyle(HarborColor.ivoryDim)
-                        .lineLimit(1)
-                    if let path = snap?.pathLabel {
-                        let format = snap?.activeFormatLabel
-                        Text([path, format].compactMap { $0 }.joined(separator: " · "))
-                            .font(HarborFont.mono(10))
-                            .foregroundStyle(HarborColor.ivoryDim)
-                            .lineLimit(1)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                if controller.canEditTracks, let track {
-                    Menu {
-                        trackOptionsButtons(track)
-                    } label: {
-                        Image(systemName: "text.badge.plus")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(HarborColor.ivoryDim)
-                            .frame(width: 26, height: 30)
-                    }
-                    .menuStyle(.button)
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Playlist and Labels")
-                }
-
-                HStack(spacing: 6) {
-                    compactTransport("backward.end.fill") { controller.previous() }
-                    compactTransport(controller.isPlaying ? "pause.fill" : "play.fill", emphasized: true) {
-                        controller.togglePlayPause()
-                    }
-                    compactTransport("forward.end.fill") { controller.next() }
-                }
-            }
-
-            HStack(spacing: 8) {
-                Text(formatTime(position))
-                    .font(HarborFont.mono(10))
-                    .foregroundStyle(HarborColor.ivoryDim)
-                    .frame(width: 36, alignment: .leading)
-                Slider(
-                    value: Binding(
-                        get: { position },
-                        set: { seekDraft = $0; isSeeking = true }
-                    ),
-                    in: 0...max(1, snap?.duration ?? 1),
-                    onEditingChanged: { editing in
-                        if !editing {
-                            controller.seek(to: seekDraft)
-                            isSeeking = false
-                        }
-                    }
-                )
-                .tint(HarborColor.amber)
-                Text(formatTime(snap?.duration ?? 0))
-                    .font(HarborFont.mono(10))
-                    .foregroundStyle(HarborColor.ivoryDim)
-                    .frame(width: 36, alignment: .trailing)
-            }
-
-            RemoteVolumeRow(
-                volume: controller.outputVolume,
-                outputName: snap?.outputName,
-                onChange: controller.setVolume
-            )
-        }
-        .padding(10)
-        .background(HarborColor.faceplateLift)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
-
-    private var searchPanel: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(HarborColor.ivoryDim)
-                TextField("Search whole catalogue", text: $searchText)
-                    .textFieldStyle(.plain)
-                    .foregroundStyle(HarborColor.ivory)
-                    .onChange(of: searchText) { _, newValue in
-                        scheduleSearch(newValue)
-                    }
-                    .onSubmit { controller.search(searchText) }
-                if !searchText.isEmpty {
-                    Button("Go") { controller.search(searchText) }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(HarborColor.amber)
-                    Button {
-                        searchTask?.cancel()
-                        searchText = ""
-                        controller.clearSearch()
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(HarborColor.ivoryDim)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(10)
-            .background(HarborColor.faceplateLift)
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-
-            if controller.searchResults.isEmpty {
-                Text(searchText.isEmpty ? "Search the whole Mac catalogue" : "No matches")
-                    .font(HarborFont.body(13))
-                    .foregroundStyle(HarborColor.ivoryDim)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                Text("\(controller.searchResults.count) match\(controller.searchResults.count == 1 ? "" : "es")")
-                    .font(HarborFont.mono(10))
-                    .foregroundStyle(HarborColor.ivoryDim)
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 0) {
-                        ForEach(controller.searchResults, id: \.cataloguePath) { track in
-                            trackRow(track)
-                            Divider().overlay(HarborColor.aluminumDark.opacity(0.4))
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-    }
-
-    private func scheduleSearch(_ query: String) {
-        searchTask?.cancel()
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
-            controller.clearSearch()
-            return
-        }
-        searchTask = Task {
-            try? await Task.sleep(nanoseconds: 250_000_000)
-            guard !Task.isCancelled else { return }
-            controller.search(trimmed)
-        }
-    }
-
-    private func compactTransport(_ systemName: String, emphasized: Bool = false, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: emphasized ? 16 : 13, weight: .semibold))
-                .foregroundStyle(emphasized ? HarborColor.chassis : HarborColor.ivory)
-                .frame(width: emphasized ? 36 : 30, height: emphasized ? 36 : 30)
-                .background(emphasized ? HarborColor.amber : HarborColor.faceplate)
-                .clipShape(Circle())
-        }
-        .buttonStyle(.plain)
     }
 
     private var browsePanel: some View {
@@ -530,7 +733,7 @@ struct RemoteControllerView: View {
         return Group {
             if let queue, !queue.tracks.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("\(queue.sourceKind)\(queue.sourceName.map { " · \($0)" } ?? "")")
+                    Text("\(queue.sourceKind)\(queue.sourceName.map { " · \($0)" } ?? "") · \(queue.tracks.count) tracks")
                         .font(HarborFont.body(12))
                         .foregroundStyle(HarborColor.ivoryDim)
 
@@ -538,7 +741,7 @@ struct RemoteControllerView: View {
                         LazyVStack(alignment: .leading, spacing: 0) {
                             ForEach(Array(queue.tracks.enumerated()), id: \.element.cataloguePath) { index, track in
                                 Button {
-                                    controller.playQueueIndex(index)
+                                    controller.playOrToggleQueueIndex(index)
                                 } label: {
                                     HStack(spacing: 10) {
                                         Text("\(index + 1)")
@@ -588,7 +791,8 @@ struct RemoteControllerView: View {
         if case .track(let dto) = item {
             browseRowButton(item)
                 .contextMenu {
-                    trackMenu(dto) { handleBrowseTap(item) }
+                    // Context "Play" always starts the song; row tap toggles pause when current.
+                    trackMenu(dto) { controller.play(cataloguePath: dto.cataloguePath) }
                 }
         } else {
             browseRowButton(item)
@@ -639,34 +843,6 @@ struct RemoteControllerView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-    }
-
-    private func trackRow(_ track: TrackDTO) -> some View {
-        let current = isCurrent(track)
-        return Button {
-            controller.play(cataloguePath: track.cataloguePath)
-        } label: {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(track.title)
-                        .font(HarborFont.body(13))
-                        .foregroundStyle(current ? HarborColor.amber : HarborColor.ivory)
-                        .lineLimit(1)
-                    Text("\(track.artist) — \(track.album)")
-                        .font(HarborFont.body(11))
-                        .foregroundStyle(HarborColor.ivoryDim)
-                        .lineLimit(1)
-                }
-                Spacer()
-                trackStateIcon(isCurrent: current)
-            }
-            .padding(.vertical, 8)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .contextMenu {
-            trackMenu(track) { controller.play(cataloguePath: track.cataloguePath) }
-        }
     }
 
     /// The track the Mac has loaded — marked in the lists, since choosing a song stays in them.
@@ -724,8 +900,8 @@ struct RemoteControllerView: View {
             drill = BrowseDrill(title: name, scope: .folders, parentID: id)
             controller.browse(scope: .folders, parentID: id)
         case .track(let dto):
-            // Stay in the list; the row marks the track once the Mac plays it.
-            controller.play(cataloguePath: dto.cataloguePath)
+            // Stay in the list; a second tap on the playing song pauses (or resumes).
+            controller.playOrToggle(cataloguePath: dto.cataloguePath)
         }
     }
 
@@ -766,10 +942,13 @@ struct RemoteControllerView: View {
         controller.browse(scope: browseRoot.scope, query: activeBrowseQuery)
     }
 
+    private func artworkImage(for hash: String?) -> Image? {
+        hash.flatMap { controller.artworkByHash[$0] }.flatMap(Image.init(artworkData:))
+    }
+
     @ViewBuilder
     private func artwork(for hash: String?, large: Bool) -> some View {
-        let data = hash.flatMap { controller.artworkByHash[$0] }
-        if let data, let image = Image(artworkData: data) {
+        if let image = artworkImage(for: hash) {
             image
                 .resizable()
                 .scaledToFill()
@@ -793,44 +972,13 @@ struct RemoteControllerView: View {
         .frame(width: 44, height: 44)
         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
     }
-
-    private func formatTime(_ t: TimeInterval) -> String {
-        let total = Int(t.rounded(.down))
-        let m = total / 60
-        let s = total % 60
-        return String(format: "%d:%02d", m, s)
-    }
 }
 
-/// Hardware volume of the Mac's output — the DAC when it has a volume control.
-/// The phone's volume buttons step the same level.
-private struct RemoteVolumeRow: View {
-    let volume: Double?
-    let outputName: String?
-    let onChange: (Double) -> Void
-
-    var body: some View {
-        if let volume {
-            HStack(spacing: 8) {
-                Image(systemName: "speaker.fill")
-                    .font(.system(size: 10))
-                    .foregroundStyle(HarborColor.ivoryDim)
-                    .frame(width: 36, alignment: .leading)
-                Slider(value: Binding(get: { volume }, set: onChange), in: 0...1)
-                    .tint(HarborColor.amber)
-                Text("\(Int((volume * 100).rounded()))")
-                    .font(HarborFont.mono(10))
-                    .foregroundStyle(HarborColor.ivoryDim)
-                    .frame(width: 36, alignment: .trailing)
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Volume\(outputName.map { " on \($0)" } ?? "")")
-        } else if let outputName {
-            Text("\(outputName) has no volume control — set the level on the amp")
-                .font(HarborFont.mono(10))
-                .foregroundStyle(HarborColor.ivoryDim)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
+private enum RemoteVolumeSymbols {
+    static func symbol(for volume: Double) -> String {
+        if volume <= 0.001 { return "speaker.slash.fill" }
+        if volume < 0.34 { return "speaker.wave.1.fill" }
+        if volume < 0.67 { return "speaker.wave.2.fill" }
+        return "speaker.wave.3.fill"
     }
 }

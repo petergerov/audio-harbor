@@ -4,23 +4,30 @@ import Foundation
 @MainActor
 final class PlaybackObserver {
     private let playback: PlaybackService
+    private let appModel: AppModel?
     private let onNowPlaying: (NowPlayingSnapshot) -> Void
     private let onQueue: (QueueSnapshot) -> Void
+    private let onSettings: ((SettingsSnapshot) -> Void)?
 
     private var generation: UInt64 = 0
     private var lastNowPlaying: NowPlayingSnapshot?
     private var lastQueueSignature: String = ""
+    private var lastSettings: SettingsSnapshot?
     private var heartbeat: Timer?
     private var started = false
 
     init(
         playback: PlaybackService,
+        appModel: AppModel? = nil,
         onNowPlaying: @escaping (NowPlayingSnapshot) -> Void,
-        onQueue: @escaping (QueueSnapshot) -> Void
+        onQueue: @escaping (QueueSnapshot) -> Void,
+        onSettings: ((SettingsSnapshot) -> Void)? = nil
     ) {
         self.playback = playback
+        self.appModel = appModel
         self.onNowPlaying = onNowPlaying
         self.onQueue = onQueue
+        self.onSettings = onSettings
     }
 
     func start() {
@@ -50,6 +57,11 @@ final class PlaybackObserver {
         makeQueue()
     }
 
+    func currentSettings() -> SettingsSnapshot? {
+        guard let appModel else { return nil }
+        return RemoteSettingsSnapshot.make(from: appModel)
+    }
+
     private func arm() {
         withObservationTracking {
             _ = playback.currentTrack?.cataloguePath
@@ -66,6 +78,23 @@ final class PlaybackObserver {
             _ = playback.outputVolume
             _ = playback.outputStatus.activeDevice?.name
             _ = playback.requiresUnlock
+            _ = playback.outputDeviceUID
+            _ = playback.outputMode
+            _ = playback.networkStreamQuality
+            _ = playback.networkDsdMode
+            _ = playback.dsdPCMLevel
+            _ = playback.networkPlayerFormats
+            _ = playback.outputStatus.devices
+            if let appModel {
+                #if os(macOS)
+                _ = appModel.sharing.isEnabled
+                _ = appModel.sharing.statusText
+                _ = appModel.sharing.activeStreams
+                #endif
+                _ = appModel.library.folders
+                _ = appModel.library.isScanning
+                _ = appModel.license.statusHeadline
+            }
         } onChange: { [weak self] in
             Task { @MainActor in
                 guard let self else { return }
@@ -94,6 +123,13 @@ final class PlaybackObserver {
         if force || signature != lastQueueSignature {
             lastQueueSignature = signature
             onQueue(queue)
+        }
+
+        if let onSettings, let settings = currentSettings() {
+            if force || lastSettings != settings {
+                lastSettings = settings
+                onSettings(settings)
+            }
         }
     }
 

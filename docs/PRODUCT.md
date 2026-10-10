@@ -50,6 +50,7 @@
 - [x] Dark, quiet visual language (no dashboard clutter)
 - [x] Keyboard shortcuts on Mac (Space, ⌘← / ⌘→, ⌘O; ⌘1 Catalogue, ⌘2 Playlists, ⌘3 Deck, ⌘, Settings)
 - [x] Play from the Catalogue without leaving it; ⌘-click, *Play and Show Deck* or the mini player open the Deck
+- [x] Tap the current song again to pause, once more to resume (Catalogue, Playlists, Deck queue, and the remote)
 
 ### Settings (MVP-thin)
 - [x] Output device (Mac)
@@ -141,6 +142,8 @@ gapless SetNext), the iPhone is the remote. NAS straight to the Devialet without
 - [x] iPad as a remote too — the same layout as the iPhone, centred
 - [x] Playlists and labels from the remote — long-press a song: Add to Playlist… / Labels…, tap to put it in or take it out; playing a song or Play all stays in the list and marks the playing row (Mac + iOS 1.1.1, protocol 2)
 - [x] Search on the remote like the Mac's catalogue search — Dirs across every directory, Albums / Artists / Lists with a matching song (Mac + iOS 1.1.1)
+- [x] Mac Settings from the remote — Settings tab: Output (device, modes / network radios, DSD as PCM), Sharing, directories (list + Rebuild Index), About; protocol 3; add/remove folders stays on the Mac
+- [x] Remote bottom tabs Deck · Catalogue · Settings — Deck mirrors the Mac deck (stage, queue sheet, no search, no Receiver look on phone); Catalogue keeps browse + search; tap current song again to pause; volume speaker on the Deck toolbar
 - [x] Play to a UPnP renderer (Mac) — Network Players separate from This Host; radios Wi‑Fi friendly / Full / DSD, SACD, DoP (native when the player lists DSD); part of the one-time unlock (see [`UPNP.md`](UPNP.md))
 - [x] Share the library as a UPnP / DLNA music server (Mac) — Settings → Sharing; a player such as mconnect browses it and plays on the iPhone; part of the one-time unlock (see [`UPNP.md`](UPNP.md))
 - Mac menu bar mini player + notch-friendly compact mode

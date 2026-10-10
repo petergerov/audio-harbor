@@ -410,6 +410,143 @@ struct TrackOptionsDTO: Codable, Sendable, Equatable {
     var trackLabels: [String]
 }
 
+/// One output the Mac can play to — local DAC / speakers or a network player.
+struct RemoteOutputDeviceDTO: Codable, Sendable, Equatable, Identifiable {
+    var uid: String
+    var name: String
+    /// `local` or `network`.
+    var kind: String
+    var supportsExclusive: Bool
+    var supportsDoP: Bool
+
+    var id: String { uid }
+}
+
+/// Output section of Mac Settings, for the remote.
+struct RemoteOutputSettingsDTO: Codable, Sendable, Equatable {
+    var devices: [RemoteOutputDeviceDTO]
+    /// Nil = System Output.
+    var selectedUID: String?
+    var selectedName: String?
+    var isNetworkSelected: Bool
+    var isDeviceMissing: Bool
+    var outputMode: String
+    var effectiveOutputMode: String
+    var canExclusive: Bool
+    var canDoP: Bool
+    /// `wifiFriendly` / `full` / `dsd`.
+    var networkChoice: String
+    var supportsNativeDSD: Bool
+    var dsdPCMLevel: Int
+}
+
+struct RemoteSharingSettingsDTO: Codable, Sendable, Equatable {
+    var enabled: Bool
+    var statusText: String
+    var blockedByLicense: Bool
+    var activeStreams: Int
+}
+
+struct RemoteDirectoryDTO: Codable, Sendable, Equatable, Identifiable {
+    var id: UUID
+    var name: String
+    var displayPath: String
+}
+
+struct RemoteAboutDTO: Codable, Sendable, Equatable {
+    var appName: String
+    var versionLabel: String
+    var tagline: String
+    var licenseHeadline: String
+    var licenseDetail: String
+}
+
+/// Full Mac Settings snapshot for the remote.
+struct SettingsSnapshot: Codable, Sendable, Equatable {
+    var output: RemoteOutputSettingsDTO
+    var sharing: RemoteSharingSettingsDTO
+    var directories: [RemoteDirectoryDTO]
+    var isScanning: Bool
+    var about: RemoteAboutDTO
+}
+
+/// One change to Mac Settings from the remote.
+enum SettingsPatch: Codable, Sendable, Equatable {
+    /// Nil / empty uid = System Output.
+    case outputDevice(uid: String?)
+    case outputMode(String)
+    case networkChoice(String)
+    case dsdPCMLevel(Int)
+    case sharingEnabled(Bool)
+    case rebuildIndex
+
+    enum CodingKeys: String, CodingKey {
+        case outputDevice, outputMode, networkChoice, dsdPCMLevel, sharingEnabled, rebuildIndex
+    }
+
+    enum UIDKeys: String, CodingKey { case uid }
+    enum ValueKeys: String, CodingKey { case value }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if container.contains(.outputDevice) {
+            let nested = try container.nestedContainer(keyedBy: UIDKeys.self, forKey: .outputDevice)
+            self = .outputDevice(uid: try nested.decodeIfPresent(String.self, forKey: .uid))
+            return
+        }
+        if container.contains(.outputMode) {
+            let nested = try container.nestedContainer(keyedBy: ValueKeys.self, forKey: .outputMode)
+            self = .outputMode(try nested.decode(String.self, forKey: .value))
+            return
+        }
+        if container.contains(.networkChoice) {
+            let nested = try container.nestedContainer(keyedBy: ValueKeys.self, forKey: .networkChoice)
+            self = .networkChoice(try nested.decode(String.self, forKey: .value))
+            return
+        }
+        if container.contains(.dsdPCMLevel) {
+            let nested = try container.nestedContainer(keyedBy: ValueKeys.self, forKey: .dsdPCMLevel)
+            self = .dsdPCMLevel(try nested.decode(Int.self, forKey: .value))
+            return
+        }
+        if container.contains(.sharingEnabled) {
+            let nested = try container.nestedContainer(keyedBy: ValueKeys.self, forKey: .sharingEnabled)
+            self = .sharingEnabled(try nested.decode(Bool.self, forKey: .value))
+            return
+        }
+        if container.contains(.rebuildIndex) {
+            self = .rebuildIndex
+            return
+        }
+        throw DecodingError.dataCorrupted(
+            .init(codingPath: decoder.codingPath, debugDescription: "Unknown SettingsPatch")
+        )
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .outputDevice(let uid):
+            var nested = container.nestedContainer(keyedBy: UIDKeys.self, forKey: .outputDevice)
+            try nested.encodeIfPresent(uid, forKey: .uid)
+        case .outputMode(let mode):
+            var nested = container.nestedContainer(keyedBy: ValueKeys.self, forKey: .outputMode)
+            try nested.encode(mode, forKey: .value)
+        case .networkChoice(let choice):
+            var nested = container.nestedContainer(keyedBy: ValueKeys.self, forKey: .networkChoice)
+            try nested.encode(choice, forKey: .value)
+        case .dsdPCMLevel(let level):
+            var nested = container.nestedContainer(keyedBy: ValueKeys.self, forKey: .dsdPCMLevel)
+            try nested.encode(level, forKey: .value)
+        case .sharingEnabled(let on):
+            var nested = container.nestedContainer(keyedBy: ValueKeys.self, forKey: .sharingEnabled)
+            try nested.encode(on, forKey: .value)
+        case .rebuildIndex:
+            try container.encode(true, forKey: .rebuildIndex)
+        }
+    }
+}
+
 enum TrackEdit: Codable, Sendable, Equatable {
     case addToPlaylist(id: UUID)
     case removeFromPlaylist(id: UUID)

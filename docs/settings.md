@@ -163,7 +163,8 @@ Die Musik spielt auf dem Mac, das iPhone ist die Fernbedienung.
 - **New Code** zeigt einen 6-stelligen Code, 3 Minuten gültig. Am iPhone den Mac antippen und den Code eingeben.
   Einmal gekoppelt, verbindet sich das iPhone danach ohne Code.
 - **Paired devices** listet die gekoppelten iPhones. **Revoke** wirft eines raus, **Revoke All** alle.
-- Mit dem iPhone: abspielen, springen, suchen, Ordner, Alben, Playlists und die Queue durchgehen.
+- Am iPhone unten dieselben drei Bereiche wie am Mac: **Deck** (Wiedergabe, Queue-Sheet, Lautstärke),
+  **Catalogue** (Dirs / Albums / Artists / Lists inkl. Suche) und **Settings** (Mac-Output, Sharing, Directories).
   Ein Song oder **Play all** spielt, ohne die Liste zu verlassen; der laufende Song ist markiert.
   Dirs / Albums / Artists / Lists bleiben oben, auch tief in einem Ordner — antippen führt an den Anfang.
 - **Playlists und Labels vom iPhone:** Song lange drücken → **Add to Playlist…** oder **Labels…**.
@@ -173,7 +174,10 @@ Die Musik spielt auf dem Mac, das iPhone ist die Fernbedienung.
   Dirs findet Ordner und Dateien in allen Ordnern; ein Ordner antippen öffnet ihn und leert die Suche.
   Albums, Artists und Lists zeigen nur Einträge mit passenden Songs, darin nur diese — eine Playlist,
   deren Name passt, zeigt alle. Braucht Mac und iPhone ab 1.1.1.
-- **Lautstärke:** Regler im iPhone und die Lautstärketasten am iPhone stellen die Lautstärke des Geräts ein,
+- **Mac Settings vom iPhone:** Tab **Settings** — Output-Gerät, Modi / Netzwerk-Radios, DSD as PCM, Sharing,
+  Directories und Index neu aufbauen. Ordner hinzufügen oder entfernen bleibt am Mac. Braucht Protokoll 3
+  auf beiden Seiten.
+- **Lautstärke:** Lautsprecher auf dem Deck öffnet den Regler; die Lautstärketasten am iPhone stellen die Lautstärke des Geräts ein,
   auf dem der Mac gerade spielt — den DAC selbst, wenn er eine Lautstärkeregelung hat, sonst den Mac-Ausgang.
   Der DAC regelt selbst, die Musik bleibt bit-perfect, auch in Exclusive und DoP.
   Drehst du am DAC, zieht das iPhone mit. DACs mit festem Ausgangspegel haben keine Regelung — dann gibt es

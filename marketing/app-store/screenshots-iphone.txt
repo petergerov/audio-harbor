@@ -1,8 +1,8 @@
 # iPhone App Store screenshots (6.9", 1320x2868): raw capture | eyebrow | headline (English)
 # Raw captures come from the Debug build's fixture mode: build-iphone.sh --capture
 # Order is the order in App Store Connect. \n in a headline forces a line break.
-now.png|Remote|Your Mac plays.\nYour iPhone steers.
-browse.png|Browse|Every album on your Mac,\nin your hand.
+now.png|Deck|Your Mac plays.\nYour iPhone steers.
+browse.png|Catalogue|Every album on your Mac,\nin your hand.
 queue.png|Queue|Jump anywhere in\nwhat plays next.
 nearby.png|Nearby|Finds your Mac on its own.\nNo account.
 pairing.png|Pairing|Pair once with\na code from the Mac.

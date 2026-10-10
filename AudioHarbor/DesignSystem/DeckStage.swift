@@ -22,6 +22,24 @@ enum DeckStyle: String, CaseIterable, Identifiable {
         case .receiver: "Stereo Receiver"
         }
     }
+
+    /// Receiver needs Mac/iPad width; the phone only offers turntable and reel-to-reel.
+    static var compactCases: [DeckStyle] { [.turntable, .reelToReel] }
+
+    #if os(iOS)
+    static var pickerCases: [DeckStyle] { compactCases }
+    #else
+    static var pickerCases: [DeckStyle] { allCases }
+    #endif
+
+    /// Falls back when a Mac-saved Receiver style is opened on iPhone.
+    var resolvedForCompact: DeckStyle {
+        #if os(iOS)
+        self == .receiver ? .turntable : self
+        #else
+        self
+        #endif
+    }
 }
 
 struct DeckStage<Trailing: View>: View {
@@ -34,12 +52,14 @@ struct DeckStage<Trailing: View>: View {
     var meterRight: Double = 0
     @ViewBuilder var trailing: () -> Trailing
 
+    private var activeStyle: DeckStyle { style.resolvedForCompact }
+
     var body: some View {
         VStack(spacing: heroHeight == nil ? 12 : 6) {
             toolbarRow
 
             Group {
-                switch style {
+                switch activeStyle {
                 case .turntable:
                     ListeningRig(
                         artwork: artwork,
@@ -65,8 +85,15 @@ struct DeckStage<Trailing: View>: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .animation(.easeInOut(duration: 0.25), value: style)
+            .animation(.easeInOut(duration: 0.25), value: activeStyle)
         }
+        #if os(iOS)
+        .onAppear {
+            if style == .receiver {
+                style = .turntable
+            }
+        }
+        #endif
     }
 
     private var toolbarRow: some View {
@@ -80,7 +107,7 @@ struct DeckStage<Trailing: View>: View {
     private var stylePicker: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
-                ForEach(DeckStyle.allCases) { option in
+                ForEach(DeckStyle.pickerCases) { option in
                     Button {
                         style = option
                     } label: {
@@ -89,10 +116,10 @@ struct DeckStage<Trailing: View>: View {
                             .tracking(0.8)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 7)
-                            .foregroundStyle(style == option ? HarborColor.faceplate : HarborColor.ivoryDim)
+                            .foregroundStyle(activeStyle == option ? HarborColor.faceplate : HarborColor.ivoryDim)
                             .background(
                                 RoundedRectangle(cornerRadius: 2, style: .continuous)
-                                    .fill(style == option ? HarborColor.amber : HarborColor.faceplate.opacity(0.5))
+                                    .fill(activeStyle == option ? HarborColor.amber : HarborColor.faceplate.opacity(0.5))
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 2, style: .continuous)
                                             .stroke(HarborColor.aluminumDark, lineWidth: 1)

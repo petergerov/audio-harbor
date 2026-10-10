@@ -3,14 +3,16 @@ import Foundation
 /// Wire format constants for Audio Harbor LAN remote.
 /// Keep this file Foundation-only — it will be shared with the iOS destination.
 enum RemoteProtocol {
-    /// 2: track options and edits — add to a playlist, add or remove a label — and browse search.
-    static let version = 2
+    /// 3: Mac Settings from the remote (output, sharing, directories, about).
+    static let version = 3
     static let minimumSupported = 1
     /// First version whose Mac answers `trackOptions` and `editTrack`. Gated on the version, not a
     /// capability: remotes on version 1 reject a capability list with a case they do not know.
     static let trackEditsVersion = 2
     /// First version whose Mac filters `browse` by `BrowseRequest.query`. A version-1 Mac ignores it.
     static let browseSearchVersion = 2
+    /// First version whose Mac answers `getSettings` / `setSettings`.
+    static let settingsVersion = 3
     /// Bonjour service type. Must also appear in Info.plist `NSBonjourServices`.
     static let serviceType = "_audioharbor._tcp"
     static let maxFrameBytes = 4 << 20 // 4 MiB
@@ -33,6 +35,7 @@ enum RemoteCapability: String, Codable, Sendable, CaseIterable {
 enum RemoteTopic: String, Codable, Sendable {
     case nowPlaying
     case queue
+    case settings
 }
 
 enum RemoteErrorCode: String, Codable, Sendable {

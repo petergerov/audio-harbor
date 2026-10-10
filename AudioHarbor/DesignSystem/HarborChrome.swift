@@ -3,6 +3,8 @@ import SwiftUI
 /// Listening-room chassis: ink field, walnut inlay, amber bloom while playing.
 struct ReceiverChassis<Content: View>: View {
     @Environment(\.harborPlaying) private var playing
+    /// Inset around the content. Settings on iPhone uses a tighter value so panels span the phone.
+    var contentPadding: CGFloat = 16
     @ViewBuilder var content: Content
 
     var body: some View {
@@ -49,7 +51,7 @@ struct ReceiverChassis<Content: View>: View {
             .allowsHitTesting(false)
 
             content
-                .padding(16)
+                .padding(contentPadding)
         }
     }
 }

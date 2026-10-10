@@ -30,6 +30,12 @@ final class RemoteCommandRouter {
             ) else {
                 return .message(.error(code: .notFound, message: "Selection not found"), requestID: requestID)
             }
+            // Remote row tap on the song already loaded: pause / resume, do not rebuild the queue.
+            if case .track = selection,
+               appModel.playback.isCurrentTrack(resolved.track) {
+                appModel.playback.togglePlayPause()
+                return .none
+            }
             appModel.play(resolved.queue, startingAt: resolved.track, from: resolved.source, showDeck: false)
             return .none
 
@@ -72,6 +78,21 @@ final class RemoteCommandRouter {
             }
             apply(edit, to: track)
             return trackOptionsReply(cataloguePath, requestID: requestID)
+
+        case .getSettings:
+            return .message(
+                .settings(snapshot: RemoteSettingsSnapshot.make(from: appModel)),
+                requestID: requestID
+            )
+
+        case .setSettings(let patch):
+            if let error = RemoteSettingsSnapshot.apply(patch, to: appModel) {
+                return .message(.error(code: .badRequest, message: error), requestID: requestID)
+            }
+            return .message(
+                .settings(snapshot: RemoteSettingsSnapshot.make(from: appModel)),
+                requestID: requestID
+            )
 
         case .ping:
             return .message(.pong, requestID: requestID)

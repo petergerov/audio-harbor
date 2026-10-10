@@ -9,7 +9,7 @@ struct TrackRow: View {
     let onPlay: () -> Void
 
     var body: some View {
-        let isCurrent = appModel.playback.currentTrack?.cataloguePath == track.cataloguePath
+        let isCurrent = appModel.playback.isCurrentTrack(track)
         Button(action: onPlay) {
             HStack(spacing: 14) {
                 VStack(alignment: .leading, spacing: 4) {
