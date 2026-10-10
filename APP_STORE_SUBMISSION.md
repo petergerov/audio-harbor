@@ -4,14 +4,14 @@ Eine App, zwei Plattformen, **ein** Eintrag in App Store Connect:
 
 | Plattform | Rolle | Release |
 |---|---|---|
-| **macOS** | Der Player: Bibliothek, Deck, Exclusive / DoP, Rack, UPnP-Netzwerkplayer. Spielt auf dem DAC oder einem Streamer im Heimnetz. | **1.1.0** — erste Mac-Version, mit Remote-Server · danach **1.1.1** · Netzwerkplayer auf `develop` für das nächste Update |
-| **iOS** (iPhone, iPad) | Die Fernbedienung: findet den Mac per Bonjour, koppelt per 6-stelligem Code; Tabs Deck · Catalogue · Settings; steuert Wiedergabe, Queue, Suche, Mac-Settings und die Lautstärke des DAC. Spielt selbst nichts. | **1.1.0** — erste iOS-Version, siehe [`APP_STORE_SUBMISSION_IOS.md`](APP_STORE_SUBMISSION_IOS.md) · danach **1.1.1** · Tabs/Settings auf `develop` |
+| **macOS** | Der Player: Bibliothek, Deck, Exclusive / DoP, Rack, UPnP-Netzwerkplayer. Spielt auf dem DAC oder einem Streamer im Heimnetz. | **1.1.0** — erste Mac-Version, mit Remote-Server · **1.1.1** — Remote Playlists/Labels/Suche, DSD as PCM · **1.1.2** — Netzwerkplayer + Bibliotheks-Sharing |
+| **iOS** (iPhone, iPad) | Die Fernbedienung: findet den Mac per Bonjour, koppelt per 6-stelligem Code; Tabs Deck · Catalogue · Settings; steuert Wiedergabe, Queue, Suche, Mac-Settings und die Lautstärke des DAC oder Netzwerkplayers. Spielt selbst nichts. | **1.1.0** — erste iOS-Version, siehe [`APP_STORE_SUBMISSION_IOS.md`](APP_STORE_SUBMISSION_IOS.md) · **1.1.1** · **1.1.2** — Tabs Deck · Catalogue · Settings |
 
 **Beide gehen in einer Einreichung raus.** Review bekommt Mac und iPhone gleichzeitig und kann den Remote gegen den Mac-Player testen, auch ohne dass der Mac schon im Store ist.
 
 Vorgeschichte: Mac 1.0.0 (16, Branch `release/REL_1.0.0`, ohne Remote) hing im Review. Sie wird aus dem Review genommen und in App Store Connect auf **1.1.0** umbenannt (Schritte in [`APP_STORE_SUBMISSION_IOS.md` § 5](APP_STORE_SUBMISSION_IOS.md#5-app-store-connect--ablauf)). `release/REL_1.0.0` bleibt nur als Archiv. In Build 16 fehlte außerdem das Lesen der FLAC-Tags: jeder FLAC-Track stand als „Unknown Artist“ ohne Cover im Katalog.
 
-Stand der App im Repo: Bundle `com.gerov.audioharbor.player`. **1.1.0 (17)** auf `release/REL_1.1.0` geht unverändert raus; `develop` steht auf **1.1.1 (18)** plus UPnP-Netzwerkausgabe und Bibliotheks-Sharing (siehe [What's New — Network players](#whats-new--network-players-develop)). App Sandbox aktiv, StoreKit 2 (Trial + Unlock) eingebaut. Offen sind vor allem Sandbox-Tests, die Remote-Tests ([iOS § 4](APP_STORE_SUBMISSION_IOS.md#4-testen-vor-dem-upload)), Verträge und App Store Connect.
+Stand der App im Repo: Bundle `com.gerov.audioharbor.player`. **1.1.0 (17)** auf `release/REL_1.1.0` geht unverändert raus; `develop` steht auf **1.1.2 (19)** — UPnP-Netzwerkausgabe, Bibliotheks-Sharing, Remote-Protokoll 3 (siehe [What's New 1.1.2](#whats-new-in-this-version-112)). App Sandbox aktiv, StoreKit 2 (Trial + Unlock) eingebaut. Offen sind vor allem Sandbox-Tests, die Remote-Tests ([iOS § 4](APP_STORE_SUBMISSION_IOS.md#4-testen-vor-dem-upload)), Verträge und App Store Connect.
 
 ---
 
@@ -90,8 +90,8 @@ Ordnerzugriff läuft über `NSOpenPanel` / `fileImporter` + security-scoped Book
 
 ### 1.3 Version, Signing, Privacy-URL
 
-- [x] Marketing-Version **1.1.0** — in `project.yml` gesetzt, landet über XcodeGen im Projekt. Aktueller Build **17** (`CURRENT_PROJECT_VERSION`), jeder Upload +1
-- [x] Build-Nummer: macOS verlangt eine höhere Build-Nummer als jede bisher hochgeladene (Build 16 von 1.0.0) — Upload mit Build 1 scheiterte mit Fehler 90061. Daher Build **17**, für iOS ebenso gültig. Nie wieder unter die höchste hochgeladene Nummer zurücksetzen.
+- [x] Marketing-Version — in `project.yml` gesetzt, landet über XcodeGen im Projekt. **1.1.0** = Build **17** (Release-Branch); **1.1.1** = **18**; `develop` = **1.1.2 (19)**. Jeder Upload +1
+- [x] Build-Nummer: macOS verlangt eine höhere Build-Nummer als jede bisher hochgeladene (Build 16 von 1.0.0) — Upload mit Build 1 scheiterte mit Fehler 90061. Daher ab **17**, für iOS ebenso gültig. Nie wieder unter die höchste hochgeladene Nummer zurücksetzen.
 - [ ] Team: Apple Developer Program, Signing **Apple Distribution** / Mac App Store (nicht Developer ID)
 - [x] Privacy Policy **live per HTTPS**: <https://petergerov.github.io/audio-harbor/privacy.html>
       (GitHub Pages, Quelle `main` + `/docs`). Geprüft: 200, HTTP wird auf HTTPS umgeleitet, Inhalt identisch mit `main`.
@@ -108,7 +108,7 @@ Ordnerzugriff läuft über `NSOpenPanel` / `fileImporter` + security-scoped Book
 | 13 | Exclusive/DoP nur mit externem DAC (sonst Shared, Lautstärketasten gehen); Settings grauen sie ohne DAC aus, zeigen Shared und wählen beim Anstecken wieder die vorherige DAC-Einstellung; M3U/M3U8-Import und -Export (Entitlement `user-selected.read-write`); neues App-Icon; FAQ-Seite `docs/faq.html` |
 | 1.1.0 (1) | iPhone- und iPad-Remote (iPad mit derselben Oberfläche wie das iPhone, mittig): Remote-Server am Mac (Bonjour, Pairing-Code, Token), DAC-Lautstärke per Remote; FLAC-Tags und -Cover werden gelesen, Cover-Dateien im Ordner (`cover.jpg`, `folder.jpg`, …) als Rückfall; Alben nach Album-Artist gruppiert, Sampler ohne Tag bleiben ein Album; größeres Cover im Deck, auch bei Tonband und Receiver; Rechtsklick „Add to Playlist“ / „Labels“ für Ordner, Alben, Künstler und die Deck-Queue; Klick spielt ohne Sprung zum Deck (⌘-Klick, „Play and Show Deck“, ⌘3). Der Katalog wird beim ersten Start einmal neu eingelesen (neues Schema). |
 | 1.1.1 (18) | Remote-Protokoll 2: Playlists und Labels vom iPhone/iPad (`trackOptions`, `editTrack` — hinzufügen, herausnehmen, neu anlegen); eine Nachricht, die der Mac nicht kennt, bekommt einen Fehler statt die Verbindung zu trennen. Remote: Abspielen bleibt in der Liste, der laufende Song ist markiert; Dirs / Albums / Artists / Lists bleiben beim Durchklicken sichtbar. Suchleiste darunter wie die Katalogsuche am Mac (`BrowseRequest.query`): Dirs über alle Ordner, Albums / Artists / Lists nur mit passenden Songs. Der Mac merkt sich seinen Remote-Port über Neustarts; das iPhone meldet einen nicht erreichbaren Mac, statt endlos zu laden. DSD→PCM neu: mehrstufige phasenlineare FIR-Filter statt Butterworth 4. Ordnung bei 20 kHz (der war bei 20 kHz schon −3 dB und ließ DSD-Rauschen in den Hörbereich spiegeln), jetzt linear bis 25 kHz, ab 44,1 kHz ≥ 120 dB Dämpfung. Settings → Output → *DSD as PCM*: 0 / +3 / +6 dB, Standard +3 dB — umgerechnetes DSD war 6 dB leiser als DoP, weil SACD-0-dB nur 50 % Aussteuerung ist. |
-| develop (nach 1.1.1) | UPnP / DLNA-Netzwerkausgabe: Renderer unter **Network Players**; Radios **Wi‑Fi friendly** / **Full** / **DSD, SACD, DoP** (ausgegraut bis der Player DSD listet); native DSF/DFF/SACD wenn möglich, sonst PCM; Library Sharing (Settings → Sharing). Remote-Protokoll **3**: Mac Settings vom iPhone (Output, Sharing, Directories). Remote-UI: untere Tabs **Deck · Catalogue · Settings**; Deck wie am Mac (Stage, Queue-Sheet, kein Search, kein Receiver-Look); Volume als Lautsprecher in der Deck-Toolbar. Gleichen Song nochmal antippen pausiert / resumiert (Mac-Katalog, Playlists, Deck-Queue und Remote). Siehe [`docs/UPNP.md`](docs/UPNP.md) und [iOS What's New](APP_STORE_SUBMISSION_IOS.md#whats-new--deck--catalogue--settings-develop). |
+| 1.1.2 (19) | UPnP / DLNA-Netzwerkausgabe: Renderer unter **Network Players** (unabhängig von Library Sharing); Radios **Wi‑Fi friendly** / **Full** / **DSD, SACD, DoP** (ausgegraut bis der Player DSD listet); native DSF/DFF/SACD wenn möglich, sonst PCM; Library Sharing (Settings → Sharing) für DLNA-Apps wie mconnect. Remote-Protokoll **3**: Mac Settings vom iPhone (Output, Sharing, Directories). Remote-UI: untere Tabs **Deck · Catalogue · Settings**; Deck wie am Mac (Stage, Queue-Sheet, kein Search, kein Receiver-Look); Volume als Lautsprecher in der Deck-Toolbar. Gleichen Song nochmal antippen pausiert / resumiert (Mac-Katalog, Playlists, Deck-Queue und Remote). Siehe [`docs/UPNP.md`](docs/UPNP.md) und [iOS What's New 1.1.2](APP_STORE_SUBMISSION_IOS.md#whats-new-in-this-version-112). |
 
 - [ ] Vor dem Upload mit USB-DAC testen: DSF, DFF und SACD ISO in **DoP** (kein Rauschen, keine Aussetzer), PCM in **Exclusive**
 - [ ] 1.1.1, DSD als PCM (Shared, Exclusive, mit Plugin): DSD64 und DSD128/256 spielen sauber ohne Aussetzer; *DSD as PCM* 0 → +3 → +6 dB im laufenden Song hörbar lauter, +3 dB etwa 3 dB unter DoP am selben DAC; Spulen ohne Knacken; DoP-Pegel unverändert
@@ -260,19 +260,21 @@ The iPhone and iPad remote now files your music.
 Update the remote too: playlists, labels, and search need version 1.1.1 on the Mac and on the iPhone or iPad.
 ```
 
-### What's New — Network players & remote (`develop`)
+### What's New in This Version (1.1.2)
 
-Copy for the next Mac + iOS update after 1.1.1 (bump marketing version when you cut the release). Paste the Mac block here and the iOS block in [`APP_STORE_SUBMISSION_IOS.md`](APP_STORE_SUBMISSION_IOS.md#whats-new--deck--catalogue--settings-develop).
+Zweites Update nach 1.1.0 — Mac und iOS wieder gemeinsam. Netzwerkplayer und Remote-Settings brauchen beide Seiten auf 1.1.2. iOS-Text: [`APP_STORE_SUBMISSION_IOS.md`](APP_STORE_SUBMISSION_IOS.md#whats-new-in-this-version-112).
 
 ```
 Play to a network streamer — and steer more of the Mac from the couch.
 
-• UPnP / DLNA players on your home network appear under Network Players, separate from This Host.
+• UPnP / DLNA players on your home network appear under Network Players, separate from This Host. You can pick one without turning on Share Library.
 • Output radios switch with the device: Shared, Exclusive and DoP stay for USB DACs; network players get Wi‑Fi friendly, Full, and DSD, SACD, DoP when the player lists DSD.
 • Files the player accepts go untouched. DSF, DFF and SACD go native when supported, as 88.2 kHz PCM on Full, or as CD-rate PCM on Wi‑Fi friendly.
 • Share Library on the Network (Settings → Sharing) so a DLNA app such as mconnect can browse and play your catalogue.
 • The iPhone and iPad remote now has Deck, Catalogue, and Settings tabs like the Mac. Change Output, Sharing, and Directories from the Settings tab. The Mac stays awake while a network player plays.
 • On Mac and on the remote: tap the song that is playing again to pause; tap once more to resume. A different song still starts fresh.
+
+Update the remote too: network output settings and the new tabs need version 1.1.2 on the Mac and on the iPhone or iPad.
 ```
 
 ---

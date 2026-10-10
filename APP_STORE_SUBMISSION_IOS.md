@@ -1,8 +1,8 @@
 # Audio Harbor — App Store Submission iOS (iPhone and iPad remote)
 
-Die iOS-App ist die **Fernbedienung** für Audio Harbor am Mac: findet den Mac per Bonjour, koppelt per 6-stelligem Code, steuert Wiedergabe, Queue, Suche und die Lautstärke des DAC. Sie spielt selbst nichts. Sie läuft auf iPhone **und iPad**; alles hier gilt für beide, wo nicht anders steht.
+Die iOS-App ist die **Fernbedienung** für Audio Harbor am Mac: findet den Mac per Bonjour, koppelt per 6-stelligem Code; Tabs **Deck · Catalogue · Settings**; steuert Wiedergabe, Queue, Suche, Mac-Settings und die Lautstärke des DAC oder Netzwerkplayers. Sie spielt selbst nichts. Sie läuft auf iPhone **und iPad**; alles hier gilt für beide, wo nicht anders steht.
 
-iOS 1.1.0 ist die **erste iOS-Version** und geht in **derselben** Einreichung wie Mac 1.1.0 raus. Danach folgt **1.1.1 (18)**, wieder mit dem Mac zusammen: Playlists, Labels und Suche vom Remote ([What's New 1.1.1](#whats-new-in-this-version-111), Tests in [§ 4](#4-testen-vor-dem-upload)). Review bekommt Mac und iPhone gleichzeitig und kann den Remote gegen den Mac-Player testen, auch ohne dass der Mac schon im Store ist. Alles zum Mac-Player steht in [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md).
+iOS 1.1.0 ist die **erste iOS-Version** und geht in **derselben** Einreichung wie Mac 1.1.0 raus. Danach **1.1.1 (18)** (Playlists, Labels, Suche) und **1.1.2 (19)** (Tabs, Mac-Settings, Netzwerkplayer — [What's New 1.1.2](#whats-new-in-this-version-112), Tests in [§ 4](#4-testen-vor-dem-upload)). Review bekommt Mac und iPhone gleichzeitig und kann den Remote gegen den Mac-Player testen, auch ohne dass der Mac schon im Store ist. Alles zum Mac-Player steht in [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md).
 
 ---
 
@@ -13,11 +13,11 @@ iOS 1.1.0 ist die **erste iOS-Version** und geht in **derselben** Einreichung wi
 | Display name | Audio Harbor |
 | Bundle ID | `com.gerov.audioharbor.player` — dieselbe wie am Mac (Universal Purchase) |
 | Target | `AudioHarbor` — ein Target für macOS und iOS, Branch `release/REL_1.1.0` aus `develop` |
-| Version | `MARKETING_VERSION` **1.1.0** — eine Versionsnummer für beide Plattformen. Eine erste iOS-Version muss nicht 1.0 heißen. Auf `develop` schon **1.1.1**. |
-| Build | `CURRENT_PROJECT_VERSION` **17** für 1.1.0, **18** für 1.1.1 (siehe [§ 3](#3-version-build-signing)) |
+| Version | `MARKETING_VERSION` — eine Versionsnummer für beide Plattformen. **1.1.0** erste iOS-Version; `develop` = **1.1.2**. |
+| Build | `CURRENT_PROJECT_VERSION` **17** = 1.1.0, **18** = 1.1.1, **19** = 1.1.2 (siehe [§ 3](#3-version-build-signing)) |
 | Geräte | iPhone und iPad (`TARGETED_DEVICE_FAMILY: "1,2"`) |
 | iOS deployment | 17.0 |
-| Remote | Bonjour `_audioharbor._tcp`, TCP im lokalen Netz, 6-stelliger Code (3 min gültig), danach Token. Protokoll 1 in 1.1.0, **2** ab 1.1.1 (Playlists, Labels, Suche in Catalogue), **3** auf `develop` (Mac Settings vom Settings-Tab) |
+| Remote | Bonjour `_audioharbor._tcp`, TCP im lokalen Netz, 6-stelliger Code (3 min gültig), danach Token. Protokoll 1 in 1.1.0, **2** ab 1.1.1 (Playlists, Labels, Suche in Catalogue), **3** ab 1.1.2 (Mac Settings vom Settings-Tab) |
 | App-Preis | Free — für den ganzen Eintrag |
 | IAP product | `com.gerov.audioharbor.unlock` (Non-Consumable, 9,90 €) |
 | Trial | Nur am Mac. Der Remote auf iPhone und iPad ist frei und hat keine eigene Sperre. |
@@ -54,8 +54,8 @@ Der Remote ist **kostenlos** und hat keine eigene Trial-Sperre. Die Trial-Uhr un
 
 ## 3. Version, Build, Signing
 
-- [x] Marketing-Version **1.1.0** in `project.yml`, landet über XcodeGen im Projekt.
-- [x] Build **17**. Der erste Upload mit Build 1 scheiterte mit Fehler **90061** („CFBundleVersion [1] … must contain a higher version than that of the previously uploaded version [16]“), weil Mac 1.0.0 schon als Build 16 hochgeladen war. Für iOS ist 17 ebenso gültig. Ab jetzt jeder Upload +1, nie unter die höchste hochgeladene Nummer zurücksetzen. Falls 17 als „bereits vorhanden“ abgelehnt wird: 18.
+- [x] Marketing-Version in `project.yml`, landet über XcodeGen im Projekt. Release **1.1.0** = Build **17**; **1.1.1** = **18**; `develop` = **1.1.2 (19)**.
+- [x] Build-Nummer: Der erste Upload mit Build 1 scheiterte mit Fehler **90061** („CFBundleVersion [1] … must contain a higher version than that of the previously uploaded version [16]“), weil Mac 1.0.0 schon als Build 16 hochgeladen war. Ab **17**, jeder Upload +1, nie unter die höchste hochgeladene Nummer zurücksetzen.
 - [ ] Signing: Automatic, Team `C9LBGZNZ6P`, **Apple Distribution**. Die Bundle ID ist dieselbe wie am Mac; Xcode legt das iOS-Provisioning-Profil beim ersten Archive an.
 - `xcodegen generate` entfernt Versionseinträge, die Xcode direkt im Target gesetzt hat; maßgeblich ist `project.yml`.
 
@@ -67,7 +67,6 @@ Der Remote ist **kostenlos** und hat keine eigene Trial-Sperre. Die Trial-Uhr un
 - [ ] Dasselbe mit einem iPad: Hoch- und Querformat, Split View, Lautstärketasten am iPad
 - [ ] Local-Network-Abfrage auf dem iPhone erscheint beim ersten Suchen; nach *Ablehnen* zeigt die App einen verständlichen Zustand
 - [ ] Play / Pause / Skip / Seek / Queue / Catalogue-Suche / Ordner, Album, Playlist starten
-- [ ] Untere Tabs: Deck · Catalogue · Settings
 - [ ] Lautstärke: Lautsprecher auf dem Deck öffnet den Regler; Lautstärketasten am iPhone ändern den DAC (Exclusive **und** DoP). DAC ohne Hardware-Lautstärke: durchgestrichener Lautsprecher
 - [ ] Lautstärketasten mit Musik einer anderen App auf dem iPhone: Tasten gehören dann dieser App. Nach dem Trennen hat das iPhone wieder seine alte Lautstärke
 - [ ] App in den Hintergrund und zurück: Verbindung kommt wieder, Tasten gehen wieder
@@ -78,18 +77,23 @@ Der Remote ist **kostenlos** und hat keine eigene Trial-Sperre. Die Trial-Uhr un
 - [ ] Song lange drücken (Catalogue, Queue) → *Add to Playlist…*: hinzufügen, Haken erscheint; nochmal antippen nimmt ihn heraus, die Verbindung bleibt. Neue Playlist anlegen. Am Mac stimmt die Playlist
 - [ ] *Labels…*: Label setzen, entfernen, neues anlegen; am Mac in der Trackzeile sichtbar
 - [ ] *Playlist and Labels* auf dem Deck: dieselben zwei Punkte für den laufenden Song
-- [ ] Song und *Play all* antippen: bleibt in der Liste, der laufende Song ist bernsteinfarben mit Lautsprecher; nochmal antippen pausiert
+- [ ] Song und *Play all* antippen: bleibt in der Liste, der laufende Song ist bernsteinfarben mit Lautsprecher
 - [ ] In Dirs tief in Ordner gehen: Dirs / Albums / Artists / Lists bleiben oben, Antippen führt an den Anfang
 - [ ] Suche unter Catalogue: Dirs findet Ordner und Dateien in allen Ordnern (Ordner antippen öffnet ihn und leert die Suche); Albums / Artists / Lists zeigen nur Einträge mit passenden Songs und darin nur diese; eine Playlist, deren Name passt, zeigt alle Songs. Treffer antippen bleibt geöffnet
 - [ ] Mac-App beenden (auch per Xcode-Stop) und neu starten: das iPhone verbindet wieder (gleicher Port). Mac aus: das iPhone zeigt „Can't reach …“ statt endlos zu laden
 - [ ] iPhone 1.1.1 mit Mac 1.1.0: Menü zeigt nur *Play*, keine Suchleiste in Catalogue, nichts bricht ab. iPhone 1.1.0 mit Mac 1.1.1: verbindet und steuert wie bisher
 - [ ] Unlock-Panel in den iPhone-Settings (Discovery): Kauf und Restore mit Sandbox-Apple-ID; danach am Mac *Restore Purchases*
 
-**Zusätzlich für Remote-Tabs / Settings (Mac und iPhone mit Protokoll 3):**
+**Zusätzlich für 1.1.2** (Mac und iPhone beide auf 1.1.2, Protokoll 3):
 
-- [ ] Settings-Tab: Output-Gerät wählen (scrollbare Liste, lange Namen), Shared/Exclusive/DoP bzw. Netzwerk-Radios, DSD as PCM, Sharing, Directories + Rebuild Index
-- [ ] Deck: Queue-Sheet, kein Suchfeld; Receiver-Look nicht im Style-Picker
+- [ ] Untere Tabs: Deck · Catalogue · Settings
+- [ ] Settings-Tab: Output-Gerät wählen (scrollbare Liste, lange Namen) — USB-DAC und **Network Players** (Sharing muss dafür nicht an sein)
+- [ ] Shared/Exclusive/DoP bzw. Netzwerk-Radios (Wi‑Fi friendly / Full / DSD, SACD, DoP), DSD as PCM, Sharing, Directories + Rebuild Index
+- [ ] Deck: Stage (Turntable / Reel-to-Reel), Queue-Sheet, kein Suchfeld; Receiver-Look nicht im Style-Picker
+- [ ] Lautsprecher in der Deck-Toolbar öffnet den Regler; am Netzwerkplayer regelt das iPhone dessen Lautstärke
+- [ ] Gleichen Song nochmal antippen (Catalogue, Queue, Deck): Pause / Resume
 - [ ] Settings-Panels nutzen die volle iPhone-Breite
+- [ ] iPhone 1.1.2 mit Mac 1.1.1: Settings-Tab ohne Mac-Output (oder Hinweis), nichts bricht ab
 
 ---
 
@@ -133,7 +137,7 @@ What you can do
 • Catalogue — browse folders, albums, artists, and playlists, and search each like on the Mac
 • Settings — change the Mac's Output, Sharing, and Directories (when both sides support it)
 • Add songs to playlists and labels, or take them out — long-press a song, or use Playlist and Labels on the Deck
-• Set the volume of your DAC — open the speaker on the Deck, or use the volume buttons. The DAC changes its own level, so the music stays bit-perfect.
+• Set the volume of your DAC or network player — open the speaker on the Deck, or use the volume buttons. On a USB DAC the device changes its own level, so the music stays bit-perfect.
 
 What it is not
 • Not a player on the iPhone or iPad. Nothing is copied to it.
@@ -179,9 +183,9 @@ Das erste iOS-Update — hier zeigt App Store Connect das Feld. Die Description 
 Playlists, labels, and search need Audio Harbor 1.1.1 on your Mac.
 ```
 
-### What's New — Deck · Catalogue · Settings (`develop`)
+### What's New in This Version (1.1.2)
 
-Copy for the next iOS update after 1.1.1 (bump marketing version when you cut the release). Needs the matching Mac build (remote protocol 3 for Settings).
+Zweites iOS-Update — braucht Mac 1.1.2 (Remote-Protokoll 3 für den Settings-Tab und Netzwerkplayer).
 
 ```
 The remote now matches the Mac.
@@ -189,9 +193,11 @@ The remote now matches the Mac.
 • Bottom tabs: Deck, Catalogue, and Settings — the same three places as on the Mac.
 • Deck shows the listening stage (Turntable or Reel-to-Reel), transport, and the queue from a button on the stage. No search on the Deck.
 • Catalogue keeps browse and search under Dirs, Albums, Artists, and Lists.
-• Settings edits the Mac: Output (device, modes or network radios, DSD as PCM), Sharing, Directories, and About. Add or remove folders still on the Mac.
+• Settings edits the Mac: Output (device, modes or network radios, DSD as PCM), Sharing, Directories, and About. Pick a network player without turning on Share Library. Add or remove folders still on the Mac.
 • Tap a playing song again to pause; tap once more to resume (same on the Mac catalogue).
-• Volume sits next to Queue on the Deck — tap the speaker to open the slider. The volume buttons still work. Live/Standby is the LED on the stage photo.
+• Volume sits next to Queue on the Deck — tap the speaker to open the slider. The volume buttons still work for your DAC or network player. Live/Standby is the LED on the stage photo.
+
+Needs Audio Harbor 1.1.2 on your Mac.
 ```
 
 ---
