@@ -141,8 +141,8 @@ gapless SetNext), the iPhone is the remote. NAS straight to the Devialet without
 - [x] iPad as a remote too — the same layout as the iPhone, centred
 - [x] Playlists and labels from the remote — long-press a song: Add to Playlist… / Labels…, tap to put it in or take it out; playing a song or Play all stays in the list and marks the playing row (Mac + iOS 1.1.1, protocol 2)
 - [x] Search on the remote like the Mac's catalogue search — Dirs across every directory, Albums / Artists / Lists with a matching song (Mac + iOS 1.1.1)
-- Play to a UPnP renderer (Mac) — a network streamer / amplifier such as the Devialet Expert shows up as an output device; files untouched where the player takes them, DSD as PCM, Wi‑Fi mode; part of the one-time unlock, no extra charge — built for the next release (see [`UPNP.md`](UPNP.md))
-- Share the library as a UPnP / DLNA music server (Mac) — Settings → Sharing; a player such as mconnect browses it and plays on the iPhone; part of the one-time unlock — built for the next release (see [`UPNP.md`](UPNP.md))
+- [x] Play to a UPnP renderer (Mac) — Network Players separate from This Host; radios Wi‑Fi friendly / Full / DSD, SACD, DoP (native when the player lists DSD); part of the one-time unlock (see [`UPNP.md`](UPNP.md))
+- [x] Share the library as a UPnP / DLNA music server (Mac) — Settings → Sharing; a player such as mconnect browses it and plays on the iPhone; part of the one-time unlock (see [`UPNP.md`](UPNP.md))
 - Mac menu bar mini player + notch-friendly compact mode
 - Continuity: handoff queue Mac ↔ iPhone (same library roots when possible)
 - CarPlay (iOS) — later, carefully

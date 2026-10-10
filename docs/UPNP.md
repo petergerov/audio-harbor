@@ -4,9 +4,10 @@
 way it plays to a USB DAC: pick it as the output device, press play. The Mac stays the player and
 library; the renderer only pulls audio over HTTP. The iPhone remote keeps working unchanged.
 
-**Status:** built (Mac). Network output: Settings → Output → Device. Library sharing: Settings →
-Sharing (below). Not yet checked on the real Expert 220 — the guided test in `tools/upnp` is ready.
-How it is built: [ARCHITECTURE.md](ARCHITECTURE.md#network-output-upnp-renderer-mac).
+**Status:** built (Mac), on `develop`. Network output: Settings → Output → Device (**This Host** /
+**Network Players**); radios **Wi‑Fi friendly** / **Full** / **DSD, SACD, DoP**. Library sharing:
+Settings → Sharing. Not yet checked on the real Expert 220 — the guided test in `tools/upnp` is
+ready. How it is built: [ARCHITECTURE.md](ARCHITECTURE.md#network-output-upnp-renderer-mac).
 
 Not multi-room, not OpenHome (later, if ever).
 

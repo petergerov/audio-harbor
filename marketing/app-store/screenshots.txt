@@ -4,4 +4,4 @@
 2.albums.png|Catalogue|The music you already own, by album and artist.
 3.directories.png|Directories|Browse your disks as they are. Search all of them at once.
 4.rack.png|AU and AUv3|Your own plugins, right on the Deck.
-5.settings.png|Output|Shared, Exclusive or DoP, explained in plain words.
+5.settings.png|Output|USB DACs: Shared, Exclusive or DoP. Network players get their own radios.

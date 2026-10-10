@@ -4,14 +4,14 @@ Eine App, zwei Plattformen, **ein** Eintrag in App Store Connect:
 
 | Plattform | Rolle | Release |
 |---|---|---|
-| **macOS** | Der Player: Bibliothek, Deck, Exclusive / DoP, Rack. Spielt auf dem DAC. | **1.1.0** — erste Mac-Version, mit Remote-Server · danach **1.1.1** |
+| **macOS** | Der Player: Bibliothek, Deck, Exclusive / DoP, Rack, UPnP-Netzwerkplayer. Spielt auf dem DAC oder einem Streamer im Heimnetz. | **1.1.0** — erste Mac-Version, mit Remote-Server · danach **1.1.1** · Netzwerkplayer auf `develop` für das nächste Update |
 | **iOS** (iPhone, iPad) | Die Fernbedienung: findet den Mac per Bonjour, koppelt per 6-stelligem Code, steuert Wiedergabe, Queue, Suche und die Lautstärke des DAC. Spielt selbst nichts. | **1.1.0** — erste iOS-Version, siehe [`APP_STORE_SUBMISSION_IOS.md`](APP_STORE_SUBMISSION_IOS.md) · danach **1.1.1** |
 
 **Beide gehen in einer Einreichung raus.** Review bekommt Mac und iPhone gleichzeitig und kann den Remote gegen den Mac-Player testen, auch ohne dass der Mac schon im Store ist.
 
 Vorgeschichte: Mac 1.0.0 (16, Branch `release/REL_1.0.0`, ohne Remote) hing im Review. Sie wird aus dem Review genommen und in App Store Connect auf **1.1.0** umbenannt (Schritte in [`APP_STORE_SUBMISSION_IOS.md` § 5](APP_STORE_SUBMISSION_IOS.md#5-app-store-connect--ablauf)). `release/REL_1.0.0` bleibt nur als Archiv. In Build 16 fehlte außerdem das Lesen der FLAC-Tags: jeder FLAC-Track stand als „Unknown Artist“ ohne Cover im Katalog.
 
-Stand der App im Repo: Bundle `com.gerov.audioharbor.player`. **1.1.0 (17)** auf `release/REL_1.1.0` geht unverändert raus; `develop` steht auf **1.1.1 (18)** (Playlists, Labels und Suche vom Remote; DSD→PCM linear bis 25 kHz mit Pegel-Einstellung, siehe [What's New 1.1.1](#whats-new-in-this-version-111)). App Sandbox aktiv, StoreKit 2 (Trial + Unlock) eingebaut. Offen sind vor allem Sandbox-Tests, die Remote-Tests ([iOS § 4](APP_STORE_SUBMISSION_IOS.md#4-testen-vor-dem-upload)), Verträge und App Store Connect.
+Stand der App im Repo: Bundle `com.gerov.audioharbor.player`. **1.1.0 (17)** auf `release/REL_1.1.0` geht unverändert raus; `develop` steht auf **1.1.1 (18)** plus UPnP-Netzwerkausgabe und Bibliotheks-Sharing (siehe [What's New — Network players](#whats-new--network-players-develop)). App Sandbox aktiv, StoreKit 2 (Trial + Unlock) eingebaut. Offen sind vor allem Sandbox-Tests, die Remote-Tests ([iOS § 4](APP_STORE_SUBMISSION_IOS.md#4-testen-vor-dem-upload)), Verträge und App Store Connect.
 
 ---
 
@@ -108,6 +108,7 @@ Ordnerzugriff läuft über `NSOpenPanel` / `fileImporter` + security-scoped Book
 | 13 | Exclusive/DoP nur mit externem DAC (sonst Shared, Lautstärketasten gehen); Settings grauen sie ohne DAC aus, zeigen Shared und wählen beim Anstecken wieder die vorherige DAC-Einstellung; M3U/M3U8-Import und -Export (Entitlement `user-selected.read-write`); neues App-Icon; FAQ-Seite `docs/faq.html` |
 | 1.1.0 (1) | iPhone- und iPad-Remote (iPad mit derselben Oberfläche wie das iPhone, mittig): Remote-Server am Mac (Bonjour, Pairing-Code, Token), DAC-Lautstärke per Remote; FLAC-Tags und -Cover werden gelesen, Cover-Dateien im Ordner (`cover.jpg`, `folder.jpg`, …) als Rückfall; Alben nach Album-Artist gruppiert, Sampler ohne Tag bleiben ein Album; größeres Cover im Deck, auch bei Tonband und Receiver; Rechtsklick „Add to Playlist“ / „Labels“ für Ordner, Alben, Künstler und die Deck-Queue; Klick spielt ohne Sprung zum Deck (⌘-Klick, „Play and Show Deck“, ⌘3). Der Katalog wird beim ersten Start einmal neu eingelesen (neues Schema). |
 | 1.1.1 (18) | Remote-Protokoll 2: Playlists und Labels vom iPhone/iPad (`trackOptions`, `editTrack` — hinzufügen, herausnehmen, neu anlegen); eine Nachricht, die der Mac nicht kennt, bekommt einen Fehler statt die Verbindung zu trennen. Remote: Abspielen bleibt in der Liste, der laufende Song ist markiert; Dirs / Albums / Artists / Lists bleiben beim Durchklicken sichtbar. Suchleiste darunter wie die Katalogsuche am Mac (`BrowseRequest.query`): Dirs über alle Ordner, Albums / Artists / Lists nur mit passenden Songs. Der Mac merkt sich seinen Remote-Port über Neustarts; das iPhone meldet einen nicht erreichbaren Mac, statt endlos zu laden. DSD→PCM neu: mehrstufige phasenlineare FIR-Filter statt Butterworth 4. Ordnung bei 20 kHz (der war bei 20 kHz schon −3 dB und ließ DSD-Rauschen in den Hörbereich spiegeln), jetzt linear bis 25 kHz, ab 44,1 kHz ≥ 120 dB Dämpfung. Settings → Output → *DSD as PCM*: 0 / +3 / +6 dB, Standard +3 dB — umgerechnetes DSD war 6 dB leiser als DoP, weil SACD-0-dB nur 50 % Aussteuerung ist. |
+| develop (nach 1.1.1) | UPnP / DLNA-Netzwerkausgabe: Renderer unter **Network Players**; Radios **Wi‑Fi friendly** / **Full** / **DSD, SACD, DoP** (ausgegraut bis der Player DSD listet); native DSF/DFF/SACD wenn möglich, sonst PCM; Library Sharing (Settings → Sharing). Siehe [`docs/UPNP.md`](docs/UPNP.md). |
 
 - [ ] Vor dem Upload mit USB-DAC testen: DSF, DFF und SACD ISO in **DoP** (kein Rauschen, keine Aussetzer), PCM in **Exclusive**
 - [ ] 1.1.1, DSD als PCM (Shared, Exclusive, mit Plugin): DSD64 und DSD128/256 spielen sauber ohne Aussetzer; *DSD as PCM* 0 → +3 → +6 dB im laufenden Song hörbar lauter, +3 dB etwa 3 dB unter DoP am selben DAC; Spulen ohne Knacken; DoP-Pegel unverändert
@@ -172,7 +173,7 @@ Review screenshot: Paywall mit Preis und Restore — [`docs/images/review-inform
 **Promotional text** (up to 170):
 
 ```
-Free to install. Seven days full use, then €9.90 once — no subscription. Local folders, bit-perfect Exclusive and DoP on Mac, AU and AUv3 on the Deck. No account.
+Free to install. Seven days full use, then €9.90 once — no subscription. Local folders, bit-perfect Exclusive and DoP, UPnP network players, AU and AUv3 on the Deck. No account.
 ```
 
 **Description:**
@@ -184,6 +185,8 @@ Free to install for everyone. Seven days full use after you first install. Then 
 
 Shared is the everyday path — other Mac sound still works. Exclusive takes over a USB DAC for bit-perfect playback and sample-rate match; DSD is converted to PCM, flat to 25 kHz, with a level setting so it plays as loud as DoP. DoP does the same and sends DSD files to a DSD-capable DAC as real DSD.
 
+Play to a UPnP / DLNA network player on your home network — a Devialet Expert, a streamer, some soundbars. Network Players sit apart from This Host. The radios switch with the pick: Shared, Exclusive and DoP for a USB DAC; Wi‑Fi friendly, Full, or DSD, SACD, DoP when the player lists DSD — then those files go to it untouched. You can also share the library so a DLNA app such as mconnect plays it on your iPhone.
+
 AUv3 inserts (and classic AU on Mac) live on the Deck rack. The rack uses Shared. Exclusive stays bit-perfect when the rack is empty.
 
 What you get
@@ -191,17 +194,19 @@ What you get
 • Catalogue by directory, album, and artist, with search, playlists, and labels
 • FLAC, ALAC, WAV, AIFF, AAC, MP3, DSF, DFF
 • SACD ISO — stereo tracks from the disc TOC, including DST-compressed areas
-• Shared, Exclusive, and DoP — explained in plain language
+• Shared, Exclusive, and DoP for USB DACs — explained in plain language
+• UPnP / DLNA network players — Wi‑Fi friendly, Full, or native DSD when supported
+• Library sharing as a DLNA music server
 • Import and export M3U / M3U8 playlists
 • Optional AU / AUv3 rack on Shared
-• Free iPhone and iPad remote — browse, queue, and set your DAC's volume from the couch
+• Free iPhone and iPad remote — browse, queue, and set your DAC's or network player's volume from the couch
 
 What you do not get
 • Streaming services or an account
 • Bit-perfect over Bluetooth, AirPlay, or built-in speakers (those stay Shared)
 • A kitchen-sink mixer
 
-Privacy: nothing about your library leaves the Mac. See the Privacy Policy.
+Privacy: nothing about your library leaves the Mac, except what you choose to play or share on your own local network. See the Privacy Policy.
 
 Restore Purchases is in Settings if you reinstall or switch Macs with the same Apple ID.
 ```
@@ -209,7 +214,7 @@ Restore Purchases is in Settings if you reinstall or switch Macs with the same A
 **Keywords** (100 characters, comma-separated, no spaces after commas if you need the room):
 
 ```
-audiophile,FLAC,DSD,DoP,bit-perfect,DAC,local,player,AUv3,ALAC,SACD,hi-res
+audiophile,FLAC,DSD,DoP,bit-perfect,DAC,UPnP,DLNA,local,player,AUv3,SACD
 ```
 
 **Support URL:** `https://github.com/petergerov/audio-harbor/issues` (oder eine Support-Seite auf der Marketing-Domain)  
@@ -255,6 +260,20 @@ The iPhone and iPad remote now files your music.
 Update the remote too: playlists, labels, and search need version 1.1.1 on the Mac and on the iPhone or iPad.
 ```
 
+### What's New — Network players (`develop`)
+
+Copy for the next Mac update after 1.1.1 (bump marketing version when you cut the release). iOS remote needs no change for this feature.
+
+```
+Play to a network streamer from Audio Harbor on your Mac.
+
+• UPnP / DLNA players on your home network appear under Network Players, separate from This Host.
+• Output radios switch with the device: Shared, Exclusive and DoP stay for USB DACs; network players get Wi‑Fi friendly, Full, and DSD, SACD, DoP when the player lists DSD.
+• Files the player accepts go untouched. DSF, DFF and SACD go native when supported, as 88.2 kHz PCM on Full, or as CD-rate PCM on Wi‑Fi friendly.
+• Share Library on the Network (Settings → Sharing) so a DLNA app such as mconnect can browse and play your catalogue.
+• The iPhone remote sets the network player's volume. The Mac stays awake while it plays.
+```
+
 ---
 
 ## 5. Screenshots (Mac)
@@ -273,7 +292,7 @@ Fertiger Satz (September 2026, Build 16): [`marketing/app-store/`](marketing/app
 2. **Catalogue** — „The music you already own, by album and artist.“
 3. **Directories** — „Browse your disks as they are. Search all of them at once.“
 4. **AU and AUv3** — „Your own plugins, right on the Deck.“ (Receiver + VU, AUNBandEQ im Rack, Shared · FX)
-5. **Output** — „Shared, Exclusive or DoP, explained in plain words.“
+5. **Output** — „Shared, Exclusive or DoP for a USB DAC; network players get their own radios.“
 
 Texte stehen in `marketing/app-store/screenshots.txt`, die Rohaufnahmen in `raw/`;
 `marketing/app-store/build.sh` setzt alles neu zusammen. Kein Preis im Listing-Bild, weil der
@@ -305,6 +324,8 @@ SACD ISO: stereo area only. Tracks come from the Scarlet Book TOC. Uncompressed 
 Please use your own files or a short CC clip. Do not require ripped commercial SACD images for review.
 
 iPhone remote: this submission also contains the iOS app, a remote for this Mac app (same record, Universal Purchase). The Mac listens on the local network only so the user's own paired iPhone can control playback (com.apple.security.network.server / network.client). See the iOS review notes for the pairing steps.
+
+Network players (Mac): UPnP / DLNA MediaRenderers on the local network can be picked as the output (SSDP discovery). The Mac serves audio over HTTP on the LAN only; nothing leaves the home network. Optional library sharing (Settings → Sharing) exposes the catalogue as a UPnP MediaServer for DLNA apps on the same network. Local Network permission may be requested on macOS 15+.
 ```
 
 Demo-Musik: ein kurzes **eigenes** oder CC-File im Review-Ordner erwähnen, oder Reviewer eigene Dateien nutzen lassen. Keine gerippten Major-Label-ISOs mitschicken.

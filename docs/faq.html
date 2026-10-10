@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FAQ — Audio Harbor</title>
-  <meta name="description" content="Answers about Audio Harbor: Shared, Exclusive and DoP output, DSD and SACD playback, volume, Audio Unit plugins, playlists, the iPhone remote, and the trial." />
+  <meta name="description" content="Answers about Audio Harbor: Shared, Exclusive and DoP output, UPnP network players, DSD and SACD playback, volume, Audio Unit plugins, playlists, the iPhone remote, and the trial." />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -174,8 +174,8 @@
           <li><strong>Exclusive · FX</strong> — the plugin rack is in use; Audio Harbor still holds the DAC at the file’s rate, but the sound is processed.</li>
           <li><strong>Shared · FX</strong> — the plugin rack is in use, through macOS.</li>
           <li><strong>Shared · No external DAC</strong> — Exclusive or DoP is chosen, but no DAC is connected.</li>
-          <li><strong>Network</strong> — the file goes untouched to a network player (Mac).</li>
-          <li><strong>PCM · Network</strong>, <strong>DSD→PCM · Network</strong>, <strong>Wi‑Fi PCM · Network</strong> — the network player gets PCM made from the file.</li>
+          <li><strong>Network</strong> / <strong>DSD · Network</strong> — the file goes untouched to a network player (Mac), including native DSF / DFF / SACD when the player lists DSD.</li>
+          <li><strong>PCM · Network</strong>, <strong>DSD→PCM · Network</strong>, <strong>DoP · Network</strong>, <strong>Wi‑Fi PCM · Network</strong> — the network player gets PCM (or DoP-in-WAV) made from the file.</li>
         </ul>
       </div>
     </details>
@@ -377,15 +377,15 @@
     <details>
       <summary>Can Audio Harbor play to a network streamer, like a Devialet?</summary>
       <div class="answer">
-        <p>Yes, on the Mac. UPnP / DLNA players on your home network — a Devialet Expert, a streamer, some TVs and soundbars — appear in Settings → Output → Device, marked <strong>Network</strong>, next to your DACs. Pick one and the music plays there; the Mac keeps the library and the queue and the player fetches the music over the network.</p>
-        <p>Files the player accepts go to it untouched. Other types go as 24-bit WAV, and DSF, DFF and SACD as 88.2 kHz / 24-bit PCM. Exclusive, DoP and the plugin rack are for DACs on the Mac and do not apply. Songs follow each other without a gap when the player supports it. The iPhone remote sets the player’s volume, and the Mac stays awake while it plays.</p>
+        <p>Yes, on the Mac. UPnP / DLNA players on your home network — a Devialet Expert, a streamer, some TVs and soundbars — appear in Settings → Output → Device under <strong>Network Players</strong>, separate from <strong>This Host</strong> (your Mac’s DACs and speakers). Pick one and the music plays there; the Mac keeps the library and the queue and the player fetches the music over the network.</p>
+        <p>The radios under Output switch with the device. A USB DAC keeps <strong>Shared</strong> / <strong>Exclusive</strong> / <strong>DoP</strong>. A network player gets <strong>Wi‑Fi friendly</strong>, <strong>Full</strong>, and <strong>DSD, SACD, DoP</strong> (greyed out until the player lists DSD). Files the player accepts go untouched; with DSD listed, DSF, DFF and SACD can go native too. Otherwise DSD becomes 88.2 kHz / 24-bit PCM on Full. The plugin rack does not apply on the network path. Songs follow each other without a gap when the player supports it. The iPhone remote sets the player’s volume, and the Mac stays awake while it plays.</p>
       </div>
     </details>
 
     <details>
       <summary>DSD drops out over Wi‑Fi.</summary>
       <div class="answer">
-        <p>DSD converted for the network needs about 4.2 Mbit/s, more with retries on a weak link. Under Settings → Output → <strong>Network stream</strong>, choose <strong>Wi‑Fi</strong>: DSD and SACD then go as CD-quality PCM (44.1 kHz / 16-bit, about 1.4 Mbit/s). FLAC and other files stay untouched. A cable or a strong 5 GHz network helps too.</p>
+        <p>DSD converted for the network needs about 4.2 Mbit/s, more with retries on a weak link. With a network player selected, choose <strong>Wi‑Fi friendly</strong>: DSD and SACD then go as CD-quality PCM (44.1 kHz / 16-bit, about 1.4 Mbit/s). FLAC and other files stay untouched. A cable or a strong 5 GHz network helps too.</p>
       </div>
     </details>
 
