@@ -191,7 +191,8 @@ enum SACDISO {
         if FileManager.default.fileExists(atPath: cache.path),
            let attrs = try? FileManager.default.attributesOfItem(atPath: cache.path),
            let size = attrs[.size] as? NSNumber,
-           size.intValue > 128 {
+           size.intValue > 128,
+           isCurrentCache(cache) {
             return cache
         }
 
@@ -656,6 +657,9 @@ enum SACDISO {
 
     // MARK: - DFF wrap
 
+    /// DSDIFF 1.5 header for raw DSD: FVER, PROP (FS, CHNL, CMPR, ABSS, LSCO), then the DSD chunk
+    /// header, whose size and FRM8's are patched once the data is written. Other players (mconnect,
+    /// anything on FFmpeg) refuse a DFF without FVER and CMPR; our own decoder skips what it does not use.
     private static func dffPreamble(sampleRate: Int, channels: Int) -> Data {
         var prop = Data()
         prop.append(contentsOf: "SND ".utf8)
@@ -669,17 +673,45 @@ enum SACDISO {
         for i in 0..<channels {
             prop.append(contentsOf: (i < ids.count ? ids[i] : "C\(i)  ").utf8)
         }
+        // CMPR: "DSD " and the pstring "not compressed", padded to an even length.
+        var compression = Data("DSD ".utf8)
+        let name = Data("not compressed".utf8)
+        compression.append(UInt8(name.count))
+        compression.append(name)
+        if compression.count % 2 == 1 { compression.append(0) }
+        prop.append(contentsOf: "CMPR".utf8)
+        appendU64BE(&prop, UInt64(compression.count))
+        prop.append(compression)
+        // ABSS: starts at 0:00:00, sample 0. LSCO: 0 = stereo, 65535 = not defined.
+        prop.append(contentsOf: "ABSS".utf8)
+        appendU64BE(&prop, 8)
+        prop.append(Data(count: 8))
+        prop.append(contentsOf: "LSCO".utf8)
+        appendU64BE(&prop, 2)
+        appendU16BE(&prop, channels == 2 ? 0 : 0xFFFF)
 
         var d = Data()
         d.append(contentsOf: "FRM8".utf8)
         appendU64BE(&d, 0)
         d.append(contentsOf: "DSD ".utf8)
+        d.append(contentsOf: "FVER".utf8)
+        appendU64BE(&d, 4)
+        appendU32BE(&d, 0x0105_0000)
         d.append(contentsOf: "PROP".utf8)
         appendU64BE(&d, UInt64(prop.count))
         d.append(prop)
         d.append(contentsOf: "DSD ".utf8)
         appendU64BE(&d, 0)
         return d
+    }
+
+    /// A cached DFF from this header version: FVER is its first chunk. Older caches lack FVER and
+    /// CMPR, so they are extracted again (same file name — nothing is left behind).
+    static func isCurrentCache(_ url: URL) -> Bool {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return false }
+        defer { try? handle.close() }
+        let head = handle.readData(ofLength: 20)
+        return head.count == 20 && head.subdata(in: 16..<20) == Data("FVER".utf8)
     }
 
     // MARK: - Bytes
@@ -748,7 +780,8 @@ enum DFFDST {
         if FileManager.default.fileExists(atPath: cache.path),
            let attrs = try? FileManager.default.attributesOfItem(atPath: cache.path),
            let size = attrs[.size] as? NSNumber,
-           size.intValue > 128 {
+           size.intValue > 128,
+           SACDISO.isCurrentCache(cache) {
             return cache
         }
 

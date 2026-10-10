@@ -15,6 +15,9 @@
   wird es ab dem nächsten Song wieder benutzt.
 - Exclusive und DoP sind nur wählbar, wenn das Gerät sie kann: Exclusive braucht einen externen DAC,
   DoP zusätzlich 176,4 kHz. Auch der Modus lässt sich mitten im Song wechseln.
+- **Netzwerk-Player** (UPnP / DLNA, z. B. ein Devialet Expert oder ein Streamer) stehen mit **Network**
+  in derselben Liste, nach den DACs. Auswählen, und die Musik spielt dort — siehe
+  [Netzwerk-Player](#netzwerk-player-der-mac-spielt-auf-einen-streamer).
 
 | Modus | Wofür | Was passiert |
 |---|---|---|
@@ -54,8 +57,9 @@ umgerechnetes DSD spielt (siehe [DSD as PCM](#dsd-as-pcm-warum-ist-umgerechnetes
 | Shared | umgerechnet in PCM | über macOS |
 | Exclusive | umgerechnet in PCM, exklusiv | bit-perfect |
 | DoP | echtes DSD per DoP | bit-perfect |
+| Netzwerk-Player | Full: PCM 88,2/24; Wi‑Fi friendly: 44,1/16; DSD, SACD, DoP: Datei unverändert wenn der Player DSD listet | unverändert, wenn der Player das Format annimmt, sonst 24-Bit-WAV |
 
-Auf dem Deck steht immer, welcher Weg aktiv ist, z. B. „Exclusive · Bit-perfect“, „Exclusive · DoP“, „Exclusive · DSD→PCM“ oder mit Plugins „Exclusive · FX“.
+Auf dem Deck steht immer, welcher Weg aktiv ist, z. B. „Exclusive · Bit-perfect“, „Exclusive · DoP“, „Exclusive · DSD→PCM“ oder mit Plugins „Exclusive · FX“. Bei einem Netzwerk-Player steht dort „Network“ / „DSD · Network“ (Datei unverändert), „PCM · Network“, „DSD→PCM · Network“, „DoP · Network“ oder „Wi‑Fi PCM · Network“.
 
 ## DSD as PCM: Warum ist umgerechnetes DSD leiser?
 
@@ -86,6 +90,40 @@ Der Frequenzgang ist **linear bis 25 kHz**, danach fällt er steil ab und ist ab
 gedämpft. So bleibt das starke Ultraschall-Rauschen von DSD draußen und spiegelt sich nicht in den
 hörbaren Bereich. Die Filter sind phasenlinear, die Wellenform bleibt also erhalten.
 
+## Netzwerk-Player: der Mac spielt auf einen Streamer
+
+Statt auf einen DAC am Mac kann die App auf einen Player im Heimnetz spielen (UPnP / DLNA), z. B. einen
+Devialet Expert, einen Streamer oder manche Fernseher und Soundbars. Der Mac bleibt der Player mit
+Bibliothek und Warteschlange; der Netzwerk-Player holt sich die Musik über das Heimnetz.
+
+- **Settings → Output → Device** und den Player wählen (er steht mit **Network** in der Liste). Die App
+  sucht laufend nach Playern im Netz; ein neuer erscheint nach wenigen Sekunden.
+- **Was gesendet wird:**
+
+  | Datei | Geht an den Player als |
+  |---|---|
+  | FLAC, WAV, AIFF, ALAC, AAC, MP3, die der Player annimmt | die Datei selbst, unverändert |
+  | ein Format, das der Player nicht annimmt | 24-Bit-WAV mit der Abtastrate der Datei |
+  | DSF, DFF, SACD mit **Full** | PCM, 88,2 kHz / 24 Bit — mit der Einstellung *DSD as PCM* |
+  | DSF, DFF, SACD mit **DSD, SACD, DoP** (wenn der Player DSD listet) | die Datei unverändert (SACD als DFF) |
+  | DSF, DFF, SACD mit **Wi‑Fi friendly** | PCM, 44,1 kHz / 16 Bit |
+
+- **Radios wechseln mit dem Gerät:** Bei einem USB-DAC stehen Shared / Exclusive / DoP. Bei einem
+  Netzwerk-Player **Wi‑Fi friendly** / **Full** / **DSD, SACD, DoP** (nur wenn der Player DSD
+  annimmt). Nimm Wi‑Fi friendly, wenn DSD über WLAN aussetzt.
+- **Exclusive und DoP** gelten nur für DACs am Mac. Auch das Plugin-Rack wirkt beim Netzwerk-Player nicht.
+- **Lückenlos** zwischen Songs, wenn der Player es kann (UPnP „SetNext“). Sonst gibt es beim Wechsel eine
+  kurze Pause.
+- **Lautstärke:** Der Regler am iPhone-Remote und die Lautstärketasten am iPhone stellen die Lautstärke
+  des Players ein.
+- **Der Mac schläft nicht ein**, solange der Player spielt. Mac und Audio Harbor müssen laufen.
+- **Ist der Player aus oder nicht im Netz**, steht das unter Device. Ist er wieder da, erscheint er wieder
+  in der Liste.
+- **Findet die App keinen Player:** gleiches Netz (kein Gast-WLAN), Player eingeschaltet und UPnP am Player
+  aktiv (beim Devialet im Configurator). Ab macOS 15 fragt macOS nach dem lokalen Netzwerk — **Erlauben**;
+  sonst unter Systemeinstellungen → Datenschutz & Sicherheit → Lokales Netzwerk → Audio Harbor einschalten.
+- Gehört zur Freischaltung, wie jede Wiedergabe.
+
 ## Plugins (Rack)
 
 **Früher:** Sobald ein Plugin (z. B. ein EQ) im Rack war, gab die App den DAC ab und spielte über macOS
@@ -109,6 +147,7 @@ mit Plugins für sich (**Exclusive · FX**):
 Kurz: Plugins werfen dich nicht mehr auf Shared zurück. Du behältst den DAC und die richtige Abtastrate,
 nur das Plugin verändert den Klang — so wie bei Audirvāna und Fidelia.
 
+- Auf einem Netzwerk-Player wirkt das Rack nicht: Er bekommt die Datei bzw. das umgerechnete PCM ohne Plugins.
 - Unterstützt werden AUv3 und klassische AU-Plugins (Stereo).
   Klassische Plugins, die nicht „sandbox-safe“ sind (z. B. UAD, Valhalla), laufen in einem eigenen Prozess von macOS.
 
@@ -138,9 +177,26 @@ Die Musik spielt auf dem Mac, das iPhone ist die Fernbedienung.
   auf dem der Mac gerade spielt — den DAC selbst, wenn er eine Lautstärkeregelung hat, sonst den Mac-Ausgang.
   Der DAC regelt selbst, die Musik bleibt bit-perfect, auch in Exclusive und DoP.
   Drehst du am DAC, zieht das iPhone mit. DACs mit festem Ausgangspegel haben keine Regelung — dann gibt es
-  am iPhone keinen Regler, und du regelst am Verstärker.
+  am iPhone keinen Regler, und du regelst am Verstärker. Spielt der Mac auf einen Netzwerk-Player, regelt
+  das iPhone dessen Lautstärke.
 - Die Lautstärketasten steuern den Mac nur, solange die Remote-App offen ist und keine andere App auf dem
   iPhone Musik spielt. Nach dem Trennen hat das iPhone wieder seine eigene Lautstärke.
+
+## Sharing: Musik vom Mac auf dem iPhone hören (DLNA)
+
+Der Mac gibt die Bibliothek im Heimnetz frei, eine Player-App auf dem iPhone spielt sie selbst ab.
+
+- **Share Library on the Network** einschalten. Der Mac heißt im Netz „Audio Harbor (Name des Macs)“.
+- Auf dem iPhone eine DLNA-App öffnen, z. B. **mconnect Player Lite** (kostenlos), den Mac als Server wählen
+  und durchblättern: **Albums**, **Artists**, **Directories**, **Playlists**, **Labels** — wie am Mac.
+- Die App bekommt die Dateien unverändert (FLAC, WAV, AIFF, ALAC, AAC, MP3, DSF, DFF) und spielt sie selbst ab;
+  ob sie DSD abspielt, hängt von der App ab. SACD-ISO-Titel werden vorher ausgepackt, der erste Start dauert
+  dann einige Sekunden. DFF-Dateien mit Kapiteln werden nicht freigegeben.
+- Der Mac muss an sein und Audio Harbor laufen. Solange ein Song gestreamt wird, schläft der Mac nicht ein.
+- **Achtung:** Solange die Freigabe an ist, kann jeder im selben WLAN die Bibliothek sehen und abspielen —
+  DLNA kennt keine Anmeldung. Nur im eigenen Netz einschalten.
+- Gehört zur Freischaltung: Nach Ablauf der Testphase lässt sich noch blättern, aber nichts abspielen.
+- Beim ersten Einschalten fragt macOS (ab macOS 15) nach dem lokalen Netzwerk: **Erlauben**.
 
 ## License
 

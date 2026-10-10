@@ -61,7 +61,7 @@
 
 ### Explicitly out of MVP
 - Video, converter suite, CUE sheets, multi-channel SACD, DST encoder / `.dst` container
-- DLNA / Chromecast / AirPlay multi-room as product focus
+- DLNA / Chromecast / AirPlay multi-room as product focus (one UPnP renderer as an output and a DLNA music server are built, see Platform Pro)
 - Streaming services (Qobuz, Tidal, etc.)
 - Heavy parametric EQ / DSP playground
 - Cloud sync / accounts
@@ -95,12 +95,54 @@ Ship only after MVP feels effortless. Pro adds power *behind* the same calm UI.
 - NAS / network volumes polish (SMB reliability)
 - iCloud / folder sync of playlists (not the audio files)
 
+#### External DLNA servers as a library source — not planned
+
+**Decision:** Audio Harbor does not mount DLNA / UPnP media servers (NAS, MinimServer, …) as a library.
+Mount the NAS share (SMB) in macOS and add it as a directory instead.
+
+**Why:**
+- Nearly every DLNA server runs on a NAS that also shares files. As a directory the share gets
+  everything: full tags, artwork, search, playlists, labels, bit-perfect Exclusive / DoP, DSD and SACD ISO.
+  Through DLNA only what the server exposes: its own tree, often thin tags, often no DSD or converted files.
+- The engine plays files. Exclusive, DoP and SACD extraction read the file itself; an HTTP stream would
+  have to be downloaded and cached first — a lot of work for what a mounted share already gives.
+- A second library source with its own rules is the feature maze the North Star rules out. SMB
+  reliability (above) is the better investment.
+
+**When it would make sense:** a server that offers only DLNA and no file share (rare), or someone who
+wants a server's own browsing (MinimServer's tag tree) — a niche.
+
+**The one interesting case:** Audio Harbor as a pure control point — the network player (the Devialet)
+pulls straight from the NAS, so the Mac could sleep. mconnect / BubbleUPnP do that today (NAS as source,
+Devialet as player).
+
+**If it ever comes:** browse-only in its own view, play only on a network player. The local engine
+never learns HTTP sources.
+
+**Variant: the iPhone app as the control point — also not planned.** The iPhone would browse the
+DLNA server and tell the Devialet what to play; the Mac could sleep and the app would still play nothing
+itself. It fits "the iPhone steers", but two things stop it:
+
+- **The queue lives in the app.** A plain UPnP AV renderer such as the Devialet knows only the current and
+  the next track; the control point has to hand over the third. iOS suspends the app shortly after it
+  leaves the screen, so the music stops after at most two tracks. Apps like mconnect keep themselves alive
+  with silent background audio — App Review dislikes that. OpenHome renderers (Linn …) keep the queue
+  themselves; the Devialet is not known to.
+- **SSDP on iOS needs the multicast entitlement** (`com.apple.developer.networking.multicast`), granted by
+  Apple on request, not by default.
+
+And it competes with mconnect, BubbleUPnP and others at their own game; Audio Harbor's strength is the
+library on the Mac. The robust path already exists: the Mac steers and serves (stays awake, long queues,
+gapless SetNext), the iPhone is the remote. NAS straight to the Devialet without the Mac: mconnect.
+
 ### Platform Pro
 - [x] iPhone remote for the Mac engine — Bonjour + pairing code; browse, search, queue, transport; DAC hardware volume from the slider and the iPhone's volume buttons (ships with Mac 1.1)
 - Listen on iPhone — the Mac streams to the paired iPhone on the home network (see below)
 - [x] iPad as a remote too — the same layout as the iPhone, centred
 - [x] Playlists and labels from the remote — long-press a song: Add to Playlist… / Labels…, tap to put it in or take it out; playing a song or Play all stays in the list and marks the playing row (Mac + iOS 1.1.1, protocol 2)
 - [x] Search on the remote like the Mac's catalogue search — Dirs across every directory, Albums / Artists / Lists with a matching song (Mac + iOS 1.1.1)
+- Play to a UPnP renderer (Mac) — a network streamer / amplifier such as the Devialet Expert shows up as an output device; files untouched where the player takes them, DSD as PCM, Wi‑Fi mode; part of the one-time unlock, no extra charge — built for the next release (see [`UPNP.md`](UPNP.md))
+- Share the library as a UPnP / DLNA music server (Mac) — Settings → Sharing; a player such as mconnect browses it and plays on the iPhone; part of the one-time unlock — built for the next release (see [`UPNP.md`](UPNP.md))
 - Mac menu bar mini player + notch-friendly compact mode
 - Continuity: handoff queue Mac ↔ iPhone (same library roots when possible)
 - CarPlay (iOS) — later, carefully

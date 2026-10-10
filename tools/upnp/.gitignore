@@ -1,0 +1,6 @@
+.build/
+test-files/
+upnp-spike-*/
+upnp-renderer-sim-*/
+dist/
+upnp-media-server-*/

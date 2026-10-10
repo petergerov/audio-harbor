@@ -54,7 +54,8 @@ final class MacAudioDeviceController: @unchecked Sendable {
                 uid: uid,
                 name: deviceName(id) ?? "Device \(id)",
                 supportsExclusive: external,
-                supportsDoP: external && supportsDoP(device: id)
+                supportsDoP: external && supportsDoP(device: id),
+                kind: .local
             )
         }
     }

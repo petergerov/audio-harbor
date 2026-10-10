@@ -30,4 +30,15 @@ enum DefaultsKey {
     static let remoteEnabled = "audioharbor.remote.enabled"
     static let remoteServerID = "audioharbor.remote.serverID"
     static let remotePort = "audioharbor.remote.port"
+
+    // Sharing (the library as a UPnP / DLNA music server)
+    static let sharingEnabled = "audioharbor.sharing.enabled"
+    static let sharingDeviceID = "audioharbor.sharing.deviceID"
+    static let sharingPort = "audioharbor.sharing.port"
+
+    // UPnP output — HTTP media for network renderers
+    static let mediaHTTPPort = "audioharbor.upnp.mediaHTTPPort"
+    static let networkStreamQuality = "audioharbor.upnp.networkStreamQuality"
+    /// Per-player DSD mode (`upnp:<UDN>` → `NetworkDsdMode` raw value).
+    static let networkDsdModes = "audioharbor.upnp.networkDsdModes"
 }

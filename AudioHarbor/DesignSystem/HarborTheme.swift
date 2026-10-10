@@ -294,13 +294,20 @@ struct FormatBadge: View {
     /// Active output path ("Shared", "Exclusive · DoP", …). Deck only — the
     /// catalogue lists files, which have no path until they play.
     var path: String?
+    /// When set, replaces format · rate (rare). Network Wi‑Fi / DSD→PCM use `path` instead
+    /// so the catalogue format (DSF, SACD, …) stays visible.
+    var liveLabel: String? = nil
 
     var body: some View {
         HStack(spacing: 5) {
-            Text(format.rawValue)
-            if let rateDetail {
-                Text("·")
-                Text(rateDetail)
+            if let liveLabel, !liveLabel.isEmpty {
+                Text(liveLabel)
+            } else {
+                Text(format.rawValue)
+                if let rateDetail {
+                    Text("·")
+                    Text(rateDetail)
+                }
             }
             if let path, !path.isEmpty {
                 Text("·")

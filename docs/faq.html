@@ -105,6 +105,7 @@
     <a href="#plugins">Plugins</a>
     <a href="#library">Library &amp; playlists</a>
     <a href="#remote">iPhone &amp; iPad remote</a>
+    <a href="#network">Network players &amp; sharing</a>
     <a href="#purchase">Trial &amp; purchase</a>
   </div>
 
@@ -173,6 +174,8 @@
           <li><strong>Exclusive · FX</strong> — the plugin rack is in use; Audio Harbor still holds the DAC at the file’s rate, but the sound is processed.</li>
           <li><strong>Shared · FX</strong> — the plugin rack is in use, through macOS.</li>
           <li><strong>Shared · No external DAC</strong> — Exclusive or DoP is chosen, but no DAC is connected.</li>
+          <li><strong>Network</strong> — the file goes untouched to a network player (Mac).</li>
+          <li><strong>PCM · Network</strong>, <strong>DSD→PCM · Network</strong>, <strong>Wi‑Fi PCM · Network</strong> — the network player gets PCM made from the file.</li>
         </ul>
       </div>
     </details>
@@ -364,6 +367,40 @@
       <div class="answer">
         <p>Check that <strong>Allow Remote Control</strong> is on and the Mac is awake, that both are on the same network (guest networks often keep devices apart), and that local network access is allowed on the iPhone under Settings → Privacy &amp; Security → Local Network → Audio Harbor.</p>
         <p>If the remote says it can't reach the Mac right after the Mac app restarted, turn Wi-Fi on the iPhone off and on again and tap the Mac once more. From 1.1.1 the Mac keeps the same port across restarts, so this should be rare.</p>
+      </div>
+    </details>
+  </section>
+
+  <section id="network">
+    <h2>Network players &amp; sharing</h2>
+
+    <details>
+      <summary>Can Audio Harbor play to a network streamer, like a Devialet?</summary>
+      <div class="answer">
+        <p>Yes, on the Mac. UPnP / DLNA players on your home network — a Devialet Expert, a streamer, some TVs and soundbars — appear in Settings → Output → Device, marked <strong>Network</strong>, next to your DACs. Pick one and the music plays there; the Mac keeps the library and the queue and the player fetches the music over the network.</p>
+        <p>Files the player accepts go to it untouched. Other types go as 24-bit WAV, and DSF, DFF and SACD as 88.2 kHz / 24-bit PCM. Exclusive, DoP and the plugin rack are for DACs on the Mac and do not apply. Songs follow each other without a gap when the player supports it. The iPhone remote sets the player’s volume, and the Mac stays awake while it plays.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>DSD drops out over Wi‑Fi.</summary>
+      <div class="answer">
+        <p>DSD converted for the network needs about 4.2 Mbit/s, more with retries on a weak link. Under Settings → Output → <strong>Network stream</strong>, choose <strong>Wi‑Fi</strong>: DSD and SACD then go as CD-quality PCM (44.1 kHz / 16-bit, about 1.4 Mbit/s). FLAC and other files stay untouched. A cable or a strong 5 GHz network helps too.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>My network player does not show up.</summary>
+      <div class="answer">
+        <p>Check that the player is on and on the same network as the Mac (guest networks often keep devices apart), and that UPnP / DLNA is enabled on the player — on a Devialet Expert in the Devialet Configurator. On macOS 15 and later, allow Audio Harbor under System Settings → Privacy &amp; Security → Local Network. If the macOS firewall asks, allow incoming connections: the player fetches the music from the Mac.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Can I listen to my library on my iPhone?</summary>
+      <div class="answer">
+        <p>Yes, with a DLNA player app such as mconnect. On the Mac, turn on Settings → Sharing → <strong>Share Library on the Network</strong>. In the app, pick “Audio Harbor (your Mac)” and browse Albums, Artists, Directories, Playlists and Labels. The app gets the files as they are and plays them itself — whether it plays DSD depends on the app. The Mac must be awake with Audio Harbor open.</p>
+        <p>While sharing is on, anyone on your network can browse and play the library — DLNA has no sign-in. Turn it on at home only.</p>
       </div>
     </details>
   </section>

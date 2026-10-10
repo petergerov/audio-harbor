@@ -127,6 +127,16 @@ final class CoreAudioPlaybackEngine: PlaybackEngine {
         onTrackEnded = handler
     }
 
+    func prepareNext(_ track: Track?) async {}
+
+    func adoptPreparedNext() -> Track? { nil }
+
+    func setNetworkStreamQuality(_ quality: NetworkStreamQuality) {}
+
+    func setNetworkDsdMode(_ mode: NetworkDsdMode) {}
+
+    func networkPlayerFormats(uid: String) async -> NetworkPlayerFormats? { nil }
+
     // MARK: - Output volume
 
     func setOutputVolume(_ level: Double) {

@@ -401,7 +401,10 @@ struct NowPlayingView: View {
                         format: track.format,
                         sampleRateHz: track.sampleRateHz,
                         bitDepth: track.bitDepth,
-                        path: playback.pathLabel
+                        path: playback.pathLabel,
+                        liveLabel: playback.isNetworkOutputSelected
+                            ? playback.activeFormatLabel
+                            : nil
                     )
                     .minimumScaleFactor(0.8)
                     .padding(.horizontal, 52)

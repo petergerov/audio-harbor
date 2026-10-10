@@ -9,7 +9,7 @@
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Audio Harbor uses your local network so your iPhone can find your Mac and control playback on it.</string>
+	<string>Audio Harbor uses your local network so your iPhone can find your Mac and control playback on it, so music players at home can find the library you share from your Mac, and so Audio Harbor can find network players such as a Devialet.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_audioharbor._tcp</string>

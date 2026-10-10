@@ -294,8 +294,15 @@ enum OutputMode: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+/// Local Core Audio vs a UPnP / DLNA renderer on the LAN (`upnp:<UDN>`).
+enum OutputDeviceKind: String, Sendable, Hashable {
+    case local
+    case network
+}
+
 /// An output Audio Harbor can play to. `uid` survives unplugging and reboots; the numeric
-/// Core Audio device ID does not, so the user's pick is stored by `uid`.
+/// Core Audio device ID does not, so the user's pick is stored by `uid`. Network renderers use
+/// `upnp:<UDN>` so the pick comes back after a power cycle the same way a DAC does.
 struct OutputDevice: Identifiable, Hashable, Sendable {
     var uid: String
     var name: String
@@ -303,13 +310,18 @@ struct OutputDevice: Identifiable, Hashable, Sendable {
     var supportsExclusive: Bool
     /// External and takes 176.4 kHz, the rate DSD64 needs as DoP.
     var supportsDoP: Bool
+    var kind: OutputDeviceKind = .local
 
     var id: String { uid }
 
     var capabilityLabel: String {
-        if supportsDoP { return "Exclusive · DoP" }
-        if supportsExclusive { return "Exclusive" }
-        return "Shared only"
+        switch kind {
+        case .network: return "Network"
+        case .local:
+            if supportsDoP { return "Exclusive · DoP" }
+            if supportsExclusive { return "Exclusive" }
+            return "Shared only"
+        }
     }
 }
 
@@ -331,6 +343,107 @@ struct OutputStatus: Equatable, Sendable {
 enum DSDStrategy: String, Sendable {
     case preferDoP
     case convertToPCM
+}
+
+/// How Audio Harbor prepares audio for a UPnP / DLNA network player.
+enum NetworkStreamQuality: String, CaseIterable, Identifiable, Sendable {
+    /// Passthrough when the renderer accepts the file; DSD per `NetworkDsdMode`.
+    case full
+    /// DSF / DFF / SACD → live 44.1 kHz / 16-bit PCM; other formats stay untouched.
+    case wifi
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .full: "Full"
+        case .wifi: "Wi‑Fi"
+        }
+    }
+}
+
+/// How DSF / DFF / SACD leave for a network player when Stream is Full.
+enum NetworkDsdMode: String, CaseIterable, Identifiable, Sendable {
+    /// File untouched when the player lists that DSD type; else ~88.2 kHz / 24-bit PCM.
+    case auto
+    /// Always ~88.2 kHz / 24-bit PCM WAV.
+    case pcm
+    /// DoP packed into 24-bit WAV at DSD rate / 16.
+    case dop
+
+    var id: String { rawValue }
+}
+
+/// Radio choices for a network player (replaces Shared / Exclusive / DoP in Settings).
+enum NetworkOutputChoice: String, CaseIterable, Identifiable, Sendable {
+    case wifiFriendly
+    case full
+    /// Bit-perfect DSF / DFF / SACD when the player lists them (Full + Auto).
+    case dsd
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .wifiFriendly: "Wi‑Fi friendly"
+        case .full: "Full"
+        case .dsd: "DSD, SACD, DoP"
+        }
+    }
+
+    var blurb: String {
+        switch self {
+        case .wifiFriendly: "DSD as CD-rate PCM — light on the link"
+        case .full: "Best PCM the player accepts"
+        case .dsd: "Bit-perfect DSD when the player takes it"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .wifiFriendly:
+            "Only DSF, DFF and SACD become 44.1 kHz / 16-bit PCM (~1.4 Mbit/s). FLAC, ALAC, MP3 and WAV are sent as the file."
+        case .full:
+            "Sends the file untouched when the renderer lists it. DSF and SACD become 88.2 kHz / 24-bit WAV (~4.2 Mbit/s)."
+        case .dsd:
+            "DSF, DFF and SACD go to the player untouched when it lists that type (SACD as extracted DFF). Otherwise they play as 88.2 kHz / 24-bit PCM. Needs a player that advertises DSD."
+        }
+    }
+
+    var streamQuality: NetworkStreamQuality {
+        switch self {
+        case .wifiFriendly: .wifi
+        case .full, .dsd: .full
+        }
+    }
+
+    var dsdMode: NetworkDsdMode {
+        switch self {
+        case .wifiFriendly, .full: .pcm
+        case .dsd: .auto
+        }
+    }
+
+    static func from(quality: NetworkStreamQuality, dsd: NetworkDsdMode) -> NetworkOutputChoice {
+        if quality == .wifi { return .wifiFriendly }
+        if dsd == .auto || dsd == .dop { return .dsd }
+        return .full
+    }
+}
+
+/// DSD containers a network player may take untouched.
+enum NetworkDsdContainer: String, Sendable, Hashable {
+    case dsf
+    case dff
+}
+
+/// What one network player listed for DSD (from GetProtocolInfo).
+struct NetworkPlayerFormats: Equatable, Sendable {
+    var online: Bool
+    var nativeDsd: [NetworkDsdContainer]
+    var volume: Double?
+
+    var supportsNativeDSD: Bool { !nativeDsd.isEmpty }
 }
 
 /// Make-up gain for DSD played as PCM (Shared, Exclusive, or with effects). SACD's 0 dB is

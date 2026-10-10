@@ -34,6 +34,18 @@ protocol PlaybackEngine: AnyObject {
     /// Called once when the loaded track reaches its end (not on pause/stop/seek),
     /// with the track that ended so late signals can be matched against it.
     func setTrackEndedHandler(_ handler: @escaping (Track) -> Void)
+    /// Arms the following track for gapless hand-off when the output supports it (UPnP
+    /// `SetNextAVTransportURI`). No-op on Core Audio. Pass `nil` to clear.
+    func prepareNext(_ track: Track?) async
+    /// After track-end, takes over a previously prepared next track without reloading.
+    /// Returns that track when the engine already holds it; otherwise `nil`.
+    func adoptPreparedNext() -> Track?
+    /// Full vs Wi‑Fi PCM for UPnP output. No-op on Core Audio.
+    func setNetworkStreamQuality(_ quality: NetworkStreamQuality)
+    /// Auto / PCM / DoP for DSD on a network player. No-op on Core Audio.
+    func setNetworkDsdMode(_ mode: NetworkDsdMode)
+    /// What a network player lists for DSD (`upnp:<UDN>`). Nil when offline or not a network UID.
+    func networkPlayerFormats(uid: String) async -> NetworkPlayerFormats?
 }
 
 enum PlaybackEngineError: LocalizedError {

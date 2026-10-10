@@ -14,6 +14,14 @@ final class AppModel {
     let license: LicenseService
     /// LAN remote control (Mac engine). Created after `self` exists.
     private(set) var remote: RemoteControlService!
+    #if os(macOS)
+    /// The library as a UPnP / DLNA music server for players on the network; off until turned on.
+    let sharing: MusicServerService
+    /// Finds UPnP / DLNA renderers for the Settings output picker.
+    let rendererBrowser = SSDPBrowser()
+    /// Serves track files to a picked network renderer (Range / tokens).
+    let mediaServer = MediaHTTPServer()
+    #endif
     let remoteBrowser = RemoteBrowser()
     let remoteController = RemoteController()
 
@@ -46,13 +54,31 @@ final class AppModel {
 
     init() {
         let effects = EffectHost()
-        let engine = CoreAudioPlaybackEngine(effectHost: effects)
+        #if os(macOS)
+        let engine: any PlaybackEngine = RoutingPlaybackEngine(
+            local: CoreAudioPlaybackEngine(effectHost: effects),
+            network: UPnPPlaybackEngine(mediaServer: mediaServer, browser: rendererBrowser)
+        )
+        #else
+        let engine: any PlaybackEngine = CoreAudioPlaybackEngine(effectHost: effects)
+        #endif
         let license = LicenseService()
+        let library = LibraryService()
         self.effects = effects
-        self.library = LibraryService()
+        self.library = library
         self.license = license
-        self.playback = PlaybackService(engine: engine, license: license)
-        self.playlists = PlaylistService()
+        let playback = PlaybackService(engine: engine, license: license)
+        self.playback = playback
+        let playlists = PlaylistService()
+        self.playlists = playlists
+        #if os(macOS)
+        self.sharing = MusicServerService(library: library, playlists: playlists, license: license)
+        self.rendererBrowser.onChange = { renderers in
+            playback.setNetworkOutputs(renderers.map(\.asOutputDevice))
+        }
+        self.rendererBrowser.start()
+        self.mediaServer.start()
+        #endif
         self.remote = RemoteControlService(appModel: self)
         #if DEBUG && os(iOS)
         if let fixture = RemoteScreenshotFixture.fromLaunchArguments() {

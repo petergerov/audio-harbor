@@ -50,6 +50,40 @@ final class PlaybackService {
         }
     }
 
+    /// Network (UPnP): Full vs Wi‑Fi (DSD/SACD → CD-rate PCM; other formats untouched).
+    var networkStreamQuality: NetworkStreamQuality = .full {
+        didSet {
+            guard networkStreamQuality != oldValue else { return }
+            UserDefaults.standard.set(networkStreamQuality.rawValue, forKey: DefaultsKey.networkStreamQuality)
+            engine.setNetworkStreamQuality(networkStreamQuality)
+            reloadNetworkTrackIfNeeded()
+        }
+    }
+
+    /// Per-player DSD mode for network output (Auto / PCM / DoP).
+    var networkDsdMode: NetworkDsdMode = .pcm {
+        didSet {
+            guard networkDsdMode != oldValue else { return }
+            engine.setNetworkDsdMode(networkDsdMode)
+            if let uid = outputDeviceUID, uid.hasPrefix("upnp:") {
+                storeDsdMode(networkDsdMode, for: uid)
+            }
+            reloadNetworkTrackIfNeeded()
+        }
+    }
+
+    /// Settings radios for a network player (Wi‑Fi friendly / Full / DSD, SACD, DoP).
+    var networkOutputChoice: NetworkOutputChoice {
+        get { NetworkOutputChoice.from(quality: networkStreamQuality, dsd: networkDsdMode) }
+        set { selectNetworkOutputChoice(newValue) }
+    }
+
+    /// What the picked network player lists for DSD (nil when not a network pick).
+    private(set) var networkPlayerFormats: NetworkPlayerFormats?
+
+    /// Skips track reload while applying stream + DSD together from one radio tap.
+    private var suppressNetworkReload = false
+
     var repeatMode: RepeatMode = .off {
         didSet {
             guard repeatMode != oldValue else { return }
@@ -73,6 +107,8 @@ final class PlaybackService {
             guard outputDeviceUID != oldValue else { return }
             UserDefaults.standard.set(outputDeviceUID, forKey: DefaultsKey.outputDevice)
             rememberOutputDeviceName()
+            applyStoredDsdMode(for: outputDeviceUID)
+            refreshNetworkFormats()
             moveToOutputDevice()
         }
     }
@@ -83,6 +119,11 @@ final class PlaybackService {
     /// The outputs on this Mac and what the active one can do. Empty on iOS.
     private(set) var outputStatus = OutputStatus()
 
+    /// Core Audio status before network renderers are merged in.
+    private var localOutputStatus = OutputStatus()
+    /// Live UPnP renderers (`upnp:<UDN>`), published by `SSDPBrowser` on macOS.
+    private var networkOutputs: [OutputDevice] = []
+
     /// Hardware volume (0…1) of the output playback goes to — the DAC, or the Mac's own output.
     /// Nil when that output has no volume control (a fixed-level DAC).
     private(set) var outputVolume: Double?
@@ -91,6 +132,35 @@ final class PlaybackService {
     var isOutputDeviceMissing: Bool {
         guard let outputDeviceUID else { return false }
         return !outputStatus.devices.contains { $0.uid == outputDeviceUID }
+    }
+
+    /// Whether the stored pick is a network renderer (even if it is offline right now).
+    var isNetworkOutputSelected: Bool {
+        outputDeviceUID?.hasPrefix("upnp:") == true
+    }
+
+    /// Merges live UPnP renderers into the output list. Local Core Audio devices stay as they are.
+    func setNetworkOutputs(_ devices: [OutputDevice]) {
+        networkOutputs = devices
+        publishOutputStatus()
+        refreshNetworkFormats()
+    }
+
+    /// Re-reads GetProtocolInfo for the picked network player (Settings gates the DSD radio on it).
+    func refreshNetworkFormats() {
+        guard let uid = outputDeviceUID, uid.hasPrefix("upnp:") else {
+            networkPlayerFormats = nil
+            return
+        }
+        Task {
+            let formats = await engine.networkPlayerFormats(uid: uid)
+            guard outputDeviceUID == uid else { return }
+            networkPlayerFormats = formats
+            // DSD radio needs a player that lists DSD — fall back to Full if this one does not.
+            if networkOutputChoice == .dsd, let formats, formats.online, !formats.supportsNativeDSD {
+                networkOutputChoice = .full
+            }
+        }
     }
 
     /// What actually plays: the stored choice where the output can take it, else the next step
@@ -145,15 +215,23 @@ final class PlaybackService {
            let level = DSDPCMLevel(rawValue: UserDefaults.standard.integer(forKey: DefaultsKey.dsdPCMLevel)) {
             dsdPCMLevel = level
         }
+        if let raw = UserDefaults.standard.string(forKey: DefaultsKey.networkStreamQuality),
+           let quality = NetworkStreamQuality(rawValue: raw) {
+            networkStreamQuality = quality
+        }
         DSDConversion.gain = dsdPCMLevel.linearGain
         engine.setOutputMode(outputMode)
+        engine.setNetworkStreamQuality(networkStreamQuality)
         // Assigned in init, so didSet does not run — hand the engine the pick directly.
         outputDeviceName = UserDefaults.standard.string(forKey: DefaultsKey.outputDeviceName)
         outputDeviceUID = UserDefaults.standard.string(forKey: DefaultsKey.outputDevice)
+        applyStoredDsdMode(for: outputDeviceUID)
+        engine.setNetworkDsdMode(networkDsdMode)
         engine.setOutputDevice(uid: outputDeviceUID)
+        refreshNetworkFormats()
         engine.setOutputStatusHandler { [weak self] status in
-            self?.outputStatus = status
-            self?.rememberOutputDeviceName()
+            self?.localOutputStatus = status
+            self?.publishOutputStatus()
         }
         engine.setTrackEndedHandler { [weak self] endedTrack in
             self?.advanceAfterTrackEnd(after: endedTrack)
@@ -265,7 +343,40 @@ final class PlaybackService {
         }
         queueEnded = false
         queueIndex = index
-        Task { await loadAndPlay(queue[index]) }
+        let next = queue[index]
+        // Gapless: the network engine already promoted SetNext — take it without reloading.
+        if let adopted = engine.adoptPreparedNext(), adopted.id == next.id {
+            currentTrack = next
+            syncFromEngine()
+            startSyncing()
+            Task { await prepareFollowingTrack() }
+            return
+        }
+        Task { await loadAndPlay(next) }
+    }
+
+    /// Arms SetNextAVTransportURI for the track after the current one (network output only).
+    private func prepareFollowingTrack() async {
+        guard let peek = peekNextIndex() else {
+            await engine.prepareNext(nil)
+            return
+        }
+        await engine.prepareNext(queue[peek])
+    }
+
+    private func peekNextIndex() -> Int? {
+        guard !queue.isEmpty else { return nil }
+        if playOrder.count != queue.count {
+            return nil
+        }
+        let next = orderPosition + 1
+        if next < playOrder.count {
+            return playOrder[next]
+        }
+        if repeatMode == .all {
+            return playOrder.first
+        }
+        return nil
     }
 
     /// Next queue index in play order. `nil` when the order ran out and we do not wrap.
@@ -343,6 +454,24 @@ final class PlaybackService {
         }
     }
 
+    /// Core Audio devices plus live network renderers. When a network pick is online it is the
+    /// active output (Exclusive / DoP off — those need a local DAC).
+    private func publishOutputStatus() {
+        var devices = localOutputStatus.devices
+        devices.append(contentsOf: networkOutputs)
+        // Capabilities / footnotes follow the Device menu pick, not a leftover hog or system default.
+        var active = localOutputStatus.activeUID
+        if let uid = outputDeviceUID {
+            if uid.hasPrefix("upnp:"), networkOutputs.contains(where: { $0.uid == uid }) {
+                active = uid
+            } else if devices.contains(where: { $0.uid == uid }) {
+                active = uid
+            }
+        }
+        outputStatus = OutputStatus(devices: devices, activeUID: active)
+        rememberOutputDeviceName()
+    }
+
     /// Keeps the last known name of the picked output; an unplugged device keeps its old one.
     private func rememberOutputDeviceName() {
         let name: String?
@@ -407,6 +536,7 @@ final class PlaybackService {
                 if position > 0 { engine.seek(to: position) }
                 syncFromEngine()
             }
+            await prepareFollowingTrack()
         } catch {
             guard generation == loadGeneration else { return }
             syncFromEngine()
@@ -465,5 +595,51 @@ final class PlaybackService {
         }
         license.requestUnlock()
         return false
+    }
+
+    // MARK: - Network output choice
+
+    private func selectNetworkOutputChoice(_ choice: NetworkOutputChoice) {
+        let quality = choice.streamQuality
+        let dsd = choice.dsdMode
+        guard quality != networkStreamQuality || dsd != networkDsdMode else { return }
+        suppressNetworkReload = true
+        networkStreamQuality = quality
+        networkDsdMode = dsd
+        suppressNetworkReload = false
+        reloadNetworkTrackIfNeeded()
+    }
+
+    private func reloadNetworkTrackIfNeeded() {
+        guard !suppressNetworkReload, isNetworkOutputSelected, currentTrack != nil else { return }
+        reloadCurrentTrack { engine.setOutputDevice(uid: outputDeviceUID) }
+    }
+
+    private func applyStoredDsdMode(for uid: String?) {
+        let mode = storedDsdMode(for: uid) ?? .pcm
+        guard mode != networkDsdMode else {
+            engine.setNetworkDsdMode(mode)
+            return
+        }
+        suppressNetworkReload = true
+        networkDsdMode = mode
+        suppressNetworkReload = false
+    }
+
+    private func storedDsdMode(for uid: String?) -> NetworkDsdMode? {
+        guard let uid, uid.hasPrefix("upnp:") else { return nil }
+        let map = UserDefaults.standard.dictionary(forKey: DefaultsKey.networkDsdModes) as? [String: String] ?? [:]
+        guard let raw = map[uid] else { return nil }
+        return NetworkDsdMode(rawValue: raw)
+    }
+
+    private func storeDsdMode(_ mode: NetworkDsdMode, for uid: String) {
+        var map = UserDefaults.standard.dictionary(forKey: DefaultsKey.networkDsdModes) as? [String: String] ?? [:]
+        if mode == .pcm {
+            map.removeValue(forKey: uid)
+        } else {
+            map[uid] = mode.rawValue
+        }
+        UserDefaults.standard.set(map, forKey: DefaultsKey.networkDsdModes)
     }
 }
