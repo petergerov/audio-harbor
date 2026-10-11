@@ -9,7 +9,7 @@
 | App shape | One shared target via XcodeGen → macOS (player) + iOS (remote for the Mac) |
 | Persistence | SQLite+FTS5 catalogue in Application Support; portable library file for playlists/labels (see below) |
 | Metadata | AVFoundation + TagLib-style fallback later for exotic tags |
-| Audio | Core Audio / AVAudioEngine; custom DSD path |
+| Audio | Core Audio / AVAudioEngine; custom DSD path; UPnP renderers on the LAN (Mac) |
 | Min OS | iOS 17 · macOS 14 (bump if needed for APIs) |
 
 **Why SwiftUI multiplatform:** One product language, one navigation model, shared domain/audio protocols. Platform differences live behind adapters, not forked apps.
@@ -91,7 +91,7 @@ Rules:
 | ALAC, AAC, MP3, WAV, AIFF | AVAudioFile / ExtAudioFile |
 | FLAC | AVAudioFile (system) or libFLAC if gaps |
 | DSF / DFF | Custom parser + DoP framer, or multi-stage FIR to PCM (flat to 25 kHz) |
-| SACD ISO | Scarlet Book stereo TOC → per-track catalogue rows; uncompressed DSD copied to a cached DFF |
+| SACD ISO | Scarlet Book stereo TOC → per-track catalogue rows; uncompressed DSD copied to a cached DFF with a full DSDIFF 1.5 header (FVER, PROP with CMPR …), so other players read it too; older caches without FVER are extracted again |
 | DST (SACD ISO / DFF) | Harbor MPEG-4 DST decoder (ISO/IEC 14496-3 Subpart 10) → cached uncompressed DFF → same DSD path |
 | CUE | Later — not in the current build |
 
@@ -111,6 +111,26 @@ The engine follows the hardware volume (`kAudioDevicePropertyVolumeScalar`) of t
 
 ---
 
+## Network output (UPnP renderer, Mac)
+
+A UPnP / DLNA MediaRenderer on the LAN (Devialet Expert, a streamer) is an output like a DAC. The Mac is the control point and serves the audio over HTTP; the renderer pulls it. `UPnP/`, macOS only. Plan and Wi‑Fi numbers: [UPNP.md](UPNP.md).
+
+| Part | Where | Job |
+|---|---|---|
+| Routing | `RoutingPlaybackEngine` | The `PlaybackEngine` `AppModel` hands to `PlaybackService`: forwards to `CoreAudioPlaybackEngine` or `UPnPPlaybackEngine` by the picked UID (`upnp:<UDN>` = network). Switching stops the old one; `PlaybackService` reloads the track at the same position, as for a DAC. |
+| Discovery | `SSDPBrowser`, `UPnPRenderer`, `DeviceDescription` | M-SEARCH every 30 s plus NOTIFY alive / byebye, `max-age` expiry; keeps renderers with AVTransport. Started at launch by `AppModel`. `lastError` (e.g. no Local Network access) shows under Device. |
+| Output list | `PlaybackService.setNetworkOutputs` / `publishOutputStatus` | Core Audio devices + live renderers (`OutputDevice.kind == .network`). Settings → Device groups them: **This Host** (local, external DACs marked `· DAC`) and **Network Players** (`Name (Network player)`). `activeUID` follows the Device-menu pick so Exclusive / DoP availability matches that device, not a leftover system default. |
+| Settings radios | `NetworkOutputChoice`, `NetworkStreamQuality`, `NetworkDsdMode` | A local pick keeps Shared / Exclusive / DoP. A network pick replaces them with **Wi‑Fi friendly** / **Full** / **DSD, SACD, DoP** (third radio greyed out until GetProtocolInfo lists native DSD). Per-player DSD mode in `DefaultsKey.networkDsdModes`. |
+| Capabilities | `UPnPPlaybackEngine.networkPlayerFormats` | Cached sink from GetProtocolInfo → `nativeDsd` (`dsf` / `dff`); Settings gates the DSD radio on `supportsNativeDSD`. |
+| Engine | `UPnPPlaybackEngine`, `UPnPControlPoint`, `DIDLLite` | `load` → SetAVTransportURI with DIDL-Lite (title, artist, album, artwork); Play / Pause / Stop / Seek; position polled each second; end of track = STOPPED after PLAYING; volume through RenderingControl (remote slider and iPhone buttons). Holds `beginActivity(.idleSystemSleepDisabled)` while playing. No meters, no plugin rack. |
+| Gapless | `PlaybackEngine.prepareNext` / `adoptPreparedNext` | `PlaybackService` arms the next track in play order; the engine sends SetNextAVTransportURI, and when the renderer moves on, the queue takes it over without a reload. Refused once → remembered per renderer, tracks change with a short gap. |
+| What is sent | `NetworkMediaPlanner`, `WAVPCMBodySource` | PCM: file untouched when the sink lists its type; else 24-bit WAV at the file's rate. DSD: **Wi‑Fi friendly** → 44.1/16 live; **Full** (`dsdMode` pcm) → ~88.2/24; **DSD, SACD, DoP** (`dsdMode` auto) → native DSF/DFF/SACD-as-DFF when listed, else PCM; `dsdMode` dop → DoP-in-WAV. WAV is made on the fly with a computed `Content-Length`, so `Range` = seek. |
+| HTTP | `MediaHTTPServer` (on `UPnPHTTPServer`) | Opaque tokens `/t/<token>.<ext>`, `Range` / `HEAD`, DLNA headers; URL host = this Mac's address toward the renderer; port remembered (`mediaHTTPPort`, prefers 49153). |
+
+Deck path: `Network` / `DSD · Network` (untouched), `PCM · Network`, `DSD→PCM · Network`, `DoP · Network`, `Wi‑Fi PCM · Network`; the format badge keeps the catalogue format.
+
+---
+
 ## Remote (iPhone → Mac)
 
 The iPhone build is a remote, not a second player (`RootView` shows `RemoteHomeView` on iOS). Same target, `Remote/` folder:
@@ -118,15 +138,34 @@ The iPhone build is a remote, not a second player (`RootView` shows `RemoteHomeV
 | Part | Where | Job |
 |---|---|---|
 | Protocol | `Remote/Protocol` | Length-prefixed frames (`FrameCodec`): JSON envelopes (`ClientMessage` / `ServerMessage`, versioned) plus binary frames for artwork. Foundation only, shared by both sides. |
-| Server (Mac) | `RemoteControlService`, `RemoteSession`, `RemoteCommandRouter`, `PlaybackObserver` | `NWListener` advertised as `_audioharbor._tcp` (Bonjour). One actor per connection. The router maps commands onto `AppModel` / `PlaybackService`; the observer pushes coalesced `NowPlayingSnapshot` (incl. `outputVolume`, `outputName`) and `QueueSnapshot`. |
+| Server (Mac) | `RemoteControlService`, `RemoteSession`, `RemoteCommandRouter`, `PlaybackObserver` | `NWListener` advertised as `_audioharbor._tcp` (Bonjour). One actor per connection. The router maps commands onto `AppModel` / `PlaybackService`; the observer pushes coalesced `NowPlayingSnapshot` (incl. `outputVolume`, `outputName`), `QueueSnapshot`, and (v3) `SettingsSnapshot`. |
 | Client (iPhone) | `RemoteBrowser`, `RemoteClientConnection`, `RemoteController` | `NWBrowser` discovery, connect, pair, mirror snapshots, send commands. Playing a song or Play all stays in the list; the row of the Mac's current track is marked. |
 | Playlists & labels | `RemoteTrackOptionsSheet` (iOS), `LibraryQueryService.trackOptions`, `RemoteCommandRouter` | Long-press a track → *Add to Playlist…* or *Labels…*, one sheet each. `trackOptions` returns the manual playlists (with `containsTrack`), every label and the track's own; `editTrack` (`addToPlaylist`, `removeFromPlaylist`, `addToNewPlaylist`, `addLabel`, `removeLabel`) applies the change through `PlaylistService` / `LibraryService` and answers with fresh options. |
+| Mac Settings | `RemoteMacSettingsView`, `RemoteSettingsSnapshot`, `getSettings` / `setSettings` | Protocol **3**: Output (device, Shared/Exclusive/DoP or network radios, DSD as PCM), Sharing on/off, directory list + Rebuild Index, About/license. The remote’s bottom **Settings** tab edits these. Add/remove folders stay on the Mac. |
+| Remote UI | `RemoteControllerView` | Bottom tabs like the Mac: **Deck** (stage Turntable/Reel-to-Reel only — no Receiver on phone; queue sheet; volume speaker in the stage toolbar; Live/Standby = LED on the photo; no search), **Catalogue** (Dirs / Albums / Artists / Lists + browse search), **Settings** (`RemoteMacSettingsView`, full width on iPhone). |
+| Same-track tap | `PlaybackService.play` / `togglePlayPause` | Clicking the loaded track again pauses or resumes (id / cataloguePath / file URL). In-flight loads keep a `playWhenLoaded` intent so pause during buffer is resumable; UPnP transport uses a generation so a late Play cannot overwrite Pause. |
 | Pairing | `Remote/Security` | 6-digit code (3 min, 5 tries then 60 s lockout) → token per client, stored on both sides (UserDefaults + Data Protection Keychain). Reconnects use the token. |
 | Volume buttons | `VolumeButtonObserver` (iOS) | No API exists for the buttons: with an active `.ambient` session, `outputVolume` is observed via KVO, each press becomes a ±5 % step on the Mac, and a hidden `MPVolumeView` puts the phone back to 50 % (and hides the HUD). Only in the foreground, only while no other app plays; the phone's level is restored on disconnect. |
 
-Compatibility: new optional snapshot fields decode as nil from an older Mac; the client only sends `setVolume` when the snapshot carries a volume. Protocol **2** (1.1.1) adds `trackOptions` / `editTrack`; the client offers them only when the Mac's hello says version ≥ `RemoteProtocol.trackEditsVersion`. New features are gated on the version, not on `RemoteCapability`: 1.1.0 remotes decode the capability list strictly and would drop a Mac that sends an unknown case. A message the Mac cannot decode gets an `unsupported` error and the session stays open; only broken framing closes it. Protocol 2 also adds `BrowseRequest.query`: the Mac filters with `LibraryService.matchingPaths` / `remoteFolderSearch` — the same index as its search field, which it leaves untouched. Dirs searches every connected directory; Albums, Artists and Lists keep entries with a matching track and show only those (a playlist found by name shows all).
+Compatibility: new optional snapshot fields decode as nil from an older Mac; the client only sends `setVolume` when the snapshot carries a volume. Features are gated on the Mac hello version, not on `RemoteCapability` (older remotes reject unknown capability cases). Protocol **2** (1.1.1): `trackOptions` / `editTrack` and `BrowseRequest.query`. Protocol **3**: `getSettings` / `setSettings` and topic `settings`. A message the Mac cannot decode gets an `unsupported` error and the session stays open; only broken framing closes it.
 
 Connecting: the Mac remembers its listener port (`DefaultsKey.remotePort`) and asks for it on the next launch, falling back to any free port. A Mac stopped without a Bonjour goodbye (crash, Xcode stop) leaves its old SRV record in the phone's mDNS cache; with a new random port every connect was refused. A client connection that goes to `.waiting` (refused, unreachable) fails with a message instead of retrying behind a spinner. Traffic is plain TCP on the local network — no TLS, hence export compliance `NO`.
+
+---
+
+## Music server (DLNA, Mac)
+
+Settings → Sharing turns the Mac into a UPnP MediaServer:1: players on the home network (mconnect on an iPhone, …) browse the catalogue and play the files themselves. `Sharing/`, macOS only, off by default (`DefaultsKey.sharingEnabled`); SSDP, SOAP and HTTP come from `UPnP/`, shared with the network output.
+
+| Part | Where | Job |
+|---|---|---|
+| Service | `MusicServerService` | `@Observable @MainActor`: on / off, status, open streams. Starts the HTTP server, then the SSDP responder on its port; keeps the Mac from idle sleep while a file streams; says goodbye on quit. Stable UDN (`sharingDeviceID`), remembered port (`sharingPort`). |
+| Discovery | `UPnP/SSDPResponder` | Answers M-SEARCH and sends NOTIFY alive / byebye on 239.255.255.250:1900; LOCATION carries the address the asker can reach. |
+| HTTP | `UPnP/UPnPHTTPServer` | `NWListener`, one request per connection; files streamed from disk with `Range` (206), at the pace the player reads. |
+| Requests | `MusicServerRouter` | Description, SCPDs, icon, SOAP (ContentDirectory: Browse, capabilities, SystemUpdateID; ConnectionManager), `/media/<token>`, `/art/<hash>.jpg`. Media needs `LicenseService.canPlay` (403 otherwise). SACD ISO tracks are extracted (`SACDISO.playbackURL`) and DST DFFs decoded (`DFFDST.playbackURL`) off the main actor first. |
+| Catalogue | `ContentDirectory`, `SharedCatalogue` / `LibraryCatalogue` | Root: Albums · Artists · Directories · Playlists · Labels — the views the remote browses. IDs come from catalogue keys (album UUID, names, `RemoteFolderRef`, `cataloguePath`); a track's ID is `<container>|t:<token>`, so one track sits in several containers. Files go out untouched; DFF chapter tracks are left out (the file holds them all). Nothing is shared while the demo library shows. |
+
+Only catalogue tracks and audio files inside connected directories are served (a token is checked against the catalogue and `remoteFolderLocation`); artwork names must be hex hashes. DLNA has no sign-in: anyone on the network can browse while sharing is on, and Settings says so. `SharedCatalogue` keeps the directory testable without the services.
 
 ---
 
@@ -269,6 +308,8 @@ AudioHarbor/
     Playback/          # PlaybackService, LicenseService
   Audio/               # PlaybackEngine + CoreAudio impl, HAL player, DSD / SACD decoders, meters
   Remote/              # LAN remote: Protocol (wire format), Server (Mac), Client + UI (iPhone), Security (pairing)
+  UPnP/                # UPnP / DLNA (Mac): SSDP, SOAP, HTTP; network output (routing, renderer engine, WAV streams)
+  Sharing/             # Music server (Mac): ContentDirectory, router, Settings UI — on the UPnP/ pieces
   Resources/           # Assets (AppIcon, BrandLogo, deck photos), Info.plist, entitlements
 design/icons/          # Icon and logo masters + render tools (build-appicon.sh)
 docs/
@@ -290,6 +331,7 @@ project.yml            # XcodeGen
 | Decoder framing | Golden files (short FLAC/DSF fixtures) |
 | Exclusive mode | Manual DAC checklist (documented) |
 | UI | Snapshot later; smoke via previews now |
+| UPnP output / music server | `tools/upnp`: renderer simulator, guided device test (`Devialet-Test.zip`), folder music-server prototype; manual checklist on the real renderer |
 
 ---
 
