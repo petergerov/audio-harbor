@@ -12,10 +12,14 @@
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Audio Harbor — Local. Bit-perfect. Calm." />
   <meta property="og:description" content="Open a folder. Hear the file. Free for seven days, then €17.90 once. No subscription, no account." />
-  <meta property="og:image" content="https://petergerov.github.io/audio-harbor/AppIcon.png" />
-  <meta name="twitter:card" content="summary" />
+  <meta property="og:image" content="https://petergerov.github.io/audio-harbor/images/web/og-home.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="670" />
+  <meta property="og:image:alt" content="Audio Harbor on a MacBook beside a DAC showing DoP DSD64 — Open a folder. Hear the file." />
+  <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Audio Harbor — Local audiophile player" />
   <meta name="twitter:description" content="Your folders. Your files. Seven days free, then €17.90 once. Bit-perfect Exclusive on Mac." />
+  <meta name="twitter:image" content="https://petergerov.github.io/audio-harbor/images/web/og-home.jpg" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -183,27 +187,15 @@
     .btn-secondary:hover { border-color: var(--gold-line); background: rgba(255,255,255,0.6); }
     .btn-secondary::after { content: " →"; }
 
-    /* Screenshot in a laptop frame */
-    .device { position: relative; }
-    .device-screen {
-      background: #0b0b0c;
-      border-radius: 18px 18px 8px 8px;
-      padding: 14px 14px 18px;
-      box-shadow: 0 0 0 1px #2c2a27 inset, 0 40px 90px rgba(90,60,20,0.20), 0 8px 24px rgba(0,0,0,0.10);
+    /* Photographed scenes: the hero, a banner per section, the quote portrait */
+    .hero-photo, .scene {
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: #16130f;
+      box-shadow: 0 40px 90px rgba(90,60,20,0.20), 0 8px 24px rgba(0,0,0,0.10);
     }
-    .device-screen img { width: 100%; height: auto; display: block; border-radius: 6px; }
-    .device-base {
-      position: relative;
-      height: 14px; margin: 0 -7%;
-      background: linear-gradient(180deg, #e2dfda 0%, #b7b2ab 100%);
-      border-radius: 0 0 18px 18px;
-      box-shadow: 0 14px 24px rgba(0,0,0,0.12);
-    }
-    .device-base::before {
-      content: ""; position: absolute; top: 0; left: 50%;
-      width: 16%; height: 5px; transform: translateX(-50%);
-      background: #a7a29b; border-radius: 0 0 6px 6px;
-    }
+    .scene { margin-top: 36px; }
+    .hero-photo img, .scene img { width: 100%; height: auto; display: block; }
     .hero .hero-trust {
       font-size: 0.8rem; color: var(--muted);
       margin: 26px 0 0;
@@ -384,6 +376,22 @@
       line-height: 1.4;
     }
     .quote em { font-style: normal; color: var(--text); }
+    .quote-inner {
+      max-width: 932px; margin: 0 auto;
+      display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+      gap: 56px; align-items: center;
+      text-align: left;
+    }
+    .quote-inner .quote { margin: 0; }
+    .quote-scene {
+      display: block; width: 100%; height: auto;
+      border-radius: var(--radius-lg);
+      box-shadow: 0 30px 70px rgba(90,60,20,0.18);
+    }
+    @media (max-width: 700px) {
+      .quote-inner { grid-template-columns: 1fr; gap: 36px; text-align: center; }
+      .quote-scene { max-width: 300px; margin: 0 auto; }
+    }
 
     .cta-section {
       background: radial-gradient(120% 140% at 50% 0%, #2e2a25 0%, #16130f 60%, #0e0c0a 100%);
@@ -433,13 +441,13 @@
     }
 
     /* Lightbox */
-    .shot-open, .hero-open {
+    .shot-open, .hero-open, .scene-open {
       display: block; width: 100%;
       padding: 0; border: 0; background: none;
       cursor: zoom-in;
       font: inherit; color: inherit;
     }
-    .shot-open:focus-visible, .hero-open:focus-visible {
+    .shot-open:focus-visible, .hero-open:focus-visible, .scene-open:focus-visible {
       outline: 2px solid var(--accent); outline-offset: 2px;
     }
     .lightbox {
@@ -550,15 +558,16 @@
       </div>
       <p class="hero-trust">No streaming · No account &nbsp;·&nbsp; AUv3 on the Deck &nbsp;·&nbsp; Shared by default · Exclusive when the DAC is ready</p>
     </div>
-    <div class="device">
-      <div class="device-screen">
-        <button class="hero-open" type="button"
-                data-full="images/web/store/lb/hero-deck.webp"
-                data-caption="The Deck in its turntable face — needle down, groove position, the folder on the right">
-          <img src="images/web/store/hero-deck.webp" width="1200" height="854" alt="Audio Harbor on macOS: the Deck in its turntable face, a record playing, the folder listing on the right" />
-        </button>
-      </div>
-      <div class="device-base"></div>
+    <div class="hero-photo">
+      <button class="hero-open" type="button"
+              data-full="images/web/scenes/desk-1920.webp"
+              data-caption="The Deck on a MacBook, a DAC reading DoP DSD64, open-back headphones on the desk">
+        <img src="images/web/scenes/desk-1280.webp"
+             srcset="images/web/scenes/desk-800.webp 800w, images/web/scenes/desk-1280.webp 1280w, images/web/scenes/desk-1920.webp 1920w"
+             sizes="(max-width: 900px) calc(100vw - 48px), 600px"
+             width="1280" height="715" fetchpriority="high"
+             alt="Audio Harbor on a MacBook on a walnut desk: the Deck playing a reel-to-reel record with the folder on the right, beside a DAC showing DoP DSD64 and open-back headphones" />
+      </button>
     </div>
   </div>
 </section>
@@ -635,6 +644,17 @@
     <div class="section-eyebrow">The room, not a dashboard</div>
     <h2 class="section-title">Ink chassis. Walnut. Filament amber.</h2>
     <p class="section-sub">The player is a listening room, not a mixer. Catalogue, Deck, Settings. Large artwork. Analog VU when the music is moving. Nothing competing for the downbeat.</p>
+    <figure class="scene">
+      <button class="scene-open" type="button"
+              data-full="images/web/scenes/room-1920.webp"
+              data-caption="The room, not a dashboard — ink chassis, walnut, analog VU">
+        <img src="images/web/scenes/room-1280.webp"
+             srcset="images/web/scenes/room-800.webp 800w, images/web/scenes/room-1280.webp 1280w, images/web/scenes/room-1920.webp 1920w"
+             sizes="(max-width: 980px) calc(100vw - 48px), 932px"
+             width="1280" height="715" loading="lazy" decoding="async"
+             alt="The room, not a dashboard. Audio Harbor — ink chassis, walnut, analog VU: the Deck on a MacBook in a dim listening room, a DAC and headphones beside it" />
+      </button>
+    </figure>
   </div>
   <div class="shots-scroll">
     <div class="shot wide">
@@ -687,6 +707,17 @@
     <div class="section-eyebrow">Next · iPhone &amp; iPad remote · not yet released</div>
     <h2 class="section-title">The music stays on the Mac. Your iPhone or iPad steers.</h2>
     <p class="section-sub">Deck, Catalogue, and Settings — the same three tabs as on the Mac. Browse and search from the couch, file songs into playlists and labels, change Output on the Mac, and set the DAC's own level with the volume buttons so the file stays bit-perfect. Local network only, no account, free.</p>
+    <figure class="scene">
+      <button class="scene-open" type="button"
+              data-full="images/web/scenes/remote-1920.webp"
+              data-caption="Bit-perfect at the desk. Steered from the couch.">
+        <img src="images/web/scenes/remote-1280.webp"
+             srcset="images/web/scenes/remote-800.webp 800w, images/web/scenes/remote-1280.webp 1280w, images/web/scenes/remote-1920.webp 1920w"
+             sizes="(max-width: 980px) calc(100vw - 48px), 932px"
+             width="1280" height="715" loading="lazy" decoding="async"
+             alt="The music stays on the Mac. Your iPhone steers. A hand holds an iPhone showing the remote Deck, the Mac playing across the living room" />
+      </button>
+    </figure>
   </div>
   <div class="shots-scroll">
     <div class="shot tall">
@@ -789,6 +820,17 @@
       <div class="section-eyebrow">Audio Units</div>
       <h2 class="section-title">AU plugins. In the player.</h2>
       <p class="section-sub">Audio Harbor is a host. Load the AU and AUv3 effects you already use in Logic, GarageBand, or AUM — as inserts on the Deck, while the record plays.</p>
+      <figure class="scene">
+        <button class="scene-open" type="button"
+                data-full="images/web/scenes/plugins-1920.webp"
+                data-caption="Headphone correction. Zero DAW required — a parametric EQ on the Deck, Exclusive · FX">
+          <img src="images/web/scenes/plugins-1280.webp"
+               srcset="images/web/scenes/plugins-800.webp 800w, images/web/scenes/plugins-1280.webp 1280w, images/web/scenes/plugins-1920.webp 1920w"
+               sizes="(max-width: 980px) calc(100vw - 48px), 932px"
+               width="1280" height="715" loading="lazy" decoding="async"
+               alt="Headphone correction. Zero DAW required. Insert your Audio Unit plugins right on the Deck: a parametric EQ open on the Deck, path Exclusive · FX, headphones and a DAC beside the Mac" />
+        </button>
+      </figure>
     </div>
     <div class="hosts-grid">
       <div class="host-card">
@@ -835,6 +877,17 @@
     <div class="section-eyebrow">Formats</div>
     <h2 class="section-title">What it will play</h2>
     <p class="section-sub">The files on your disks — not a converter suite in the main path.</p>
+    <figure class="scene">
+      <button class="scene-open" type="button"
+              data-full="images/web/scenes/badge-1920.webp"
+              data-caption="Never guess what left the app — the badge reads SACD · DoP, the DAC agrees">
+        <img src="images/web/scenes/badge-1280.webp"
+             srcset="images/web/scenes/badge-800.webp 800w, images/web/scenes/badge-1280.webp 1280w, images/web/scenes/badge-1920.webp 1920w"
+             sizes="(max-width: 980px) calc(100vw - 48px), 932px"
+             width="1280" height="715" loading="lazy" decoding="async"
+             alt="Never guess what left the app. Bit-perfect Exclusive and native DoP: the Deck badge reads SACD · DoP while the DAC display shows DoP DSD64 · 2.822 MHz" />
+      </button>
+    </figure>
     <div class="preset-list">
       <div class="preset">
         <h3>PCM, as written</h3>
@@ -884,7 +937,15 @@
 </section>
 
 <div class="quote-section">
-  <p class="quote">Your folders. Your files. <em>No cloud required.</em></p>
+  <div class="quote-inner">
+    <img class="quote-scene"
+         src="images/web/scenes/vu-480.webp"
+         srcset="images/web/scenes/vu-480.webp 480w, images/web/scenes/vu-960.webp 960w"
+         sizes="(max-width: 700px) 300px, 320px"
+         width="480" height="600" loading="lazy" decoding="async"
+         alt="A MacBook between reel-to-reel decks, Audio Harbor's analog VU meters glowing, the badge reading SACD · DoP" />
+    <p class="quote">Your folders. Your files. <em>No cloud required.</em></p>
+  </div>
 </div>
 
 <section class="hosts-section" id="price">
@@ -893,6 +954,17 @@
       <div class="section-eyebrow">What it costs</div>
       <h2 class="section-title">Free to install. One payment, once.</h2>
       <p class="section-sub">No subscription, no account, no tier above this one. You try the whole app first and decide afterwards.</p>
+      <figure class="scene">
+        <button class="scene-open" type="button"
+                data-full="images/web/scenes/price-1920.webp"
+                data-caption="No streaming feeds. No monthly fees. €17.90 once.">
+          <img src="images/web/scenes/price-1280.webp"
+               srcset="images/web/scenes/price-800.webp 800w, images/web/scenes/price-1280.webp 1280w, images/web/scenes/price-1920.webp 1920w"
+               sizes="(max-width: 980px) calc(100vw - 48px), 932px"
+               width="1280" height="715" loading="lazy" decoding="async"
+               alt="Open a folder. Hear the file. No streaming feeds. No monthly fees. €17.90 once. The Deck on a MacBook beside a DAC and an external drive labelled Lossless Library" />
+        </button>
+      </figure>
     </div>
     <div class="hosts-grid">
       <div class="host-card">
@@ -965,9 +1037,9 @@
   var prevBtn  = box.querySelector('.lightbox-prev');
   var nextBtn  = box.querySelector('.lightbox-next');
 
-  // Only the gallery cycles; the hero opens on its own.
+  // Only the gallery cycles; the hero and the scene banners open on their own.
   var triggers = Array.prototype.slice.call(document.querySelectorAll('.shot-open'));
-  var all      = triggers.concat(Array.prototype.slice.call(document.querySelectorAll('.hero-open')));
+  var all      = triggers.concat(Array.prototype.slice.call(document.querySelectorAll('.hero-open, .scene-open')));
   var index    = -1;
   var lastFocus = null;
 
