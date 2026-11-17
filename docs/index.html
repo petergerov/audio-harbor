@@ -685,7 +685,7 @@
       <button class="shot-open" type="button"
               data-full="images/web/store/lb/mac-04-rack.webp"
               data-caption="AU and AUv3 — your own plugins, right on the Deck">
-        <img src="images/web/store/mac-04-rack.webp" width="840" height="525" alt="The Deck in its receiver face with VU meters and an EQ plugin in the rack" loading="lazy" />
+        <img src="images/web/store/mac-04-rack.webp" width="840" height="525" alt="The Deck in its Compact face with small VU meters, and three Audio Unit inserts in the rack" loading="lazy" />
       </button>
       <div class="shot-label">AU and AUv3</div>
     </div>
@@ -724,7 +724,10 @@
       <button class="shot-open" type="button"
               data-full="images/web/store/lb/iphone-01-now.webp"
               data-caption="Deck — your Mac plays, your iPhone steers, queue and volume on the stage">
-        <img src="images/web/store/iphone-01-now.webp" width="480" height="1043" alt="The Deck on iPhone: listening stage, transport, seek bar, and volume on the Mac" loading="lazy" />
+        <img src="images/web/store/iphone-01-now.webp"
+             srcset="images/web/store/iphone-01-now-240.webp 240w, images/web/store/iphone-01-now.webp 480w"
+             sizes="220px" width="480" height="1043" loading="lazy" decoding="async"
+             alt="The Deck on iPhone: listening stage, transport, seek bar, and volume on the Mac" />
       </button>
       <div class="shot-label">Deck</div>
     </div>
@@ -732,7 +735,10 @@
       <button class="shot-open" type="button"
               data-full="images/web/store/lb/iphone-02-browse.webp"
               data-caption="Catalogue — every album on your Mac, in your hand">
-        <img src="images/web/store/iphone-02-browse.webp" width="480" height="1043" alt="The Catalogue tab browsing the Mac's albums" loading="lazy" />
+        <img src="images/web/store/iphone-02-browse.webp"
+             srcset="images/web/store/iphone-02-browse-240.webp 240w, images/web/store/iphone-02-browse.webp 480w"
+             sizes="220px" width="480" height="1043" loading="lazy" decoding="async"
+             alt="The Catalogue tab browsing the Mac's albums" />
       </button>
       <div class="shot-label">Catalogue</div>
     </div>
@@ -740,23 +746,43 @@
       <button class="shot-open" type="button"
               data-full="images/web/store/lb/iphone-03-queue.webp"
               data-caption="Queue — jump anywhere in what plays next">
-        <img src="images/web/store/iphone-03-queue.webp" width="480" height="1043" alt="The Deck queue sheet with the playing track marked" loading="lazy" />
+        <img src="images/web/store/iphone-03-queue.webp"
+             srcset="images/web/store/iphone-03-queue-240.webp 240w, images/web/store/iphone-03-queue.webp 480w"
+             sizes="220px" width="480" height="1043" loading="lazy" decoding="async"
+             alt="The Deck queue sheet with the playing track marked" />
       </button>
       <div class="shot-label">Queue</div>
     </div>
     <div class="shot tall">
       <button class="shot-open" type="button"
-              data-full="images/web/store/lb/iphone-04-nearby.webp"
+              data-full="images/web/store/lb/iphone-04-rack.webp"
+              data-caption="Rack — your Mac's plugin rack and presets, from the couch">
+        <img src="images/web/store/iphone-04-rack.webp"
+             srcset="images/web/store/iphone-04-rack-240.webp 240w, images/web/store/iphone-04-rack.webp 480w"
+             sizes="220px" width="480" height="1043" loading="lazy" decoding="async"
+             alt="The rack sheet on iPhone: preset chips, the A/B switch and three Audio Unit inserts on the Mac" />
+      </button>
+      <div class="shot-label">Rack</div>
+    </div>
+    <div class="shot tall">
+      <button class="shot-open" type="button"
+              data-full="images/web/store/lb/iphone-05-nearby.webp"
               data-caption="Nearby — finds your Mac on its own, no account">
-        <img src="images/web/store/iphone-04-nearby.webp" width="480" height="1043" alt="The remote listing two Macs found on the local network" loading="lazy" />
+        <img src="images/web/store/iphone-05-nearby.webp"
+             srcset="images/web/store/iphone-05-nearby-240.webp 240w, images/web/store/iphone-05-nearby.webp 480w"
+             sizes="220px" width="480" height="1043" loading="lazy" decoding="async"
+             alt="The remote listing two Macs found on the local network" />
       </button>
       <div class="shot-label">Nearby</div>
     </div>
     <div class="shot tall">
       <button class="shot-open" type="button"
-              data-full="images/web/store/lb/iphone-05-pairing.webp"
+              data-full="images/web/store/lb/iphone-06-pairing.webp"
               data-caption="Pairing — once, with a code from the Mac">
-        <img src="images/web/store/iphone-05-pairing.webp" width="480" height="1043" alt="The remote asking for the six-digit pairing code" loading="lazy" />
+        <img src="images/web/store/iphone-06-pairing.webp"
+             srcset="images/web/store/iphone-06-pairing-240.webp 240w, images/web/store/iphone-06-pairing.webp 480w"
+             sizes="220px" width="480" height="1043" loading="lazy" decoding="async"
+             alt="The remote asking for the six-digit pairing code" />
       </button>
       <div class="shot-label">Pairing</div>
     </div>
@@ -841,7 +867,7 @@
       <div class="host-card">
         <div class="lead">Out of process</div>
         <h3>Crash-safe</h3>
-        <p>AUv3 effects run outside the player. Classic AUs that are not sandbox-safe — most commercial ones — run in macOS’s own Audio Unit host, not inside Audio Harbor. A plugin that misbehaves takes itself down, not your listening.</p>
+        <p>AUv3 effects run outside the player. Classic AUs run in macOS’s own Audio Unit host, not inside Audio Harbor. A plugin that misbehaves takes itself down, not your listening.</p>
       </div>
       <div class="host-card">
         <div class="lead">Honest path</div>
