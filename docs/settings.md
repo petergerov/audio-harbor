@@ -149,11 +149,50 @@ nur das Plugin verändert den Klang — so wie bei Audirvāna und Fidelia.
 
 - Auf einem Netzwerk-Player wirkt das Rack nicht: Er bekommt die Datei bzw. das umgerechnete PCM ohne Plugins.
 - Unterstützt werden AUv3 und klassische AU-Plugins (Stereo).
-  Klassische Plugins, die nicht „sandbox-safe“ sind (z. B. UAD, Valhalla), laufen in einem eigenen Prozess von macOS.
+  Klassische AU-Plugins (z. B. UAD, Valhalla, Analog Obsession) laufen immer in einem eigenen Prozess von macOS.
+  Stürzt eines ab, läuft die Musik weiter.
+
+**Bedienen (ab 1.1.3):** Das Rack sitzt auf dem Deck unter dem Player. Oben steht, was rausgeht:
+*Exclusive · FX* oder *Shared · FX*, solange Plugins den Klang formen; *Bypassed*, wenn alle umgangen sind —
+der Ton läuft dann weiter über den Plugin-Weg, bit-perfect und DoP gibt es nur mit leerem Rack; leer: *Bit-perfect* bzw. *Shared*.
+
+- **Add** öffnet die Liste der installierten Plugins, nach Hersteller sortiert. Ein Klick schließt sie
+  und lädt das Plugin ins Rack. Was schon im Rack ist, steht dort als *In rack* und kommt nicht doppelt rein.
+- Jeder Insert hat eine **Power-Taste** (leuchtet = im Signalweg, aus = umgangen), seine Nummer in der Kette,
+  **Editor** für die Oberfläche des Herstellers und **⋮** für Bypass, nach oben / unten und Entfernen
+  (auch per Rechtsklick). Das Signal läuft von oben nach unten.
+- Darunter liegen bis zu sechs **Drehregler** mit den ersten Parametern des Plugins: nach oben oder rechts
+  ziehen dreht auf. Sie folgen dem Editor und umgekehrt; der Pfeil klappt sie ein.
+- **Presets (ab 1.1.4):** Unter dem Rack-Kopf speicherst du das ganze Rack als Preset — welche Plugins, Reihenfolge,
+  Schalter und alle Einstellungen —, etwa *Kopfhörer* mit Kopfhörer-Korrektur und *Lautsprecher* mit
+  Raumkorrektur. Ein Klick im Menü lädt eines; Plugins, die in beiden vorkommen, bleiben geladen und
+  wechseln nur ihre Einstellungen. Änderst du danach etwas, steht dort *Edited* mit **Save**; *Save as New
+  Preset…*, *Rename…* und *Delete…* stehen im Menü.
+
+**Compact:** Die Deck-Ansicht *Compact* (statt Receiver) ersetzt das Bühnenfoto durch einen schmalen Streifen
+mit Cover, Titel, kleinen VU-Metern und Transport — das Rack bekommt den Platz, die Drehregler sind dort offen.
+Rechtsklick auf den Streifen blendet die VU-Meter aus oder ein. Am iPhone gibt es weiter Turntable und Reel-to-Reel.
 
 ## Directories
 
 Hier fügst du die Ordner mit deiner Musik hinzu. Die App liest nur. Sie verschiebt und verändert keine Dateien.
+
+- **Offline:** Liegt ein Ordner auf einer externen Platte oder einem NAS-Share, das gerade nicht gemountet ist,
+  bleibt er verbunden. In Dirs steht dann „Offline — Pfad“, Play ist aus. Seine Songs fehlen so lange in Albums,
+  Artists, Labels, Suche, Playlists und Queue, auch am iPhone und im Sharing. Gelöscht wird nichts:
+  Platte anstecken oder Share mounten, und alles ist wieder da, ohne Rebuild. Ab 1.1.3.
+- **Add Music Library** (Mac, ab 1.1.6): liest die Mediathek der Music-App und fügt die Ordner hinzu, in denen ihre
+  Dateien liegen — meist nur den Medienordner. Pro Ordner geht der Ordner-Dialog schon an der richtigen Stelle auf,
+  ein Klick auf *Add* genügt (die Sandbox lässt die App nur Ordner lesen, die du selbst wählst). Die Playlists aus
+  Music kommen als normale Playlists dazu, smarte als Momentaufnahme. Danach bleibt die Mediathek **verbunden**:
+  Ändert sich etwas in Music (und beim Start der App), kommen neue Dateien in den Katalog und die übernommenen
+  Playlists werden aufgefrischt, neue Playlists kommen dazu. Ein Name, den du hier geändert hast, bleibt; eine
+  übernommene Playlist, die du hier löschst, kommt nicht von selbst zurück. Legt Music Dateien in einem neuen Ordner
+  ab, steht er unter der Mediathek mit *Add Directory* — den Klick braucht die Sandbox. *Disconnect* hört auf
+  abzugleichen; Ordner und Playlists bleiben. Apple-Music-Streams, Titel nur in
+  iCloud und geschützte Käufe bleiben in Music. Beim ersten Mal fragt macOS, ob Audio Harbor auf „Medien & Apple
+  Music“ zugreifen darf; abgelehnt änderst du das unter Systemeinstellungen → Datenschutz & Sicherheit.
+- Einen Ordner, den du nicht mehr willst, entfernst du hier. Erst das nimmt seine Songs aus dem Katalog.
 
 ## Remote: iPhone steuert den Mac
 
@@ -164,19 +203,31 @@ Die Musik spielt auf dem Mac, das iPhone ist die Fernbedienung.
   Einmal gekoppelt, verbindet sich das iPhone danach ohne Code.
 - **Paired devices** listet die gekoppelten iPhones. **Revoke** wirft eines raus, **Revoke All** alle.
 - Am iPhone unten dieselben drei Bereiche wie am Mac: **Deck** (Wiedergabe, Queue-Sheet, Lautstärke),
-  **Catalogue** (Dirs / Albums / Artists / Lists inkl. Suche) und **Settings** (Mac-Output, Sharing, Directories).
+  **Catalogue** (Dirs / Albums / Artists / Playlists inkl. Suche) und **Settings** (Mac-Output, Sharing, Directories).
   Ein Song oder **Play all** spielt, ohne die Liste zu verlassen; der laufende Song ist markiert.
-  Dirs / Albums / Artists / Lists bleiben oben, auch tief in einem Ordner — antippen führt an den Anfang.
+  Dirs / Albums / Artists / Playlists bleiben oben, auch tief in einem Ordner — antippen führt an den Anfang.
 - **Playlists und Labels vom iPhone:** Song lange drücken → **Add to Playlist…** oder **Labels…**.
   Antippen nimmt den Song auf, nochmal antippen nimmt ihn heraus; ein Haken zeigt, wo er drin ist.
   Neue Playlists und Labels lassen sich dort anlegen. Braucht Mac und iPhone ab 1.1.1.
-- **Suche in Browse:** Unter Dirs / Albums / Artists / Lists sucht das Feld wie die Katalogsuche am Mac.
+- **Mehrere Songs auf einmal (ab 1.1.7, Mac und iPhone):** Catalogue → **Select** oben links, Songs antippen —
+  auch über Alben, Ordner und Suchen hinweg —, dann unten **Add to Playlist**. **Select All** hakt alle Songs der
+  Liste an.
+- **Reihenfolge (ab 1.1.7):** Im Tab **Playlists** oder in einer Playlist **Reorder** antippen und die Zeilen an
+  ihren Griffen ziehen; der Mac übernimmt die Reihenfolge.
+- **Suche in Browse:** Unter Dirs / Albums / Artists / Playlists sucht das Feld wie die Katalogsuche am Mac.
   Dirs findet Ordner und Dateien in allen Ordnern; ein Ordner antippen öffnet ihn und leert die Suche.
-  Albums, Artists und Lists zeigen nur Einträge mit passenden Songs, darin nur diese — eine Playlist,
+  Albums, Artists und Playlists zeigen nur Einträge mit passenden Songs, darin nur diese — eine Playlist,
   deren Name passt, zeigt alle. Braucht Mac und iPhone ab 1.1.1.
 - **Mac Settings vom iPhone:** Tab **Settings** — Output-Gerät, Modi / Netzwerk-Radios, DSD as PCM, Sharing,
   Directories und Index neu aufbauen. Ordner hinzufügen oder entfernen bleibt am Mac. Braucht Protokoll 3
   auf beiden Seiten.
+- **Rack vom iPhone (ab 1.1.3):** Der Regler-Knopf in der Deck-Leiste (bernsteinfarben, solange Plugins
+  den Klang formen) öffnet das Rack: oben der Pfad und eine große Taste, die das ganze Rack für einen A/B-Vergleich
+  umgeht und zurückholt — ohne Aussetzer, jeder Insert behält dabei seinen eigenen Schalter. Darunter jeder Insert
+  mit seiner Power-Taste, und ab 1.1.4 ganz oben die gespeicherten Presets — bis fünf als Chips, mehr als eine Zeile mit dem aktiven
+  Preset, die die Liste öffnet (ab neun mit Suche); antippen lädt eines. Speichern,
+  Drehregler und Plugin-Editoren bleiben am Mac. Dieselbe A/B-Taste steht am Mac im Rack-Kopf.
+  Braucht Protokoll 4 auf beiden Seiten.
 - **Lautstärke:** Lautsprecher auf dem Deck öffnet den Regler; die Lautstärketasten am iPhone stellen die Lautstärke des Geräts ein,
   auf dem der Mac gerade spielt — den DAC selbst, wenn er eine Lautstärkeregelung hat, sonst den Mac-Ausgang.
   Der DAC regelt selbst, die Musik bleibt bit-perfect, auch in Exclusive und DoP.

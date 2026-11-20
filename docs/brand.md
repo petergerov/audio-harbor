@@ -45,6 +45,15 @@ A simple, beautiful local audiophile player for macOS and iOS.
   `icon_no_text_2d.png` (same tile, no wordmark) at 16 / 32 px. Rendered by `design/icons/tools/build-appicon.sh`.
 - The store subtitle stays *Local audiophile player*; the app itself shows only the logo.
 
+### Homepage scenes (2026-10-23)
+
+- Source: desk renders in `design/202610` (2752×1536 PNG, not in git). Warm walnut, filament amber,
+  the real Deck UI on a MacBook, a DAC reading DoP DSD64.
+- On the site: `docs/images/web/scenes/` as WebP at 800 / 1280 / 1920 px (`desk`, `room`, `remote`,
+  `plugins`, `badge`, `price`), plus a 4:5 crop of the VU portrait at 480 / 960 (`vu`). Share image
+  `docs/images/web/og-home.jpg`, 1200×670 JPEG, from `desk-3-home`.
+- Left out: `generated-idea.png` — its UI (Library / Now Playing / Queue tabs) is not the app's.
+
 ---
 
 ## Marketing name candidates

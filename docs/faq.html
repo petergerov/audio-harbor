@@ -273,7 +273,7 @@
     <details>
       <summary>Can I bring playlists from other apps?</summary>
       <div class="answer">
-        <p>Yes. In <strong>Playlists</strong>, use <strong>Import M3U</strong> for <code>.m3u</code> / <code>.m3u8</code> files from foobar2000, VLC, Audirvāna, Roon, or Music. The tracks must be in a folder Audio Harbor already knows. To take a playlist or label elsewhere, select it and click <strong>Export M3U8</strong> (or right-click a playlist and choose <strong>Export M3U8…</strong>).</p>
+        <p>Yes. In <strong>Playlists</strong>, use <strong>Import M3U</strong> for <code>.m3u</code> / <code>.m3u8</code> files from foobar2000, VLC, Audirvāna, Roon, or Music. The tracks must be in a folder Audio Harbor already knows. To take a playlist or label elsewhere, select it and click <strong>Export M3U8</strong> (or right-click a playlist and choose <strong>Export M3U8…</strong>). From version 1.1.7, <strong>Export All</strong> saves every playlist at once: choose a folder, and each playlist becomes its own <code>.m3u8</code> file there. Empty playlists are left out; files of the same name in that folder are replaced.</p>
       </div>
     </details>
 
@@ -288,14 +288,14 @@
       <summary>Can I listen to a track without leaving the Catalogue?</summary>
       <div class="answer">
         <p>Yes — that is what a click does. Clicking a track, album, artist, folder or playlist plays it and keeps you where you are. The row that is playing shows a small speaker, and the mini player at the top shows the track.</p>
-        <p>Click a song to play it and stay in the list. Click that same song again to pause, and once more to resume. A different song starts fresh. To go to the Deck: click the mini player, press <strong>⌘3</strong>, <strong>⌘-click</strong> the item you want to play, or right-click it and choose <strong>Play and Show Deck</strong>.</p>
+        <p>Click a song to play it and stay in the list. Click that same song again to pause, and once more to resume. A different song starts fresh. To go to the Deck: click the mini player, press <strong>⌘3</strong>, <strong>⌘-click</strong> the album, folder or playlist you want to play, or right-click it and choose <strong>Play and Show Deck</strong>. On a song in the Catalogue, ⌘-click ticks it instead, as in the Finder — see the next question but one.</p>
       </div>
     </details>
 
     <details>
       <summary>Which keyboard shortcuts are there?</summary>
       <div class="answer">
-        <p><strong>Space</strong> play / pause · <strong>⌘→</strong> next · <strong>⌘←</strong> previous · <strong>⌘1</strong> Catalogue · <strong>⌘2</strong> Playlists · <strong>⌘3</strong> Deck · <strong>⌘,</strong> Settings · <strong>⌘O</strong> add a music folder · <strong>⇧⌘R</strong> rebuild the catalogue · <strong>⌘\</strong> show or hide the queue beside the Deck · <strong>⌘0</strong> bring back the main window. <strong>⌘-click</strong> on anything playable also opens the Deck.</p>
+        <p><strong>Space</strong> play / pause · <strong>⌘→</strong> next · <strong>⌘←</strong> previous · <strong>⌘1</strong> Catalogue · <strong>⌘2</strong> Playlists · <strong>⌘3</strong> Deck · <strong>⌘,</strong> Settings · <strong>⌘O</strong> add a music folder · <strong>⇧⌘R</strong> rebuild the catalogue · <strong>⌘\</strong> show or hide the queue beside the Deck · <strong>⌘0</strong> bring back the main window. <strong>⌘-click</strong> on an album, folder or playlist also opens the Deck. In the Catalogue, <strong>⌘-click</strong> ticks a song and <strong>⇧-click</strong> ticks a run of songs; <strong>Esc</strong> ends selecting or reordering.</p>
       </div>
     </details>
 
@@ -304,6 +304,22 @@
       <div class="answer">
         <p>Yes. Right-click a directory, folder, album or artist and choose <strong>Add to Playlist</strong> or <strong>Labels</strong>. A folder brings everything below it, subfolders included; an album or artist brings all of its tracks, even if a search shows only some. On the Deck, right-click the title above the queue for the whole queue, or one row for one track.</p>
         <p>A label shows a check when every track has it. Choosing it then removes it from all of them.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Can I pick several songs and add them to a playlist at once?</summary>
+      <div class="answer">
+        <p>Yes, from version 1.1.7. In the <strong>Catalogue</strong>, click <strong>Select</strong>. A click on a song now ticks it instead of playing it; the circle in front of an album, artist or folder ticks all of its songs. You can also <strong>⌘-click</strong> a song to tick it, or <strong>⇧-click</strong> to tick every song from the last one you clicked — no need to press Select first. Your ticks stay while you switch between Directories, Albums and Artists and move between folders, so one playlist can collect songs from all over.</p>
+        <p>The bar above the list counts the songs and offers <strong>Select All</strong>, <strong>Clear</strong> and <strong>Add to Playlist</strong> — an existing playlist or a new one. Right-click a ticked song for Add to Playlist and Labels on all of them. <strong>Done</strong> or <strong>Esc</strong> ends selecting.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>How do I change the order of my playlists and their songs?</summary>
+      <div class="answer">
+        <p>From version 1.1.7: in <strong>Playlists</strong>, click <strong>Reorder</strong>. Each playlist on the left and each song of the open playlist gets <strong>≡</strong> at its end; drag the row to its new place. While Reorder is on, a click does not play. <strong>Done</strong> or <strong>Esc</strong> ends it. The new order is saved at once.</p>
+        <p>While a playlist plays, the queue beside the Deck has <strong>Reorder</strong> too. Moving a song there changes the playlist as well; the song that plays carries on, and what comes next follows the new order. Albums and folders keep their own order and have no Reorder.</p>
       </div>
     </details>
 
@@ -337,13 +353,15 @@
       <div class="answer">
         <p>Yes, from version 1.1.1 on the Mac and the iPhone or iPad. Long-press a song and choose <strong>Add to Playlist…</strong> or <strong>Labels…</strong>, or use <strong>Playlist and Labels</strong> on the Deck for the song that is playing. Tap a playlist or label to put the song in, tap it again to take it out — a checkmark shows where the song is. You can also make a new playlist or label there. The change is saved on the Mac straight away. Smart playlists fill themselves and are not listed.</p>
         <p>Playing a song or <strong>Play all</strong> keeps you in the list; the song that plays is marked. Tap that song again to pause, and once more to resume.</p>
+        <p>Several songs at once (version 1.1.7 on the Mac and the iPhone or iPad): tap <strong>Select</strong> at the top of the Catalogue, tap the songs — across albums, folders and searches — and choose <strong>Add to Playlist</strong> in the bar at the bottom. <strong>Select All</strong> ticks every song in the list on screen.</p>
+        <p>To change the order, tap <strong>Reorder</strong> on the <strong>Playlists</strong> tab or inside a playlist and drag the rows by their handles. The Mac keeps the new order.</p>
       </div>
     </details>
 
     <details>
       <summary>How does search work on the remote?</summary>
       <div class="answer">
-        <p>Search lives under the <strong>Catalogue</strong> tab (not on the Deck). The field under Dirs, Albums, Artists, and Lists searches like the catalogue search on the Mac (version 1.1.1 on both). In <strong>Dirs</strong> it finds directories and files across every connected directory; tap a directory to open it. In <strong>Albums</strong>, <strong>Artists</strong>, and <strong>Lists</strong> it keeps the ones with a matching song and shows only those songs — a playlist whose name matches shows all of its songs.</p>
+        <p>Search lives under the <strong>Catalogue</strong> tab (not on the Deck). The field under Dirs, Albums, Artists, and Playlists (called Lists before 1.1.7) searches like the catalogue search on the Mac (version 1.1.1 on both). In <strong>Dirs</strong> it finds directories and files across every connected directory; tap a directory to open it. In <strong>Albums</strong>, <strong>Artists</strong>, and <strong>Playlists</strong> it keeps the ones with a matching song and shows only those songs — a playlist whose name matches shows all of its songs.</p>
       </div>
     </details>
 

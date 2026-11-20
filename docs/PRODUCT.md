@@ -34,6 +34,7 @@
 
 ### Library
 - [x] Add folders (watch for changes on Mac)
+- [x] Offline directories: a folder on an unmounted drive or NAS share stays connected, shows as offline, and its tracks are hidden (not deleted) until the volume mounts again (1.1.3)
 - [x] Fast scan + metadata (title, artist, album, year, track #, artwork)
 - [x] Browse by Album / Artist / Folder
 - [x] Search
@@ -49,7 +50,7 @@
 - [x] Large artwork Now Playing, minimal chrome
 - [x] Dark, quiet visual language (no dashboard clutter)
 - [x] Keyboard shortcuts on Mac (Space, ⌘← / ⌘→, ⌘O; ⌘1 Catalogue, ⌘2 Playlists, ⌘3 Deck, ⌘, Settings)
-- [x] Play from the Catalogue without leaving it; ⌘-click, *Play and Show Deck* or the mini player open the Deck
+- [x] Play from the Catalogue without leaving it; ⌘-click (albums, folders, playlists — on a Catalogue song it ticks, since 1.1.7), *Play and Show Deck* or the mini player open the Deck
 - [x] Tap the current song again to pause, once more to resume (Catalogue, Playlists, Deck queue, and the remote)
 
 ### Settings (MVP-thin)
@@ -141,9 +142,13 @@ gapless SetNext), the iPhone is the remote. NAS straight to the Devialet without
 - Listen on iPhone — the Mac streams to the paired iPhone on the home network (see below)
 - [x] iPad as a remote too — the same layout as the iPhone, centred
 - [x] Playlists and labels from the remote — long-press a song: Add to Playlist… / Labels…, tap to put it in or take it out; playing a song or Play all stays in the list and marks the playing row (Mac + iOS 1.1.1, protocol 2)
-- [x] Search on the remote like the Mac's catalogue search — Dirs across every directory, Albums / Artists / Lists with a matching song (Mac + iOS 1.1.1)
+- [x] Several songs at once, and order by drag — Mac Catalogue *Select* (or ⌘-click / ⇧-click) ticks songs, albums, artists and folders across modes, then *Add to Playlist*; right-click a ticked song for the whole selection; Playlists: *Reorder* shows ≡ to drag playlists and songs, also in the Deck's queue for a playing playlist (the song plays on), *Export All* writes every playlist as M3U8 into a folder; remote: *Select* in Catalogue, *Reorder* on Playlists and in a playlist (protocol 5); the remote's *Lists* tab is called *Playlists* (1.1.7)
+- [x] Search on the remote like the Mac's catalogue search — Dirs across every directory, Albums / Artists / Playlists with a matching song (Mac + iOS 1.1.1)
 - [x] Mac Settings from the remote — Settings tab: Output (device, modes / network radios, DSD as PCM), Sharing, directories (list + Rebuild Index), About; protocol 3; add/remove folders stays on the Mac
-- [x] Remote bottom tabs Deck · Catalogue · Settings — Deck mirrors the Mac deck (stage, queue sheet, no search, no Receiver look on phone); Catalogue keeps browse + search; tap current song again to pause; volume speaker on the Deck toolbar
+- [x] Remote bottom tabs Deck · Catalogue · Settings — Deck mirrors the Mac deck (stage, queue sheet, no search, no Compact face on phone); Catalogue keeps browse + search; tap current song again to pause; volume speaker on the Deck toolbar
+- [x] Plugin rack from the remote, stage 1 — dial in the Deck toolbar, sheet with the path badge, one key for the whole rack (A/B, in place) and each insert's switch; the Mac's rack header has the same A/B key; protocol 4, Mac + iOS 1.1.3
+- [x] Rack presets — save the whole rack (plugins, order, switches, settings) as Headphones / Speakers / …; load from the Mac's preset bar or at the top of the remote's rack (chips up to five, a searchable list beyond); Edited / Save, Save as New, Rename, Delete on the Mac (1.1.4)
+- Rack preset per output device — load Headphones when the headphone DAC is picked, Speakers for the speakers
 - [x] Play to a UPnP renderer (Mac) — Network Players separate from This Host; radios Wi‑Fi friendly / Full / DSD, SACD, DoP (native when the player lists DSD); part of the one-time unlock (see [`UPNP.md`](UPNP.md))
 - [x] Share the library as a UPnP / DLNA music server (Mac) — Settings → Sharing; a player such as mconnect browses it and plays on the iPhone; part of the one-time unlock (see [`UPNP.md`](UPNP.md))
 - Mac menu bar mini player + notch-friendly compact mode
